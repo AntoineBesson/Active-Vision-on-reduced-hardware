@@ -1,0 +1,31 @@
+# Example Cityscapes-VPS data config.
+#
+# Maps directly onto src/data/cityscapes_vps.py::CityscapesVPSConfig. Load with:
+#
+#     from data.cityscapes_vps import CityscapesVPSConfig, CityscapesVPS
+#     cfg = CityscapesVPSConfig.from_yaml("configs/cityscapes_vps.yaml")
+#     ds = CityscapesVPS(cfg)
+#
+# `root: null` means "read the dataset location from the $CITYSCAPES_VPS_ROOT
+# environment variable" — the recommended way to keep machine-specific paths
+# out of version control.
+
+root: null                       # or an absolute path, e.g. /data/cityscapes_vps
+split: val                       # train | val | test
+
+image_subdir: img_all            # all frames of every clip (dense)
+annotation_subdir: panoptic_video  # panoptic PNGs for labeled frames only
+
+image_glob: "*.png"
+filename_regex: '^(?P<clip>\d{4})_(?P<frame>\d{4})_'
+image_suffix: _leftImg8bit
+
+# annotation_suffix: null  -> match any annotation whose name starts with the
+# image stem (robust when the exact suffix is unknown). Set a string to require
+# an exact "<stem><suffix>.png", e.g. "_gtFine_panoptic".
+annotation_suffix: null
+annotation_ext: .png
+
+decode_panoptic_ids: true        # decode COCO-panoptic RGB -> (H,W) id map
+annotated_every: 5               # sparse-label period (informational only)
+stack_frames: true               # stack same-size frames into (T,H,W,3)

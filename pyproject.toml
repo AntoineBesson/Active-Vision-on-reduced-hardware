@@ -1,0 +1,50 @@
+# Why pyproject.toml (not requirements.txt):
+#   - Makes src/ an installable package (`pip install -e .`) so tests, scripts and
+#     later training code import `data`, `models`, ... cleanly with no sys.path hacks.
+#   - Optional-dependency "extras" keep the base install tiny for T4 / Colab / Kaggle:
+#     the data loader itself needs only numpy + pillow, so `torch` and plotting are
+#     opt-in (`.[torch]`, `.[viz]`) rather than forced on a constrained machine.
+#   - Single place to configure pytest.
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "active-vision-reduced-hw"
+version = "0.0.1"
+description = "Foveated video segmentation with persistent glimpse memory on reduced hardware (T4 / Colab-class)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Antoine Besson" }]
+
+# Base runtime deps kept deliberately minimal. The Cityscapes-VPS loader works
+# with just these; torch is only needed once model/training code lands.
+dependencies = [
+    "numpy>=1.21",
+    "pillow>=8.0",
+    "pyyaml>=5.4",
+]
+
+[project.optional-dependencies]
+# Plotting for scripts/verify_data.py and future analysis.
+viz = ["matplotlib>=3.4"]
+# Deep-learning stack. Pin the CPU/T4 build in your environment as appropriate;
+# left unversioned here so Colab/Kaggle's preinstalled CUDA torch is reused.
+torch = ["torch", "torchvision"]
+# Dev / test tooling.
+dev = ["pytest>=7.0", "matplotlib>=3.4"]
+
+[tool.setuptools]
+# src-layout: the source root is ./src, and the packages inside it
+# (data, models, policies, eval) become importable top-level packages.
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+# Put ./src on sys.path so `pytest` works without an editable install.
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra"

@@ -1,0 +1,55 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.Python
+pip-wheel-metadata/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- Testing / coverage ----
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+
+# ---- Project data & runs ----
+# The real datasets are large and license-restricted: never commit them.
+# Anchored with a leading slash so this only matches a top-level ./data dir and
+# NOT the source package src/data/ or the test fixtures under tests/.
+/data/
+/datasets/
+*.pth
+*.ckpt
+*.onnx
+
+# Experiment run outputs. Keep the folder + its README, ignore everything else
+# (including the data_check outputs produced by scripts/verify_data.py).
+experiments/*
+!experiments/README.md
+
+# The synthetic Cityscapes-VPS fixture is generated on demand from
+# tests/fixtures/generate_fixture.py (tiny, deterministic PNGs), so the
+# generated data dir is not committed. The generator + conftest.py ARE tracked.
+tests/fixtures/cityscapes_vps/
