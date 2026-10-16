@@ -1,86 +1,246 @@
 # Active Vision on Reduced Hardware
 
-A research side-project on **lightweight foveated video segmentation**: a small
-non-ViT backbone that maintains a persistent memory across "glimpses" (inspired
-by CanViT), targeting a single T4-class GPU (16 GB) or a Colab/Kaggle free-tier
-runtime. This repository currently contains the **infrastructure and data
-plumbing only** — model, glimpse-policy and training code land in later work.
+A research side-project on **lightweight foveated video segmentation** for a
+single T4-class GPU (16 GB), using public data only.
+
+We do **not** build a new segmentation model. We add a layer on top of an
+existing one: preprocessing (a low-resolution context view plus
+high-resolution crops), an optional persistent scene memory (a canvas), and
+a gaze policy that chooses which regions to inspect. Compared methods:
+
+1. full frame (the backbone on the whole frame, at full or reduced resolution);
+2. foveation without memory (uncertainty-driven policy);
+3. foveation with a persistent canvas and a policy that can read it;
+4. optionally, an RL-trained policy.
+
+Nothing outside one dataset adapter is Cityscapes-specific: preprocessing,
+policies and evaluation are written against a dataset-agnostic interface so
+they can be retrained or reused on other video segmentation datasets.
 
 ## Status
 
 | Piece | State |
 | --- | --- |
-| Repo scaffolding (`src/`, `scripts/`, `configs/`, `tests/`) | ✅ |
-| Cityscapes-VPS clip loader (`src/data/cityscapes_vps.py`) | ✅ |
-| Synthetic test fixture + unit tests | ✅ |
-| Data verification / visualization script | ✅ |
-| Model backbone / glimpse memory | ⬜ later |
-| Glimpse policy (uncertainty / motion) | ⬜ later |
-| Training loop | ⬜ later |
+| Dataset-agnostic interface `VideoSegDataset` (`src/data/base.py`) | ✅ |
+| Cityscapes-VPS adapter + 19-class mapping, layout verified against the official scripts | ✅ (real-data check pending) |
+| Torch sub-clip `Dataset`/`DataLoader`, clip-level splits | ✅ |
+| Interfaces: `SegmentationBackbone`, `GazePolicy`, `SceneMemory` | ✅ contracts only |
+| Backbones: PIDNet-S (+M/L), BiSeNetV2, dummy | ✅ ports bit-exact vs official code |
+| Evaluation harness: mIoU, FLOPs, GPU latency, peak memory, run JSON | ✅ (GPU path not exercised here: no GPU) |
+| Full-frame baseline CLI, 5 input scales | ✅ on the synthetic fixture · ⏳ real data |
+| Real-data diagnostics script | ✅ · ⏳ to run on real data |
+| Method 2: foveation without memory | ⬜ next |
+| Method 3: foveation + persistent canvas | ⬜ |
+| Method 4: RL-trained policy | ⬜ optional |
+| Any result on real data | ⬜ waiting for Cityscapes access |
 
 ## Layout
 
 ```
-src/                 # library code (importable package root)
-  data/              # datasets & loaders  (cityscapes_vps.py lives here)
-  models/            # backbones + glimpse memory (empty for now)
-  policies/          # foveation / glimpse policies (empty for now)
-  eval/              # metrics & reporting (empty for now)
-scripts/             # CLI entry points (verify_data.py)
-configs/             # experiment/data configs (YAML -> dataclasses)
-experiments/         # one folder per run; gitignored except its README
-tests/               # unit tests + a tiny synthetic dataset fixture
+src/                       library code (importable package root)
+  data/
+    base.py                VideoSegDataset interface, VideoClip, InMemoryVideoSeg
+    label_mapping.py       config-driven raw annotation -> train-id mapping
+    cityscapes_vps.py      Cityscapes-VPS adapter (the only Cityscapes-specific module)
+    registry.py            build_dataset(spec)
+    subclips.py            sub-clip windows (length T, strides)
+    splits.py              clip-level (never frame-level) splits
+    torch_dataset.py       torch Dataset / DataLoader (needs torch)
+  models/
+    interfaces.py          SegmentationBackbone, SceneMemory, MemoryState
+    pidnet.py              PIDNet-S/M/L (official architecture, ported, MIT)
+    bisenetv2.py           BiSeNetV2 (CoinCheung implementation, ported, MIT)
+    dummy.py               tiny deterministic backbone for tests and smoke runs
+    weights.py             weights from a path or URL, explicit failures
+    registry.py            build_backbone(spec)
+    utils.py               padding, logits upsampling
+  policies/
+    interfaces.py          GazePolicy, GazeState, Box
+  eval/
+    metrics.py             confusion-matrix mIoU / per-class IoU (numpy)
+    cost.py                cost ledger, FLOPs, latency, peak memory
+    results.py             one JSON file per run
+    harness.py             evaluation loop + full-frame method (torch)
+scripts/
+  run_baseline.py          full-frame baseline:  python -m scripts.run_baseline
+  diagnose_real_data.py    checks a local copy of the data before trusting it
+  verify_data.py           quick visual grid of one clip
+  common.py                YAML / --set / seeding helpers for the CLIs
+configs/
+  cityscapes_vps.yaml                 data config (official layout)
+  baseline_fixture.yaml               baseline smoke test (synthetic fixture + dummy)
+  baseline_fullframe_pidnet_s.yaml    baseline on real data, PIDNet-S
+  baseline_fullframe_bisenetv2.yaml   baseline on real data, BiSeNetV2
+  diagnose_cityscapes_vps.yaml        diagnostics config
+experiments/               one folder per run (gitignored except its README)
+tests/                     unit tests; fixtures/generate_fixture.py builds two
+                           synthetic datasets on demand (nothing binary is committed)
 ```
 
 ## Setup
 
-Requires Python ≥ 3.9. The base install is deliberately tiny (numpy + pillow +
-pyyaml) so it runs anywhere; the deep-learning stack is an opt-in extra.
+Python ≥ 3.9. The base install (numpy + pillow + pyyaml) covers the data
+layer, the label mapping, splits, metrics, result files and the diagnostics
+script; torch is an optional extra for models, the torch data pipeline and
+the evaluation loop.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-
-# Base loader + dev/test tooling (numpy, pillow, pyyaml, pytest, matplotlib):
-pip install -e ".[dev]"
-
-# Later, when you add model/training code, also install torch. On Colab/Kaggle
-# the CUDA build is usually preinstalled; otherwise:
-pip install -e ".[torch]"
+pip install -e ".[dev]"     # base + pytest + matplotlib
+pip install -e ".[torch]"   # torch + torchvision (Colab/Kaggle usually preinstall them)
+# CPU-only torch, if you do not want the CUDA wheels:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ```
-
-> **Why `pyproject.toml`?** It makes `src/` an installable package (clean
-> imports, no `sys.path` hacks), keeps pytest config in one place, and uses
-> optional "extras" so the base footprint stays small for constrained hardware.
-> `pip install -e ".[dev]"` is enough to run the test suite.
 
 ## Running the tests
 
-The suite runs entirely against a **synthetic fixture** — no real dataset
-required:
+Everything runs on synthetic data, on CPU, in seconds:
 
 ```bash
-pytest              # or: pytest tests/ -v
+pytest            # or: pytest -v
 ```
 
-The fixture is a handful of tiny, fully-deterministic PNGs generated on demand
-by `tests/fixtures/generate_fixture.py` (auto-invoked from `tests/conftest.py`),
-so it is not committed as binaries — a fresh clone regenerates it on first run.
-The one torch-dependent test is auto-skipped if torch isn't installed.
+`tests/conftest.py` generates two tiny deterministic datasets on first use:
+`tests/fixtures/cityscapes_vps/` (the original fixture, an older layout
+guess) and `tests/fixtures/cityscapes_vps_official/` (mirrors the verified
+official layout and all three label encodings). Without torch, the
+torch-dependent tests are skipped; without CUDA, the GPU-only tests (latency,
+peak memory) are skipped. A subprocess test checks that every numpy-only
+module imports with torch blocked.
+
+## Full-frame baseline
+
+```bash
+# Smoke test: synthetic fixture + dummy backbone, CPU, no data or download.
+python -m scripts.run_baseline --config configs/baseline_fixture.yaml
+
+# Real data (see "To run once data is available"):
+python -m scripts.run_baseline --config configs/baseline_fullframe_pidnet_s.yaml \
+    --set backbone.weights=/path/to/PIDNet_S_Cityscapes_val.pt
+```
+
+Options: `--set key=value` (any config value, YAML-parsed, e.g.
+`--set eval.scales=[1.0,0.5]`), `--device auto|cpu|cuda`, `--max-clips N`,
+`--fixture`, `--out DIR`.
+
+Each input scale is one run and writes one JSON file to
+`experiments/<date>_<run.name>/<run.name>_s<scale>.json`, next to the
+resolved `config.yaml`. A run record contains the resolved config, the git
+commit and whether the work tree was dirty, the seed, the dataset
+description and fingerprint (a hash of the clip metadata), the backbone
+description (including the weights' sha256), the metrics, the cost and the
+software/hardware environment. Reduced scales (0.75, 0.5, 0.375, 0.25 of
+1024×2048) are the equal-cost full-frame baselines for the foveated methods.
+
+**Metrics.** mIoU and per-class IoU are computed only on labelled frames,
+from one confusion matrix accumulated over all clips (dataset-level IoU, as
+in the Cityscapes benchmark). Classes absent from both ground truth and
+predictions are excluded from the mean. Pixels a method leaves unpredicted
+count as errors, never as ignore.
+
+**Cost.** One ledger sums named components per frame. The baseline only has
+`backbone`; foveated methods will add context, glimpses, policy, memory and
+recomposition to the same total.
+- *FLOPs* use `torch.utils.flop_counter.FlopCounterMode`. It ships with torch,
+  so it adds no dependency, and it counts at the dispatcher level, so it
+  handles the data-dependent control flow of gaze loops, which tracing
+  (fvcore) can miss and module hooks (ptflops) skip for functional ops. It
+  counts 2 FLOPs per multiply-accumulate of convolutions and matrix products.
+  Elementwise ops, normalisation, pooling, interpolation and biases are not
+  counted. MACs = FLOPs / 2 are also reported.
+- *Latency*: CUDA, batch 1, fp16 weights and inputs, cuDNN autotuning, 20
+  warm-up calls, then 100 calls each timed between `torch.cuda.synchronize()`
+  barriers. Median and p95 are reported for the backbone alone and end to
+  end (full-resolution frame → resize → network → upsampling → argmax).
+  Without CUDA the record says `"status": "skipped"`: no CPU number
+  masquerades as GPU latency.
+- *Peak memory*: `torch.cuda.max_memory_allocated` during the end-to-end
+  runs. Reported as the absolute peak, the increment over the memory
+  already resident, and `estimated_footprint_mib` = the measured model's
+  weights + that increment. The estimate is not inflated by the fp32 copy of
+  the model kept on the GPU for the accuracy pass.
+- *Pixel fraction*: pixels fed to the backbone per frame over the
+  full-resolution pixel count (`scale²` for the baseline).
+
+The accuracy pass runs in fp32 (`eval.precision`), as PIDNet's own
+evaluation does.
+
+## Backbone weights
+
+Weights come from a local path or a URL given in the config
+(`backbone.weights`, optional `sha256` pin). URLs are downloaded once into
+the torch hub cache. A missing file, an unreachable URL (no network) or a
+Google Drive share page fails with a message saying what to do instead.
+Real backbones refuse to run without weights unless `allow_random_init:
+true` is set, for smoke tests only.
+
+- **PIDNet-S**: download `PIDNet_S_Cityscapes_val.pt` from the links in the
+  [official README](https://github.com/XuJiacong/PIDNet#models) (Google
+  Drive, manual download) and set `PIDNET_S_WEIGHTS` or
+  `--set backbone.weights=...`. Use the **`_val`** checkpoint, which was
+  trained on Cityscapes train only. The `_test` one was trained on
+  train+val, and **every Cityscapes-VPS clip is a Cityscapes val sequence**,
+  so it would leak.
+- **BiSeNetV2**: `configs/baseline_fullframe_bisenetv2.yaml` points at the
+  public release asset `model_final_v2_city.pth` of
+  [CoinCheung/BiSeNet](https://github.com/CoinCheung/BiSeNet), pinned by sha256.
+  That file was checked to load strictly into the port.
+- **Dummy**: no weights. Seeded random, or nearest-colour (`class_colors:
+  dataset_palette`), which makes it an alignment probe on the fixture.
+
+Both ports keep the official module names, so official checkpoints load
+unchanged. Against the official code, with random weights and randomised BN
+statistics, they give identical state-dict keys and parameter counts
+(PIDNet-S: 7,625,715) and bit-identical outputs.
 
 ## Getting the real Cityscapes-VPS data
 
-This repo contains **no download logic** — Cityscapes-VPS is license-gated, so
-you must obtain it yourself (register at cityscapes-dataset.com / the VPSNet
-release) and place it locally.
+Cityscapes-VPS (Kim et al., CVPR 2020) is built from Cityscapes, which is
+licence-gated (non-commercial use; registration and approval required). The
+VPS annotations are CC BY-NC-SA 4.0 on top of the Cityscapes licence. This
+repo contains no download logic. The steps below follow the official
+[VPSNet DATASET.md](https://github.com/mcahny/vps/blob/master/docs/DATASET.md).
+They could not be run here (no data access), so check each step's output.
 
-Point the loader at your copy (the folder that holds `train/ val/ test/` and
-the `*_city_vps.json` files) with an environment variable:
+1. **Cityscapes account.** Register at <https://www.cityscapes-dataset.com/register/>
+   and wait for approval.
+2. **Cityscapes packages** (log in, <https://www.cityscapes-dataset.com/downloads/>):
+   - the `gtFine` package (`gtFine_trainvaltest.zip`);
+   - the `leftImg8bit_sequence` package. Third-party download guides list
+     these as packageID 1 and 14, the latter at about 324 GB; check both on
+     the page (it could not be reached from here). Only the `val/` part
+     (500 sequences × 30 frames) is needed, so after downloading you can
+     extract just that part, e.g. `unzip <archive>.zip 'leftImg8bit_sequence/val/*'`.
 
-```bash
-export CITYSCAPES_VPS_ROOT=/path/to/cityscapes_vps
-```
+   Command-line download via a login cookie is described in several guides,
+   or use `csDownload` from `pip install cityscapesscripts` (`csDownload -l`
+   lists the package names).
+3. **VPS annotations.** Download `cityscapes-vps-dataset-1.0.zip` from the
+   link in the [VPSNet README](https://github.com/mcahny/vps) (Dropbox) and
+   unzip it so you have `data/cityscapes_vps/` with the `*_city_vps.json`
+   files and the `train/ val/ test/` folders.
+4. **Merge and build the labels** with the official scripts, run from a
+   clone of the VPSNet repository:
 
-...or set `root:` in a config (see `configs/cityscapes_vps.yaml`).
+   ```bash
+   git clone https://github.com/mcahny/vps && cd vps
+   pip install numpy pillow tqdm "git+https://github.com/cocodataset/panopticapi.git"
+   # data/ holds cityscapes_vps/, leftImg8bit_sequence/ and gtFine/
+   bash ./prepare_data/merge_datasets.sh data/cityscapes_vps data/leftImg8bit_sequence/val/ data/gtFine/val/
+   bash ./prepare_data/create_panoptic_labels.sh data/cityscapes_vps/
+   ```
+
+   Keep `val/labelmap/` and `val/panoptic_inst/`. DATASET.md says they can be
+   deleted, but the diagnostics use them to cross-check the label mapping.
+5. **Point this repo at it.** Use the folder that contains `train/ val/
+   test/` and the `*_city_vps.json` files:
+
+   ```bash
+   export CITYSCAPES_VPS_ROOT=/absolute/path/to/vps/data/cityscapes_vps
+   ```
+
+   Or set `root:` in `configs/cityscapes_vps.yaml`, or pass `--root` to the
+   diagnostics.
 
 ### Cityscapes-VPS format: what is verified, what is assumed
 
@@ -135,18 +295,71 @@ The earlier guess (clip-prefixed names inside `img_all/`) finds **zero clips**
 on the official layout. It survives only as the `CityscapesVPSConfig`
 defaults, because the original synthetic fixture and its tests use it.
 
-## Visual sanity check
+## To run once data is available
 
-Once the real data is in place, render a grid of a clip's frames with their
-annotations overlaid (saved under `experiments/data_check/`):
+⚠️ None of this has been run yet. There are no real-data numbers anywhere in this repo.
 
-```bash
-python scripts/verify_data.py --split val --clip-index 0
-# or, without real data, smoke-test the pipeline on the fixture:
-python scripts/verify_data.py --fixture
-```
+1. **Diagnose the copy**, then read the summary and look at the overlays:
+
+   ```bash
+   python scripts/diagnose_real_data.py --config configs/diagnose_cityscapes_vps.yaml
+   # -> experiments/data_check/diagnose/{diagnose_report.json, overlay_*.png}
+   ```
+
+   What the official layout should give: val 100 clips × 30 frames with 6
+   labelled frames each at positions 4, 9, 14, 19, 24, 29; train 400 clips
+   of 6 frames (only `img/` exists); test 100 clips × 30 frames, none
+   labelled; every filename matching its regex; no orphan annotation;
+   1024×2048 frames; `panoptic_inst` agreeing 100% with `panoptic_video` +
+   JSON; `labelmap` differing only on crowd regions. Any other outcome means
+   the config (or an assumption) needs fixing before running anything else.
+2. **Eyeball a clip:** `python scripts/verify_data.py --split val --clip-index 0`.
+3. **Full-frame baselines on a T4.** Five scales each, one JSON per scale:
+
+   ```bash
+   export PIDNET_S_WEIGHTS=/path/to/PIDNet_S_Cityscapes_val.pt
+   python -m scripts.run_baseline --config configs/baseline_fullframe_pidnet_s.yaml
+   python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yaml
+   ```
+
+   As a plausibility check only, compare the scale-1.0 mIoU with the
+   official PIDNet-S Cityscapes val figure (78.8 mIoU). That figure is over
+   a different frame set (the 500 gtFine images, without VPS crowd
+   handling), so equality is not expected, but a large gap points to a
+   preprocessing or mapping problem: check the overlays and cross-checks first.
+
+## Using another dataset
+
+1. Write an adapter: subclass `data.base.VideoSegDataset` (`class_names`,
+   `ignore_index`, `__len__`, `clip_id`, `labeled_mask`, `load_frame`,
+   `load_label`; optionally `frame_indices`, `clip_group`, `palette` and the
+   diagnostic hooks) and add a `from_spec(spec, base_dir)` classmethod.
+2. Describe its annotation encoding with a `label_mapping` block
+   (`data.label_mapping`: rgb/gray ids, identity / divisor / COCO-panoptic
+   JSON rule, optional category→train-id table). No code needed for common
+   formats.
+3. Register a short name in `data/registry.py` (or use `type:
+   package.module:Class`) and point a config's `dataset:` section at it.
+   The torch pipeline, splits, backbones, harness, baseline CLI and
+   diagnostics work unchanged.
+
+## Interfaces for the next methods
+
+- `SegmentationBackbone.forward(images (B,3,H,W) in [0,1]) -> logits
+  (B,C,ceil(H/s),ceil(W/s))`. The backbone normalises and pads internally.
+  `models.utils.upsample_logits` maps logits back to any frame size.
+- `GazePolicy.select(state: GazeState, memory: MemoryState | None) -> list[Box]`,
+  with a `uses_memory` flag, so memory-free and canvas-aware policies share
+  one contract. `Box` uses coordinates normalised to the full frame.
+- `SceneMemory.reset(frame_size)`, `update(glimpse_output (C,h,w), box, *, t)`,
+  `read() -> MemoryState` (canvas `(D,Hc,Wc)`, optional confidence and age).
+- `eval.harness.FrameMethod`: what the evaluation loop runs. A foveated
+  method implements `predict(frame, t, ledger)` and reports each component's
+  cost to the ledger.
 
 ## License
 
-MIT (see `pyproject.toml`). The Cityscapes / Cityscapes-VPS data has its own
-license and is **not** included in this repo.
+MIT (see `pyproject.toml`). `src/models/pidnet.py` and
+`src/models/bisenetv2.py` are ports of MIT-licensed code; their copyright
+and permission notices are reproduced in the file headers. The Cityscapes
+and Cityscapes-VPS data have their own licences and are **not** included.
