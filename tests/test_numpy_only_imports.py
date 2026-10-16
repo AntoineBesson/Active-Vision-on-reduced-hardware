@@ -21,6 +21,7 @@ NUMPY_ONLY_MODULES = [
     "data.cityscapes_vps",
     "data.splits",
     "data.subclips",
+    "data.registry",
     "models",
     "models.interfaces",
     "policies",

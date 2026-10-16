@@ -48,6 +48,8 @@ def resolve_weights(source: str, cache_dir: Optional[str] = None, sha256: Option
     """Return a local file for ``source`` (path or URL), downloading if needed."""
     if not source:
         raise WeightsError("empty weights source")
+    if "${" in str(source):
+        raise WeightsError(f"weights source {source!r} contains an environment variable that is not set")
     parsed = urllib.parse.urlparse(str(source))
     if parsed.scheme in ("http", "https", "file"):
         if parsed.netloc.endswith("drive.google.com") or parsed.netloc.endswith("docs.google.com"):

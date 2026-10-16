@@ -628,6 +628,27 @@ class CityscapesVPS(VideoSegDataset):
                 return name[: -len(suffix)]
         return name
 
+    @classmethod
+    def from_spec(cls, spec: Dict[str, Any], base_dir: Optional[Path] = None) -> "CityscapesVPS":
+        """Build from a registry spec (see :mod:`data.registry`)::
+
+            {type, config: YAML path (optional), split, root, overrides: {...}}
+        """
+        known = {"type", "config", "split", "root", "overrides"}
+        unknown = set(spec) - known
+        if unknown:
+            raise ValueError(f"unknown dataset spec keys for cityscapes_vps: {sorted(unknown)}")
+        base = Path(base_dir) if base_dir else Path.cwd()
+        structural = {k: spec[k] for k in ("split", "root") if spec.get(k) is not None}
+        if "root" in structural and not Path(structural["root"]).expanduser().is_absolute():
+            structural["root"] = str(base / structural["root"])
+        if spec.get("config"):
+            path = Path(spec["config"])
+            cfg = CityscapesVPSConfig.from_yaml(path if path.is_absolute() else base / path)
+        else:
+            cfg = CityscapesVPSConfig()
+        return cls(cfg, **structural, **dict(spec.get("overrides") or {}))
+
     # -- Access -------------------------------------------------------------- #
     def __len__(self) -> int:
         return len(self.clips)
