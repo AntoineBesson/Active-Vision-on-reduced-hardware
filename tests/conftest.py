@@ -1,4 +1,4 @@
-"""Pytest bootstrap: make sure the synthetic Cityscapes-VPS fixture exists.
+"""Pytest bootstrap: make sure the synthetic Cityscapes-VPS fixtures exist.
 
 The fixture PNGs are tiny and fully deterministic, so they are generated on
 demand (from tests/fixtures/generate_fixture.py) rather than committed as
@@ -24,3 +24,4 @@ import generate_fixture  # noqa: E402
 @pytest.fixture(scope="session", autouse=True)
 def _ensure_cityscapes_vps_fixture():
     generate_fixture.ensure_fixture()
+    generate_fixture.ensure_official_fixture()

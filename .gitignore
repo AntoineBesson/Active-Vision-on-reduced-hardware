@@ -53,3 +53,4 @@ experiments/*
 # tests/fixtures/generate_fixture.py (tiny, deterministic PNGs), so the
 # generated data dir is not committed. The generator + conftest.py ARE tracked.
 tests/fixtures/cityscapes_vps/
+tests/fixtures/cityscapes_vps_official/
