@@ -21,6 +21,10 @@ NUMPY_ONLY_MODULES = [
     "data.cityscapes_vps",
     "data.splits",
     "data.subclips",
+    "models",
+    "models.interfaces",
+    "policies",
+    "policies.interfaces",
 ]
 
 _PROBE = r"""

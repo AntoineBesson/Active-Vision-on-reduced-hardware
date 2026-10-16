@@ -1,5 +1,9 @@
-"""Model backbones and heads.
+"""Segmentation backbones and scene memory.
 
-Will hold the lightweight non-ViT backbone and the persistent glimpse-memory
-module (CanViT-inspired) for foveated video segmentation. Empty for now.
+* :mod:`models.interfaces` -- the ``SegmentationBackbone`` and ``SceneMemory``
+  contracts (``typing.Protocol``) plus ``MemoryState``. Imports without torch.
+
+We do not build a new segmentation model: existing backbones are wrapped
+behind ``SegmentationBackbone`` and a persistent memory (canvas) is added on
+top of them.
 """
