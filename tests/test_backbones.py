@@ -94,6 +94,24 @@ def test_upsample_logits_is_exact_for_unpadded_cells():
         upsample_logits(same, (20, 20), output_stride=4, align_corners=False)
 
 
+def test_upsample_logits_from_a_downscaled_input():
+    # Backbone saw a (6, 10) input (frame downscaled 2x from (12, 20)), stride 4 ->
+    # (2, 3) grid covering the padded (8, 12) input = (16, 24) frame pixels.
+    logits = torch.zeros(1, 2, 2, 3)
+    logits[0, 1] = -10.0
+    logits[0, 1, :, 2] = 10.0  # last grid column: input x in [8, 12) -> frame x in [16, 24)
+    out = upsample_logits(logits, (12, 20), output_stride=4, align_corners=False, input_size=(6, 10))
+    assert out.shape == (1, 2, 12, 20)
+    pred = out.argmax(1)[0]
+    # +-10 logits put the decision boundary halfway between cell centres, i.e.
+    # exactly at the cell edge mapped into frame coordinates (x = 16).
+    assert pred[:, 16:].eq(1).all() and pred[:, :16].eq(0).all()
+    # no padding: identical to a direct interpolation to the frame size
+    g = torch.rand(1, 2, 4, 8)
+    direct = torch.nn.functional.interpolate(g, size=(64, 128), mode="bilinear", align_corners=True)
+    assert torch.allclose(upsample_logits(g, (64, 128), 8, True, input_size=(32, 64)), direct)
+
+
 # --- weights ----------------------------------------------------------------- #
 def _save_like_official(tmp_path, model, name="w.pt"):
     state = {"model." + k: v for k, v in model.net.state_dict().items()}

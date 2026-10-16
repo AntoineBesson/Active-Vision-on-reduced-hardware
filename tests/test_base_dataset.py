@@ -135,6 +135,13 @@ def test_duplicate_clip_ids_rejected():
 def test_iteration_and_describe(toy: InMemoryVideoSeg):
     assert [c.clip_id for c in toy] == ["a", "b"]
     d = toy.describe()
+    fingerprint = d.pop("fingerprint")
+    assert len(fingerprint) == 40 and fingerprint == toy.fingerprint()
+    # metadata-only: same clips/frames/labels -> same fingerprint; any change -> different
+    assert InMemoryVideoSeg(_toy_clips(), class_names=CLASSES).fingerprint() == fingerprint
+    changed = _toy_clips()
+    changed[1]["labels"] = [None, np.zeros((5, 6), np.uint8)]
+    assert InMemoryVideoSeg(changed, class_names=CLASSES).fingerprint() != fingerprint
     assert d == {
         "name": "in_memory",
         "num_clips": 2,

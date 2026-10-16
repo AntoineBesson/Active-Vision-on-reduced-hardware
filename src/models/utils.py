@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -25,22 +25,29 @@ def pad_to_multiple(images: torch.Tensor, multiple: int, mode: str = "replicate"
 
 
 def upsample_logits(
-    logits: torch.Tensor, size: Tuple[int, int], output_stride: int, align_corners: bool
+    logits: torch.Tensor,
+    size: Tuple[int, int],
+    output_stride: int,
+    align_corners: bool,
+    input_size: Optional[Tuple[int, int]] = None,
 ) -> torch.Tensor:
-    """Bring backbone logits back to an ``(H, W)`` input resolution.
+    """Bring backbone logits to an ``(H, W)`` output resolution.
 
     Implements the :class:`models.interfaces.SegmentationBackbone` contract:
-    the ``(h, w)`` logit grid covers the input padded to ``(h*s, w*s)``, so we
-    interpolate to that padded size and crop -- exact for every ``H, W``. When
-    ``H, W`` are multiples of ``s`` this is a plain interpolation to ``(H, W)``.
+    the ``(gh, gw)`` logit grid covers the backbone input of size
+    ``input_size = (h, w)`` (default: ``size``) padded to ``(gh*s, gw*s)``.
+    That padded extent, mapped to output pixels (``x H/h``, ``x W/w``), is
+    interpolated in one step and cropped to ``(H, W)``. Without padding this
+    is a plain interpolation to ``(H, W)``; at the input resolution it is exact.
     """
     height, width = int(size[0]), int(size[1])
-    h, w = logits.shape[-2:]
+    in_h, in_w = (height, width) if input_size is None else (int(input_size[0]), int(input_size[1]))
+    gh, gw = logits.shape[-2:]
     s = int(output_stride)
-    target = (h * s, w * s)
-    if target[0] < height or target[1] < width:
-        raise ValueError(f"logits {tuple(logits.shape[-2:])} at stride {s} cannot cover input {size}")
-    if target != (h, w):
+    if gh * s < in_h or gw * s < in_w:
+        raise ValueError(f"logits {(gh, gw)} at stride {s} cannot cover input {(in_h, in_w)}")
+    target = (int(round(gh * s * height / in_h)), int(round(gw * s * width / in_w)))
+    if target != (gh, gw):
         logits = F.interpolate(logits, size=target, mode="bilinear", align_corners=align_corners)
     return logits[..., :height, :width]
 

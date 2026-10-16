@@ -25,6 +25,10 @@ NUMPY_ONLY_MODULES = [
     "models.interfaces",
     "policies",
     "policies.interfaces",
+    "eval",
+    "eval.metrics",
+    "eval.cost",
+    "eval.results",
 ]
 
 _PROBE = r"""

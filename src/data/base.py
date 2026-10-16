@@ -294,6 +294,22 @@ class VideoSegDataset(abc.ABC):
         for i in range(len(self)):
             yield self.get_clip(i)
 
+    def fingerprint(self) -> str:
+        """sha1 of the clip metadata (ids, frame numbers, labelled masks).
+
+        Identifies the exact set of clips/frames independently of the machine
+        (no paths involved), so results from two runs can be checked to come
+        from the same data.
+        """
+        import hashlib
+
+        digest = hashlib.sha1()
+        for i in range(len(self)):
+            digest.update(self.clip_id(i).encode())
+            digest.update(np.asarray(self.frame_indices(i), dtype=np.int64).tobytes())
+            digest.update(np.packbits(np.asarray(self.labeled_mask(i), dtype=bool)).tobytes())
+        return digest.hexdigest()
+
     def describe(self) -> Dict[str, Any]:
         """JSON-serialisable summary recorded alongside results."""
         n_frames = [self.num_frames(i) for i in range(len(self))]
@@ -305,6 +321,7 @@ class VideoSegDataset(abc.ABC):
             "num_classes": self.num_classes,
             "ignore_index": int(self.ignore_index),
             "class_names": list(self.class_names),
+            "fingerprint": self.fingerprint(),
         }
 
 
