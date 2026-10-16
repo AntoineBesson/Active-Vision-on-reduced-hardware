@@ -195,10 +195,19 @@ class VideoSegDataset(abc.ABC):
     def load_label(self, index: int, t: int) -> Optional[np.ndarray]:
         """(H, W) train-id map of frame ``t`` of clip ``index``, or None if unlabelled."""
 
-    # -- Optional hooks ------------------------------------------------------- #
+    # -- Optional hooks (diagnostics; scripts/diagnose_real_data.py) ----------- #
     def diagnostics(self) -> Dict[str, Any]:
-        """Adapter-specific indexing statistics (used by scripts/diagnose_real_data.py)."""
+        """Adapter-specific indexing statistics (regex matches, joins, ...)."""
         return {}
+
+    def annotation_ids(self, index: int, t: int) -> Optional[np.ndarray]:
+        """Raw (H, W) id map of an annotated frame *before* class mapping, if the
+        adapter has such a notion (e.g. panoptic segment ids); None otherwise."""
+        return None
+
+    def explain_annotation_ids(self, index: int, t: int, ids: Sequence[int]) -> List[Dict[str, Any]]:
+        """For each raw id, how it maps to a train id / class (diagnostics)."""
+        return []
 
     # -- Shared helpers ------------------------------------------------------- #
     def _check_index(self, index: int) -> int:

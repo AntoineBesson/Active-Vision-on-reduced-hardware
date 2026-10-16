@@ -1,31 +1,84 @@
-# Example Cityscapes-VPS data config.
+# Cityscapes-VPS data config -- the OFFICIAL VPSNet layout.
 #
-# Maps directly onto src/data/cityscapes_vps.py::CityscapesVPSConfig. Load with:
+# Every value below was checked against the official preparation scripts
+# (github.com/mcahny/vps, prepare_data/*.py); the header of
+# src/data/cityscapes_vps.py lists what is verified and what is still assumed.
+# Run scripts/diagnose_real_data.py on the real data before trusting it.
 #
 #     from data.cityscapes_vps import CityscapesVPSConfig, CityscapesVPS
-#     cfg = CityscapesVPSConfig.from_yaml("configs/cityscapes_vps.yaml")
+#     cfg = CityscapesVPSConfig.from_yaml("configs/cityscapes_vps.yaml", split="val")
 #     ds = CityscapesVPS(cfg)
 #
-# `root: null` means "read the dataset location from the $CITYSCAPES_VPS_ROOT
-# environment variable" — the recommended way to keep machine-specific paths
-# out of version control.
+# root: null -> read $CITYSCAPES_VPS_ROOT: the folder that holds train/ val/
+# test/ and the *_city_vps.json files (VPSNet's data/cityscapes_vps).
 
-root: null                       # or an absolute path, e.g. /data/cityscapes_vps
-split: val                       # train | val | test
+root: null
+split: val
 
-image_subdir: img_all            # all frames of every clip (dense)
-annotation_subdir: panoptic_video  # panoptic PNGs for labeled frames only
+# ---- Frames (val / test): every frame, from img_all/ -----------------------
+# img_all keeps the ORIGINAL Cityscapes sequence names, without a clip prefix:
+#   frankfurt_000000_000294_leftImg8bit.png
+#   -> sequence=frankfurt_000000, frame=294, key=frankfurt_000000_000294
+# Frames are grouped by sequence and cut into clips wherever the frame number
+# jumps by more than max_frame_gap (Cityscapes snippets are 30 consecutive frames).
+image_subdir: img_all
+image_glob: "*_leftImg8bit.png"
+filename_regex: '^(?P<key>(?P<sequence>[^_]+_\d{6})_(?P<frame>\d{6}))_leftImg8bit\.png$'
+max_frame_gap: 1
 
-image_glob: "*.png"
-filename_regex: '^(?P<clip>\d{4})_(?P<frame>\d{4})_'
-image_suffix: _leftImg8bit
+# ---- Annotations: joined to frames on `key`; `clip` = the VPS video id ------
+#   0005_0025_frankfurt_000000_001736_final_mask.png    (frames annotated by VPS)
+#   0005_0025_frankfurt_000000_001736_gtFine_color.png  (original Cityscapes 20th frame)
+# The second 4-digit field is undocumented and ignored.
+annotation_subdir: panoptic_video
+annotation_regex: '^(?P<clip>\d{4})_\d{4}_(?P<key>[^_]+_\d{6}_\d{6})_(?:final_mask|gtFine_color)\.png$'
 
-# annotation_suffix: null  -> match any annotation whose name starts with the
-# image stem (robust when the exact suffix is unknown). Set a string to require
-# an exact "<stem><suffix>.png", e.g. "_gtFine_panoptic".
-annotation_suffix: null
-annotation_ext: .png
+# ---- Raw ids -> the 19 Cityscapes train classes -----------------------------
+# panoptic_video PNGs are COCO-panoptic RGB (id = R + 256 G + 256^2 B) whose
+# ids are random colours; the class of each segment is ONLY in the JSON below.
+# VPS category ids are the Cityscapes train ids 0..18 (prepare_data/city_default.py),
+# so no category -> train-id table is needed. Void (id 0) and crowd -> 255.
+label_mapping:
+  class_names: [road, sidewalk, building, wall, fence, pole, traffic light,
+                traffic sign, vegetation, terrain, sky, person, rider, car,
+                truck, bus, train, motorcycle, bicycle]
+  ignore_index: 255
+  encoding: rgb
+  id_rule: segments_json
+  segments_json: panoptic_gt_{split}_city_vps.json   # relative to root
+  category_to_train_id: null
 
-decode_panoptic_ids: true        # decode COCO-panoptic RGB -> (H,W) id map
-annotated_every: 5               # sparse-label period (informational only)
-stack_frames: true               # stack same-size frames into (T,H,W,3)
+# Labelled frames sit at clip positions 4, 9, ..., 29. This only feeds the
+# informational `is_keyframe` hint: a frame is "labelled" iff its annotation exists.
+annotated_every: 5
+keyframe_offset: 4
+
+decode_panoptic_ids: true   # legacy load_clip(): return decoded RGB ids
+stack_frames: true
+
+split_overrides:
+  train:
+    # The official preparation creates no train/img_all: only the 6 labelled
+    # frames of each clip exist (img/, prefixed names), 5 frames apart.
+    image_subdir: img
+    image_glob: "*.png"
+    filename_regex: '^(?P<clip>\d{4})_\d{4}_(?P<key>(?P<sequence>[^_]+_\d{6})_(?P<frame>\d{6}))_(?:newImg8bit|leftImg8bit)\.png$'
+    # No panoptic_video for train: use the Cityscapes-style instance-id maps
+    # (stuff = train id, thing = train id * 1000 + object, 255 = void and crowd),
+    # which treat crowd regions exactly like val/panoptic_video does.
+    annotation_subdir: panoptic_inst
+    label_mapping:
+      encoding: gray
+      id_rule: divisor
+      label_divisor: 1000
+    annotated_every: 1
+    keyframe_offset: 0
+  test:
+    annotation_subdir: null   # test labels are withheld
+
+# Alternatives (pick per split via split_overrides or a --set override):
+#   annotation_subdir: labelmap       + label_mapping {encoding: gray, id_rule: identity}
+#     -> crowd regions keep their class (closest to Cityscapes' own semantic GT);
+#   annotation_subdir: panoptic_inst  + label_mapping {encoding: gray, id_rule: divisor}
+#     -> identical to panoptic_video + JSON (crowd = 255), needs no JSON.
+# scripts/diagnose_real_data.py compares them pixel by pixel.
