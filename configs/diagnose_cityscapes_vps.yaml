@@ -1,0 +1,27 @@
+# Real-data diagnostics for Cityscapes-VPS (scripts/diagnose_real_data.py).
+#
+#     export CITYSCAPES_VPS_ROOT=/path/to/cityscapes_vps
+#     python scripts/diagnose_real_data.py --config configs/diagnose_cityscapes_vps.yaml
+#
+# The script is dataset-agnostic; everything Cityscapes-specific is here or in
+# configs/cityscapes_vps.yaml / src/data/cityscapes_vps.py.
+
+dataset:
+  type: cityscapes_vps
+  config: configs/cityscapes_vps.yaml
+  root: null   # null -> $CITYSCAPES_VPS_ROOT (or pass --root)
+
+splits: [val, train, test]
+
+sample_annotations: 20   # annotations whose raw ids are listed per split
+overlays: 3              # overlay PNGs saved in total (first labelled splits first)
+
+# Alternative annotation folders, compared pixel by pixel with the configured
+# source on the sampled frames (label_mapping: null -> the adapter's default
+# for that folder). Expected on the official layout: panoptic_inst == panoptic
+# video + JSON exactly; labelmap differs only on crowd regions (class kept).
+crosscheck:
+  - name: labelmap
+    overrides: {annotation_subdir: labelmap, label_mapping: null}
+  - name: panoptic_inst
+    overrides: {annotation_subdir: panoptic_inst, label_mapping: null}

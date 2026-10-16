@@ -209,6 +209,17 @@ class VideoSegDataset(abc.ABC):
         """For each raw id, how it maps to a train id / class (diagnostics)."""
         return []
 
+    def frame_size(self, index: int, t: int) -> Tuple[int, int]:
+        """(H, W) of a frame; adapters may override with a header-only read."""
+        shape = self.load_frame(index, t).shape
+        return int(shape[0]), int(shape[1])
+
+    @classmethod
+    def layout_report(cls, spec: Mapping[str, Any], base_dir: Optional[Any] = None) -> Dict[str, Any]:
+        """Describe the on-disk layout a registry ``spec`` points at, WITHOUT
+        building the dataset (so it still works when building fails)."""
+        return {}
+
     # -- Shared helpers ------------------------------------------------------- #
     def _check_index(self, index: int) -> int:
         n = len(self)

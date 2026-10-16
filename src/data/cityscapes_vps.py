@@ -628,12 +628,8 @@ class CityscapesVPS(VideoSegDataset):
                 return name[: -len(suffix)]
         return name
 
-    @classmethod
-    def from_spec(cls, spec: Dict[str, Any], base_dir: Optional[Path] = None) -> "CityscapesVPS":
-        """Build from a registry spec (see :mod:`data.registry`)::
-
-            {type, config: YAML path (optional), split, root, overrides: {...}}
-        """
+    @staticmethod
+    def _config_from_spec(spec: Dict[str, Any], base_dir: Optional[Path]) -> Tuple[CityscapesVPSConfig, Dict[str, Any]]:
         known = {"type", "config", "split", "root", "overrides"}
         unknown = set(spec) - known
         if unknown:
@@ -647,7 +643,48 @@ class CityscapesVPS(VideoSegDataset):
             cfg = CityscapesVPSConfig.from_yaml(path if path.is_absolute() else base / path)
         else:
             cfg = CityscapesVPSConfig()
-        return cls(cfg, **structural, **dict(spec.get("overrides") or {}))
+        return cfg, {**structural, **dict(spec.get("overrides") or {})}
+
+    @classmethod
+    def from_spec(cls, spec: Dict[str, Any], base_dir: Optional[Path] = None) -> "CityscapesVPS":
+        """Build from a registry spec (see :mod:`data.registry`)::
+
+            {type, config: YAML path (optional), split, root, overrides: {...}}
+        """
+        cfg, overrides = cls._config_from_spec(dict(spec), base_dir)
+        return cls(cfg, **overrides)
+
+    @classmethod
+    def layout_report(cls, spec: Dict[str, Any], base_dir: Optional[Path] = None) -> Dict[str, Any]:
+        """Directory listings for ``spec`` (root, split dir, configured subdirs)."""
+        report: Dict[str, Any] = {}
+        try:
+            cfg, overrides = cls._config_from_spec(dict(spec), base_dir)
+            structural = {k: overrides.pop(k) for k in ("root", "split") if k in overrides}
+            cfg = cfg.with_overrides(**structural).for_split().merged(**overrides)
+            root = cfg.resolve_root()
+        except Exception as exc:  # diagnostics never raise
+            return {"error": f"{type(exc).__name__}: {exc}"}
+
+        def listing(path: Optional[Path], limit: int = 25) -> Dict[str, Any]:
+            if path is None:
+                return {"path": None}
+            if not path.is_dir():
+                return {"path": str(path), "exists": False}
+            entries = sorted(path.iterdir())
+            return {
+                "path": str(path),
+                "exists": True,
+                "num_entries": len(entries),
+                "entries": [p.name + ("/" if p.is_dir() else "") for p in entries[:limit]],
+            }
+
+        report["root_source"] = "config" if cfg.root else f"${ROOT_ENV_VAR}"
+        report["root"] = listing(root)
+        report["split_dir"] = listing(cfg.split_dir)
+        report["image_dir"] = listing(cfg.image_dir, limit=3)
+        report["annotation_dir"] = listing(cfg.annotation_dir, limit=3)
+        return report
 
     # -- Access -------------------------------------------------------------- #
     def __len__(self) -> int:
@@ -690,6 +727,11 @@ class CityscapesVPS(VideoSegDataset):
 
     def load_frame(self, index: int, t: int) -> np.ndarray:
         return self.load_image(self.clips[index].frames[t].image_path)
+
+    def frame_size(self, index: int, t: int) -> Tuple[int, int]:
+        with Image.open(self.clips[index].frames[t].image_path) as img:  # header only
+            width, height = img.size
+        return int(height), int(width)
 
     def load_label(self, index: int, t: int) -> Optional[np.ndarray]:
         """Semantic train-id map of frame ``t`` (None if the frame is unlabelled)."""
