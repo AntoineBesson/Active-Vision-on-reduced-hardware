@@ -72,6 +72,12 @@ clip once you have the real files.
 Dependencies: numpy + pillow only. torch is optional and imported lazily by
 :func:`clip_to_tensors`, so this module (and the tests) run on a CPU box with
 no deep-learning stack installed.
+
+ADAPTER ROLE: :class:`CityscapesVPS` implements the dataset-agnostic
+:class:`data.base.VideoSegDataset` interface (frames, semantic train-id labels,
+``labeled_mask``, class names, ignore index). It is the ONLY place that knows
+about Cityscapes(-VPS) conventions; downstream code uses the base interface.
+The legacy dict API (:meth:`CityscapesVPS.load_clip`, raw annotations) is kept.
 """
 
 from __future__ import annotations
@@ -81,12 +87,17 @@ import re
 import warnings
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 from PIL import Image
 
+from .base import VideoSegDataset
+
 __all__ = [
+    "CITYSCAPES_TRAIN_CLASSES",
+    "CITYSCAPES_PALETTE",
+    "IGNORE_INDEX",
     "CityscapesVPSConfig",
     "FrameRecord",
     "ClipRecord",
@@ -97,6 +108,29 @@ __all__ = [
 
 # Environment variable that points at the local dataset root.
 ROOT_ENV_VAR = "CITYSCAPES_VPS_ROOT"
+
+#: The 19 Cityscapes evaluation classes, in train-id order (cityscapesScripts
+#: helpers/labels.py: the labels with ``trainId`` 0..18).
+CITYSCAPES_TRAIN_CLASSES: Tuple[str, ...] = (
+    "road", "sidewalk", "building", "wall", "fence", "pole", "traffic light",
+    "traffic sign", "vegetation", "terrain", "sky", "person", "rider", "car",
+    "truck", "bus", "train", "motorcycle", "bicycle",
+)
+
+#: Official Cityscapes colours of the 19 train ids (same source, same order).
+CITYSCAPES_PALETTE = np.array(
+    [
+        (128, 64, 128), (244, 35, 232), (70, 70, 70), (102, 102, 156),
+        (190, 153, 153), (153, 153, 153), (250, 170, 30), (220, 220, 0),
+        (107, 142, 35), (152, 251, 152), (70, 130, 180), (220, 20, 60),
+        (255, 0, 0), (0, 0, 142), (0, 0, 70), (0, 60, 100), (0, 80, 100),
+        (0, 0, 230), (119, 11, 32),
+    ],
+    dtype=np.uint8,
+)
+
+#: Cityscapes convention for "void / not evaluated".
+IGNORE_INDEX = 255
 
 
 # --------------------------------------------------------------------------- #
@@ -253,13 +287,17 @@ def decode_panoptic(rgb: np.ndarray) -> np.ndarray:
 # --------------------------------------------------------------------------- #
 # Dataset
 # --------------------------------------------------------------------------- #
-class CityscapesVPS:
+class CityscapesVPS(VideoSegDataset):
     """Index and load Cityscapes-VPS clips from a local copy of the dataset.
 
-    Indexing is by clip: ``len(ds)`` is the number of clips and ``ds[i]`` loads
-    the ``i``-th clip's frames + (sparse) annotations. Metadata-only access is
-    available via :attr:`clips` and :meth:`clip_record` without touching pixels.
+    Indexing is by clip: ``len(ds)`` is the number of clips and ``ds[i]`` returns
+    a :class:`data.base.VideoClip` (frames + semantic train-id labels). The legacy
+    :meth:`load_clip` still returns the raw dict with (decoded) annotation ids.
+    Metadata-only access is available via :attr:`clips` and :meth:`clip_record`
+    without touching pixels.
     """
+
+    name = "cityscapes_vps"
 
     def __init__(self, config: Optional[CityscapesVPSConfig] = None, **overrides: Any):
         self.config = (config or CityscapesVPSConfig()).with_overrides(**overrides)
@@ -342,12 +380,55 @@ class CityscapesVPS:
     def clip_record(self, index: int) -> ClipRecord:
         return self.clips[index]
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
-        return self.load_clip(index)
+    # -- VideoSegDataset interface ------------------------------------------- #
+    # ``ds[i]`` / ``iter(ds)`` come from the base class and yield VideoClip.
+    @property
+    def class_names(self) -> Tuple[str, ...]:
+        return CITYSCAPES_TRAIN_CLASSES
 
-    def __iter__(self):
-        for i in range(len(self)):
-            yield self.load_clip(i)
+    @property
+    def ignore_index(self) -> int:
+        return IGNORE_INDEX
+
+    @property
+    def palette(self) -> np.ndarray:
+        return CITYSCAPES_PALETTE.copy()
+
+    def clip_id(self, index: int) -> str:
+        return self.clips[index].clip_id
+
+    def labeled_mask(self, index: int) -> np.ndarray:
+        return self.clips[index].labeled_mask
+
+    def num_frames(self, index: int) -> int:
+        return self.clips[index].num_frames
+
+    def frame_indices(self, index: int) -> np.ndarray:
+        return self.clips[index].frame_indices
+
+    def load_frame(self, index: int, t: int) -> np.ndarray:
+        return self.load_image(self.clips[index].frames[t].image_path)
+
+    def load_label(self, index: int, t: int) -> Optional[np.ndarray]:
+        """Semantic train-id map of frame ``t`` (None if the frame is unlabelled).
+
+        Single-channel annotations (e.g. ``labelmap/``) are read as train ids;
+        values outside ``[0, 19)`` become ``ignore_index``. Panoptic (RGB)
+        annotations need an id -> class mapping, which is not implemented yet.
+        """
+        frame = self.clips[index].frames[t]
+        if frame.annotation_path is None:
+            return None
+        raw = self.load_annotation(frame.annotation_path, decode=False)
+        if raw.ndim != 2:
+            raise NotImplementedError(
+                f"{frame.annotation_path.name}: panoptic (multi-channel) annotations cannot be "
+                "mapped to semantic classes yet; point annotation_subdir at a single-channel "
+                "train-id directory such as 'labelmap'."
+            )
+        ids = raw.astype(np.int64)
+        valid = (ids >= 0) & (ids < self.num_classes)
+        return np.where(valid, ids, self.ignore_index).astype(np.uint8)
 
     # -- Pixel loading ------------------------------------------------------- #
     def load_image(self, path: Path) -> np.ndarray:
