@@ -381,6 +381,9 @@ class PIDNetBackbone(nn.Module):
     size_divisor = 8  # forward() needs H, W divisible by 8
     #: training-only heads present in official checkpoints, dropped on load
     aux_prefixes = ("seghead_p.", "seghead_d.")
+    # FullModel loss buffers saved in the released checkpoints (class weights);
+    # the released PIDNet_S_Cityscapes_val.pt has sem_loss.* and sb_loss.*.
+    loss_prefixes = ("sem_loss.", "bd_loss.", "sb_loss.")
 
     def __init__(
         self,
@@ -413,7 +416,7 @@ class PIDNetBackbone(nn.Module):
     ) -> Dict[str, Any]:
         path = resolve_weights(source, cache_dir=cache_dir, sha256=sha256)
         state = extract_state_dict(load_checkpoint(path, trust_pickle=trust_pickle))
-        report = load_into(self.net, state, strict=strict, ignore_prefixes=self.aux_prefixes + ("sem_loss.", "bd_loss."))
+        report = load_into(self.net, state, strict=strict, ignore_prefixes=self.aux_prefixes + self.loss_prefixes)
         self.weights_info = {"source": str(source), "file": path.name, "sha256": sha256_of(path), "load": report}
         return report
 

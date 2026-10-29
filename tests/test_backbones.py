@@ -136,6 +136,20 @@ def test_weights_from_path_and_file_url(tmp_path, pidnet):
     assert torch.equal(via_url.net.final_layer.conv2.weight, pidnet.net.final_layer.conv2.weight)
 
 
+def test_weights_released_checkpoint_layout(tmp_path, pidnet):
+    # PIDNet_S_Cityscapes_val.pt as released: a flat dict of FullModel keys,
+    # i.e. `model.*` plus the class-weight buffers of both losses.
+    state = {"model." + k: v for k, v in pidnet.net.state_dict().items()}
+    state["sem_loss.criterion.weight"] = torch.ones(19)
+    state["sb_loss.criterion.weight"] = torch.ones(19)
+    path = tmp_path / "released.pt"
+    torch.save(state, path)
+    fresh = PIDNetBackbone(variant="s")
+    report = fresh.load_weights(str(path), strict=True)
+    assert not report["missing"] and not report["unexpected"]
+    assert torch.equal(fresh.net.final_layer.conv2.weight, pidnet.net.final_layer.conv2.weight)
+
+
 def test_weights_failures_are_explicit(tmp_path, pidnet):
     with pytest.raises(WeightsError, match="not found"):
         resolve_weights(str(tmp_path / "missing.pt"))
