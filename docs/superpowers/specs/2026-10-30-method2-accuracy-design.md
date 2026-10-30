@@ -11,6 +11,10 @@ pass followed by k full-resolution glimpses beats simply shrinking the whole
 frame, at equal T4 latency, for PIDNet-S and BiSeNetV2. The same code must
 serve both models, which also checks that the harness is model-agnostic.
 
+The accuracy metric is the standard 19-class mIoU, and nothing else (decided
+2026-10-30). No per-class subset is a target, although per-class IoUs are
+still reported.
+
 The trade-off target isn't decided yet (it waits on a discussion with a
 collaborator). So the deliverable is full curves, from which either target can
 be read:
@@ -126,7 +130,7 @@ All rules read only the context pass of the current frame:
 - pooling within a cell: mean (current) or the mean of its top 10% pixels;
 - optional class-prior term: weight the score by the predicted class of each
   pixel (for example up-weighting thin and small classes). The weights are
-  tuned on train;
+  tuned on train to maximise mIoU, never a class subset;
 - top-k vs greedy with Chebyshev suppression 1;
 - oracle, random and fixed-prior, as references.
 
@@ -178,4 +182,5 @@ All rules read only the context pass of the current frame:
   configuration.
 - Equal-latency interpolation piecewise linear between the five full-frame
   scales.
-- Class-prior weights are allowed as a selection feature, tuned on train.
+- Class-prior weights are allowed as a selection feature, tuned on train for
+  mIoU.
