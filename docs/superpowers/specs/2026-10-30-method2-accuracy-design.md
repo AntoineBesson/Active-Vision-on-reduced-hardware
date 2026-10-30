@@ -82,7 +82,8 @@ be read:
   those points:
   - context scales 0.25, 0.375, 0.5;
   - glimpse sizes 256, 384, 512;
-  - k = 1, 2, 4, 8 (16 for crops of 256 and less);
+  - k = 1, 2, 4, 8 (the overhead table stops at k = 8, so k = 16 needs a
+    new latency-floor run);
   - margin 32;
   - top-k or greedy selection.
 
