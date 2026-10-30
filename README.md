@@ -22,17 +22,17 @@ they can be retrained or reused on other video segmentation datasets.
 | Piece | State |
 | --- | --- |
 | Dataset-agnostic interface `VideoSegDataset` (`src/data/base.py`) | ✅ |
-| Cityscapes-VPS adapter + 19-class mapping, layout verified against the official scripts | ✅ (real-data check pending) |
+| Cityscapes-VPS adapter + 19-class mapping, layout verified against the official scripts | ✅ confirmed on real data |
 | Torch sub-clip `Dataset`/`DataLoader`, clip-level splits | ✅ |
 | Interfaces: `SegmentationBackbone`, `GazePolicy`, `SceneMemory` | ✅ contracts only |
 | Backbones: PIDNet-S (+M/L), BiSeNetV2, dummy | ✅ ports bit-exact vs official code |
-| Evaluation harness: mIoU, FLOPs, GPU latency, peak memory, run JSON | ✅ (GPU path not exercised here: no GPU) |
-| Full-frame baseline CLI, 5 input scales | ✅ on the synthetic fixture · ⏳ real data |
-| Real-data diagnostics script | ✅ · ⏳ to run on real data |
+| Evaluation harness: mIoU, FLOPs, GPU latency, peak memory, run JSON | ✅ incl. GPU path (RTX 2060) |
+| Full-frame baseline CLI, 5 input scales | ✅ fixture and real data |
+| Real-data diagnostics script | ✅ run on real data, no problem |
 | Method 2: foveation without memory | ⬜ next |
 | Method 3: foveation + persistent canvas | ⬜ |
 | Method 4: RL-trained policy | ⬜ optional |
-| Any result on real data | ⬜ waiting for Cityscapes access |
+| Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout
 
@@ -180,7 +180,10 @@ true` is set, for smoke tests only.
   `--set backbone.weights=...`. Use the **`_val`** checkpoint, which was
   trained on Cityscapes train only. The `_test` one was trained on
   train+val, and **every Cityscapes-VPS clip is a Cityscapes val sequence**,
-  so it would leak.
+  so it would leak. The released file (sha256 `b51aa935…7c01`) loads
+  strictly; its training-loss buffers (`sem_loss.*`, `sb_loss.*`) are dropped.
+  The individual Drive links in that README may be dead; the author's
+  backup folder linked at its top has the same files.
 - **BiSeNetV2**: `configs/baseline_fullframe_bisenetv2.yaml` points at the
   public release asset `model_final_v2_city.pth` of
   [CoinCheung/BiSeNet](https://github.com/CoinCheung/BiSeNet), pinned by sha256.
@@ -197,24 +200,29 @@ statistics, they give identical state-dict keys and parameter counts
 
 Cityscapes-VPS (Kim et al., CVPR 2020) is built from Cityscapes, which is
 licence-gated (non-commercial use; registration and approval required). The
-VPS annotations are CC BY-NC-SA 4.0 on top of the Cityscapes licence. This
-repo contains no download logic. The steps below follow the official
-[VPSNet DATASET.md](https://github.com/mcahny/vps/blob/master/docs/DATASET.md).
-They could not be run here (no data access), so check each step's output.
+VPS annotations are CC BY-NC-SA 4.0 on top of the Cityscapes licence. The
+steps below follow the official
+[VPSNet DATASET.md](https://github.com/mcahny/vps/blob/master/docs/DATASET.md)
+and were run end to end on Windows with Python 3.14 and Pillow 13 (see the
+two script patches in step 4).
 
 1. **Cityscapes account.** Register at <https://www.cityscapes-dataset.com/register/>
    and wait for approval.
 2. **Cityscapes packages** (log in, <https://www.cityscapes-dataset.com/downloads/>):
    - the `gtFine` package (`gtFine_trainvaltest.zip`);
-   - the `leftImg8bit_sequence` package. Third-party download guides list
-     these as packageID 1 and 14, the latter at about 324 GB; check both on
-     the page (it could not be reached from here). Only the `val/` part
-     (500 sequences × 30 frames) is needed, so after downloading you can
-     extract just that part, e.g. `unzip <archive>.zip 'leftImg8bit_sequence/val/*'`.
+   - the `leftImg8bit_sequence` package (packageID 1 and 14; the latter is
+     about 324 GB). Only the `val/` part (500 sequences × 30 frames) is needed.
 
-   Command-line download via a login cookie is described in several guides,
-   or use `csDownload` from `pip install cityscapesscripts` (`csDownload -l`
-   lists the package names).
+   `scripts/get_val.py` downloads just those two `val/` folders (2,000 +
+   15,000 files, ~34 GB) without fetching the whole archives: it reads the
+   zips remotely with HTTP range requests. It is resumable and asks for the
+   Cityscapes login (or reads `CITYSCAPES_USERNAME` / `CITYSCAPES_PASSWORD`).
+   At ~2.7 MB/s the frames took about 3.5 h.
+
+   ```bash
+   pip install remotezip requests
+   python scripts/get_val.py --out /path/to/cityscapes   # -> gtFine/val, leftImg8bit_sequence/val
+   ```
 3. **VPS annotations.** Download `cityscapes-vps-dataset-1.0.zip` from the
    link in the [VPSNet README](https://github.com/mcahny/vps) (Dropbox) and
    unzip it so you have `data/cityscapes_vps/` with the `*_city_vps.json`
@@ -229,6 +237,21 @@ They could not be run here (no data access), so check each step's output.
    bash ./prepare_data/merge_datasets.sh data/cityscapes_vps data/leftImg8bit_sequence/val/ data/gtFine/val/
    bash ./prepare_data/create_panoptic_labels.sh data/cityscapes_vps/
    ```
+
+   On Windows, or with Pillow ≥ 10, two patches to the official scripts are
+   needed. Without them the label step finishes with no output (the worker
+   pool hides the errors), and on Windows it overwrites `cls/` in place:
+   - `create_panoptic_labels.py` and `create_panoptic_video_labels.py`:
+     replace `x.split('/')[-1]` with `os.path.basename(x)` (with `\` paths,
+     the "file name" is the full input path, so outputs overwrite the inputs);
+   - `create_panoptic_labels.py`: save `pan_map.astype(np.uint16)`. Pillow ≥ 10
+     cannot write 32-bit PNGs; old Pillow wrote them as 16-bit, and ids
+     (≤ 18999) fit.
+
+   The `.sh` wrappers just call the Python scripts per split, so on Windows
+   run those calls directly. Expected counts: `train/labelmap`,
+   `train/panoptic_inst` 2400; `val/labelmap`, `val/panoptic_inst`,
+   `val/panoptic_video` 300.
 
    Keep `val/labelmap/` and `val/panoptic_inst/`. DATASET.md says they can be
    deleted, but the diagnostics use them to cross-check the label mapping.
@@ -247,8 +270,8 @@ They could not be run here (no data access), so check each step's output.
 The layout and label encodings were checked against the **official VPSNet
 release** ([mcahny/vps](https://github.com/mcahny/vps): `docs/DATASET.md`,
 `prepare_data/*.py`, `tools/eval_vpq.py`, `tools/dataset/cityscapes_vps.py`).
-No real files were available yet, so nothing here has been checked against
-real data; `scripts/diagnose_real_data.py` will do that. Full details, with
+All of it was then confirmed on the real data by
+`scripts/diagnose_real_data.py` (2026-10-30, no problem reported). Full details, with
 file-by-file sources, are in the header of
 [`src/data/cityscapes_vps.py`](src/data/cityscapes_vps.py);
 [`configs/cityscapes_vps.yaml`](configs/cityscapes_vps.yaml) encodes them.
@@ -257,7 +280,7 @@ file-by-file sources, are in the header of
 
 - The VPS zip ships annotations + JSON only. Frames are copied from Cityscapes
   `leftImg8bit_sequence/val` (all 500 VPS videos are Cityscapes *val*
-  sequences), 400/100/100 videos for train/val/test, 30 frames each, labelled at
+  sequences), 400/50/50 videos for train/val/test, 30 frames each, labelled at
   clip positions 4, 9, 14, 19, 24, 29.
 - `val/` and `test/` have `img_all/` (every frame) whose files keep their
   **original Cityscapes names** (`frankfurt_000000_000294_leftImg8bit.png`):
@@ -273,7 +296,10 @@ file-by-file sources, are in the header of
     are random colours. The class of a segment is **only** in
     `panoptic_gt_val_city_vps.json`; it cannot be recovered from the colour.
 - Crowd regions keep their class in `labelmap/` but are void (255) in the two
-  panoptic encodings.
+  panoptic encodings. Also, each panoptic instance takes the majority semantic
+  class of its mask, so a few thing pixels differ from `labelmap` (e.g. a
+  rider's pixels inside a bicycle instance). On real data `labelmap` agrees with
+  the configured labels on 99.96% (val) / 99.83% (train) of pixels.
 
 **What the config does with this:** val/test frames come from `img_all/`,
 val labels from `panoptic_video/` + JSON, train frames and labels from
@@ -282,22 +308,23 @@ Everything maps to the 19 train classes with ignore index 255, and the
 mapping lives entirely in config (`label_mapping`), so another dataset can
 supply its own.
 
-**Still assumed (each is checked by `scripts/diagnose_real_data.py`):**
+**Assumptions, all confirmed on the real data:**
 
 1. Two VPS videos never use consecutive frame numbers of the same Cityscapes
-   sequence, so a run of consecutive `img_all` frames is one clip. If a run
-   holds annotations of several videos, it is split with a warning.
+   sequence, so a run of consecutive `img_all` frames is one clip (no split
+   warning: val and test give exactly 50 clips of 30 frames).
 2. The second 4-digit field (`fid`) is undocumented; it is ignored, and
    frames are ordered by the Cityscapes frame number.
-3. Annotation PNG bit depth (8/16/32-bit) is read as stored.
+3. Annotation PNG bit depth is read as stored (`panoptic_inst` is 16-bit with
+   the patched script, `panoptic_video` RGB).
 
 The earlier guess (clip-prefixed names inside `img_all/`) finds **zero clips**
 on the official layout. It survives only as the `CityscapesVPSConfig`
 defaults, because the original synthetic fixture and its tests use it.
 
-## To run once data is available
+## Running on the real data
 
-⚠️ None of this has been run yet. There are no real-data numbers anywhere in this repo.
+All of this was run on 2026-10-30; results are in [Real-data results](#real-data-results).
 
 1. **Diagnose the copy**, then read the summary and look at the overlays:
 
@@ -306,15 +333,16 @@ defaults, because the original synthetic fixture and its tests use it.
    # -> experiments/data_check/diagnose/{diagnose_report.json, overlay_*.png}
    ```
 
-   What the official layout should give: val 100 clips × 30 frames with 6
+   What the official layout should give: val 50 clips × 30 frames with 6
    labelled frames each at positions 4, 9, 14, 19, 24, 29; train 400 clips
-   of 6 frames (only `img/` exists); test 100 clips × 30 frames, none
+   of 6 frames (only `img/` exists); test 50 clips × 30 frames, none
    labelled; every filename matching its regex; no orphan annotation;
    1024×2048 frames; `panoptic_inst` agreeing 100% with `panoptic_video` +
-   JSON; `labelmap` differing only on crowd regions. Any other outcome means
+   JSON; `labelmap` differing only on crowd regions and instance
+   majority-class pixels (~0.05–0.2%). Any other outcome means
    the config (or an assumption) needs fixing before running anything else.
 2. **Eyeball a clip:** `python scripts/verify_data.py --split val --clip-index 0`.
-3. **Full-frame baselines on a T4.** Five scales each, one JSON per scale:
+3. **Full-frame baselines.** Five scales each, one JSON per scale:
 
    ```bash
    export PIDNET_S_WEIGHTS=/path/to/PIDNet_S_Cityscapes_val.pt
@@ -327,6 +355,40 @@ defaults, because the original synthetic fixture and its tests use it.
    a different frame set (the 500 gtFine images, without VPS crowd
    handling), so equality is not expected, but a large gap points to a
    preprocessing or mapping problem: check the overlays and cross-checks first.
+
+## Real-data results
+
+Cityscapes-VPS val: 50 clips, the 300 labelled frames, fp32 accuracy pass.
+Latency is the median end-to-end time on a laptop **RTX 2060 Max-Q (6 GB)**,
+batch 1, fp16; a T4 will give different numbers.
+
+| Backbone | Scale | Input | mIoU | GFLOPs/frame | Latency (ms) |
+| --- | --- | --- | --- | --- | --- |
+| PIDNet-S | 1.0 | 1024×2048 | 71.5 | 94.4 | 26.5 |
+| PIDNet-S | 0.75 | 768×1536 | 70.1 | 53.1 | 26.4 |
+| PIDNet-S | 0.5 | 512×1024 | 64.8 | 23.6 | 25.1 |
+| PIDNet-S | 0.375 | 384×768 | 58.6 | 13.3 | 21.5 |
+| PIDNet-S | 0.25 | 256×512 | 50.1 | 5.9 | 20.5 |
+| BiSeNetV2 | 1.0 | 1024×2048 | 70.4 | 196.8 | 37.3 |
+| BiSeNetV2 | 0.75 | 768×1536 | 69.9 | 110.7 | 26.1 |
+| BiSeNetV2 | 0.5 | 512×1024 | 67.6 | 49.2 | 20.0 |
+| BiSeNetV2 | 0.375 | 384×768 | 64.3 | 27.7 | 16.6 |
+| BiSeNetV2 | 0.25 | 256×512 | 59.1 | 12.3 | 14.6 |
+
+**Pipeline check against the official numbers.** On VPS val, PIDNet-S is
+7 points below its official 78.8, almost all of it on rare classes (train
+26.9, motorcycle 31.4, wall 48.0 IoU), which a 50-clip set decides with a
+handful of objects. To rule out a pipeline bug, the same code (frame loading,
+backbone wrapper, upsampling, confusion matrix) was run on the **official 500
+Cityscapes val images** (frame `_000019` of each sequence, gtFine `labelIds`
+→ train ids): PIDNet-S gives **78.76** (official 78.8) and BiSeNetV2
+**74.95** (CoinCheung single-scale: 74.95). The gap on VPS val is therefore
+the frame set, not the pipeline.
+
+Note: `BiSeNetV2Backbone` defaults to ImageNet mean/std; the CoinCheung
+checkpoint needs its Cityscapes mean/std (set in
+`configs/baseline_fullframe_bisenetv2.yaml`). With ImageNet stats it drops
+to 69.1 on official val.
 
 ## Using another dataset
 

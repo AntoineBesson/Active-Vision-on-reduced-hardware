@@ -22,8 +22,8 @@ Verified from the official code/docs:
 * ``cityscapes-vps-dataset-1.0.zip`` ships annotations + JSON only. Frames are
   copied from Cityscapes ``leftImg8bit_sequence`` (``val/`` part only: all 500
   VPS videos are Cityscapes *val* sequences) by ``fetch_city_images.py``; the
-  20th-frame labels come from Cityscapes ``gtFine/val``. Splits: 400/100/100
-  videos = 2400/600/600 labelled frames; labels at the 5th, 10th, ..., 30th
+  20th-frame labels come from Cityscapes ``gtFine/val``. Splits: 400/50/50
+  videos = 2400/300/300 labelled frames (checked on the release JSONs); labels at the 5th, 10th, ..., 30th
   frame of each 30-frame video, i.e. clip positions 4, 9, 14, 19, 24, 29
   (``pred[(20 // 5)::5]`` in tools/dataset/cityscapes_vps.py).
 * Layout after the official preparation (``<root>`` = ``data/cityscapes_vps``)::
