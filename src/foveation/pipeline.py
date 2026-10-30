@@ -28,7 +28,22 @@ from models.utils import upsample_logits
 from .ops import (SCORE_KINDS, GlimpseGrid, cell_features, downsample, gather_crops, paste_labels, pool_scores,
                   samples_per_cell, select_greedy, select_topk)
 
-__all__ = ["FoveationConfig", "FoveatedSegmenter", "StubBackbone"]
+__all__ = ["FoveationConfig", "FoveatedSegmenter", "StubBackbone", "context_pass", "glimpse_labels"]
+
+
+def context_pass(backbone: nn.Module, frame: torch.Tensor, scale: float) -> Tuple[torch.Tensor, torch.Tensor]:
+    """(1, C, h, w) context logits and the (H, W) labels they give at full resolution."""
+    small = downsample(frame, scale)
+    logits = backbone(small)
+    labels = upsample_logits(logits, tuple(frame.shape[-2:]), backbone.output_stride, backbone.align_corners,
+                             input_size=tuple(small.shape[-2:])).argmax(1)[0]
+    return logits, labels
+
+
+def glimpse_labels(backbone: nn.Module, crops: torch.Tensor) -> torch.Tensor:
+    """(k, 3, size, size) crops -> (k, size, size) labels."""
+    size = tuple(crops.shape[-2:])
+    return upsample_logits(backbone(crops), size, backbone.output_stride, backbone.align_corners).argmax(1)
 
 
 @dataclass(frozen=True)
@@ -66,17 +81,11 @@ class FoveatedSegmenter(nn.Module):
                 return_idx: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         cfg, grid = self.cfg, self.grid
         h, w = self.frame_size
-        small = downsample(frame, cfg.context_scale)
-        ctx_logits = self.ctx(small)
+        ctx_logits, labels = context_pass(self.ctx, frame, cfg.context_scale)
         sums, top10 = cell_features(ctx_logits, grid, [cfg.score])[cfg.score]
         scores = pool_scores(sums, top10, samples_per_cell(ctx_logits.shape[-2], grid), cfg.pool, self._class_weights)
         idx = select_topk(scores, cfg.k) if cfg.selection == "topk" else select_greedy(scores, grid, cfg.k, cfg.suppress)
-        crops = gather_crops(grid.pad_frame(frame), grid, idx)
-        crop_logits = self.glimpse(crops)
-        size = (grid.size, grid.size)
-        crop_labels = upsample_logits(crop_logits, size, self.glimpse.output_stride, self.glimpse.align_corners).argmax(1)
-        labels = upsample_logits(ctx_logits, (h, w), self.ctx.output_stride, self.ctx.align_corners,
-                                 input_size=tuple(small.shape[-2:])).argmax(1)[0]
+        crop_labels = glimpse_labels(self.glimpse, gather_crops(grid.pad_frame(frame), grid, idx))
         canvas = paste_labels(grid.to_canvas(labels), crop_labels, grid, idx)
         return (canvas[:h, :w], idx) if return_idx else canvas[:h, :w]
 
