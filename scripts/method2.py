@@ -220,7 +220,7 @@ def _weights_key(pair: str, scale: float, size: int) -> str:
 # --------------------------------------------------------------------------- #
 def cmd_cache(args: argparse.Namespace) -> int:
     from eval.results import git_info
-    from foveation.cache import build_cache, cache_path
+    from foveation.cache import build_model_caches, cache_path
     from models.registry import build_backbone
 
     device = resolve_device(args.device)
@@ -234,21 +234,23 @@ def cmd_cache(args: argparse.Namespace) -> int:
         clips = None if args.max_clips is None else list(range(min(args.max_clips, len(dataset))))
         meta = {"split": args.split, "git": git_info(REPO_ROOT), "dataset_fingerprint": dataset.fingerprint(),
                 "class_names": list(dataset.class_names), "clips_limited_to": args.max_clips}
+        jobs = []
         for size in _ints(args.sizes):
             grid = _grid(frame_size, size, args.margin)
-            jobs = [("glimpse", None)] + [("context", s) for s in _floats(args.scales)]
-            for kind, scale in jobs:
+            for kind, scale in [("glimpse", None)] + [("context", s) for s in _floats(args.scales)]:
                 path = cache_path(root, args.split, kind, model, grid, scale)
                 tmp = path.with_name(path.name[:-len(".npz")] + ".tmp.npz")
                 if tmp.exists():
                     tmp.unlink()  # left by an interrupted build: never trusted
                 if path.exists():
                     skipped += 1
-                    continue
-                print(f"[method2 cache] {path.name} ...", flush=True)
-                build_cache(dataset, kind, backbone, model, grid, path, device, scale=scale, clip_indices=clips,
-                            precision=args.precision, allow_any_frame_size=args.fixture, extra_meta=meta)
-                built += 1
+                else:
+                    jobs.append((kind, grid, scale, path))
+        if jobs:  # one pass over the frames builds every missing cache of this model
+            print(f"[method2 cache] {model}: {', '.join(j[3].name for j in jobs)}", flush=True)
+            build_model_caches(dataset, backbone, model, jobs, device, clip_indices=clips, precision=args.precision,
+                               allow_any_frame_size=args.fixture, extra_meta=meta, progress=True)
+            built += len(jobs)
     print(f"[method2 cache] built {built}, skipped {skipped} existing, in {root / args.split}")
     return 0
 

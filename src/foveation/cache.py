@@ -25,7 +25,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -35,7 +35,7 @@ from eval.harness import PRECISIONS, frame_to_tensor
 from .ops import SCORE_KINDS, GlimpseGrid, cell_features, gather_crops, paste_labels, samples_per_cell
 from .pipeline import context_pass, glimpse_labels
 
-__all__ = ["FRAME", "per_cell_confusion", "ContextCells", "context_cells", "glimpse_cells", "build_cache", "cache_path"]
+__all__ = ["FRAME", "per_cell_confusion", "ContextCells", "context_cells", "glimpse_cells", "build_cache", "build_model_caches", "cache_path"]
 
 FRAME = (1024, 2048)  # the frame the T4 latency tables were measured at
 
@@ -71,6 +71,12 @@ def context_cells(backbone: torch.nn.Module, frame: torch.Tensor, label: torch.T
     """Per-cell context confusion and selection features of one (1, 3, H, W) frame."""
     with torch.no_grad():
         logits, labels = context_pass(backbone, frame, scale)
+    return _context_cells_from(logits, labels, label, grid, num_classes, ignore_index, kinds)
+
+
+def _context_cells_from(logits: torch.Tensor, labels: torch.Tensor, label: torch.Tensor, grid: GlimpseGrid,
+                        num_classes: int, ignore_index: int, kinds: Sequence[str]) -> ContextCells:
+    with torch.no_grad():
         feats = cell_features(logits, grid, kinds)
     return ContextCells(conf=per_cell_confusion(labels, label, grid, num_classes, ignore_index),
                         class_sums={k: v[0].float() for k, v in feats.items()},
@@ -100,64 +106,92 @@ def cache_path(root: Path, split: str, kind: str, model: str, grid: GlimpseGrid,
     raise ValueError(f"kind must be 'context' or 'glimpse', got {kind!r}")
 
 
+Job = Tuple[str, GlimpseGrid, Optional[float], Path]  # (kind, grid, context scale or None, output path)
+
+
 def build_cache(dataset: Any, kind: str, backbone: torch.nn.Module, model_name: str, grid: GlimpseGrid,
                 out_path: Path, device: Any, scale: Optional[float] = None,
                 clip_indices: Optional[Sequence[int]] = None, precision: str = "fp32",
                 allow_any_frame_size: bool = False, extra_meta: Optional[Dict[str, Any]] = None) -> Path:
-    """Run one pass over every labelled frame of ``clip_indices`` and write the cache npz.
+    """One cache file: see :func:`build_model_caches`."""
+    return build_model_caches(dataset, backbone, model_name, [(kind, grid, scale, Path(out_path))], device,
+                              clip_indices=clip_indices, precision=precision,
+                              allow_any_frame_size=allow_any_frame_size, extra_meta=extra_meta)[0]
 
-    The file is written as ``<name>.tmp.npz`` and renamed when complete, so an
-    interrupted build never leaves a file that looks finished.
+
+def build_model_caches(dataset: Any, backbone: torch.nn.Module, model_name: str, jobs: Sequence[Job], device: Any,
+                       clip_indices: Optional[Sequence[int]] = None, precision: str = "fp32",
+                       allow_any_frame_size: bool = False, extra_meta: Optional[Dict[str, Any]] = None,
+                       progress: bool = False) -> List[Path]:
+    """Every cache of one backbone in a single pass over the labelled frames of ``clip_indices``.
+
+    Each frame is loaded once; the context pass runs once per scale and serves
+    every grid. Each file is written as ``<name>.tmp.npz`` and renamed when
+    complete, so an interrupted build never leaves a file that looks finished.
     """
-    if kind not in ("context", "glimpse"):
-        raise ValueError(f"kind must be 'context' or 'glimpse', got {kind!r}")
-    if kind == "context" and scale is None:
-        raise ValueError("a context cache needs its scale")
-    if not allow_any_frame_size and tuple(grid.frame_size) != FRAME:
-        raise ValueError(f"grid frame {grid.frame_size[0]}x{grid.frame_size[1]}: the T4 latency tables are for 1024x2048")
+    for kind, grid, scale, _ in jobs:
+        if kind not in ("context", "glimpse"):
+            raise ValueError(f"kind must be 'context' or 'glimpse', got {kind!r}")
+        if kind == "context" and scale is None:
+            raise ValueError("a context cache needs its scale")
+        if not allow_any_frame_size and tuple(grid.frame_size) != FRAME:
+            raise ValueError(f"grid frame {grid.frame_size[0]}x{grid.frame_size[1]}: "
+                             f"the T4 latency tables are for 1024x2048")
     dtype = PRECISIONS[precision]
     if dtype != torch.float32:
         backbone = copy.deepcopy(backbone)  # don't convert the caller's model in place
     backbone = backbone.to(device=device, dtype=dtype).eval()
     c, ignore = dataset.num_classes, dataset.ignore_index
-    indices = range(len(dataset)) if clip_indices is None else clip_indices
-    conf, clip_index, ts, q = [], [], [], 0
-    sums: Dict[str, list] = {k: [] for k in SCORE_KINDS}
-    tops: Dict[str, list] = {k: [] for k in SCORE_KINDS}
-    for ci in indices:
+    indices = list(range(len(dataset)) if clip_indices is None else clip_indices)
+    frame_size = tuple(jobs[0][1].frame_size)
+    acc = [{"conf": [], "sums": {k: [] for k in SCORE_KINDS}, "tops": {k: [] for k in SCORE_KINDS}, "q": 0}
+           for _ in jobs]
+    clip_index, ts = [], []
+    scales = sorted({scale for kind, _, scale, _ in jobs if kind == "context"})
+    for n, ci in enumerate(indices):
         for t in np.flatnonzero(np.asarray(dataset.labeled_mask(ci), dtype=bool)):
             image = dataset.load_frame(ci, int(t))
-            if tuple(image.shape[:2]) != tuple(grid.frame_size):
+            if tuple(image.shape[:2]) != frame_size:
                 raise ValueError(f"clip {dataset.clip_id(ci)} frame {t} is {image.shape[0]}x{image.shape[1]}, "
-                                 f"the grid is for {grid.frame_size[0]}x{grid.frame_size[1]}"
+                                 f"the grid is for {frame_size[0]}x{frame_size[1]}"
                                  + ("" if allow_any_frame_size else " (the T4 latency tables are for 1024x2048)"))
             frame = frame_to_tensor(image, device).to(dtype)
             label = torch.from_numpy(np.asarray(dataset.load_label(ci, int(t)), dtype=np.int64)).to(device)
-            if kind == "context":
-                cells = context_cells(backbone, frame, label, scale, grid, c, ignore)
-                conf.append(cells.conf.cpu())
-                for k in SCORE_KINDS:
-                    sums[k].append(cells.class_sums[k].cpu())
-                    tops[k].append(cells.top10[k].cpu())
-                q = cells.q
-            else:
-                conf.append(glimpse_cells(backbone, frame, label, grid, c, ignore).cpu())
+            with torch.no_grad():
+                ctx = {s: context_pass(backbone, frame, s) for s in scales}
+            for (kind, grid, scale, _), a in zip(jobs, acc):
+                if kind == "context":
+                    cells = _context_cells_from(*ctx[scale], label, grid, c, ignore, SCORE_KINDS)
+                    a["conf"].append(cells.conf.cpu())
+                    for k in SCORE_KINDS:
+                        a["sums"][k].append(cells.class_sums[k].cpu())
+                        a["tops"][k].append(cells.top10[k].cpu())
+                    a["q"] = cells.q
+                else:
+                    a["conf"].append(glimpse_cells(backbone, frame, label, grid, c, ignore).cpu())
             clip_index.append(ci)
             ts.append(int(t))
-    meta = {"kind": kind, "model": model_name, "scale": scale, "size": grid.size, "margin": grid.margin,
-            "rows": grid.rows, "cols": grid.cols, "frame_size": list(grid.frame_size), "precision": precision,
-            "num_classes": c, "ignore_index": ignore, **(extra_meta or {})}
-    arrays: Dict[str, Any] = {"conf": torch.stack(conf).numpy(), "clip_index": np.array(clip_index, dtype=np.int32),
-                              "t": np.array(ts, dtype=np.int32), "meta": json.dumps(meta, default=str)}
-    if kind == "context":
-        arrays["q"] = np.int32(q)
-        for k in SCORE_KINDS:
-            arrays[f"class_sums_{k}"] = torch.stack(sums[k]).numpy()
-            arrays[f"top10_{k}"] = torch.stack(tops[k]).numpy()
-    out_path = Path(out_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = out_path.with_name(out_path.name[:-len(".npz")] + ".tmp.npz") if out_path.name.endswith(".npz") \
-        else out_path.with_name(out_path.name + ".tmp.npz")
-    np.savez(tmp, **arrays)
-    os.replace(tmp, out_path)
-    return out_path
+        if progress:
+            print(f"\r[cache] {model_name}: clip {n + 1}/{len(indices)}", end="", flush=True)
+    if progress:
+        print()
+    written = []
+    for (kind, grid, scale, out_path), a in zip(jobs, acc):
+        meta = {"kind": kind, "model": model_name, "scale": scale, "size": grid.size, "margin": grid.margin,
+                "rows": grid.rows, "cols": grid.cols, "frame_size": list(grid.frame_size), "precision": precision,
+                "num_classes": c, "ignore_index": ignore, **(extra_meta or {})}
+        arrays: Dict[str, Any] = {"conf": torch.stack(a["conf"]).numpy(),
+                                  "clip_index": np.array(clip_index, dtype=np.int32),
+                                  "t": np.array(ts, dtype=np.int32), "meta": json.dumps(meta, default=str)}
+        if kind == "context":
+            arrays["q"] = np.int32(a["q"])
+            for k in SCORE_KINDS:
+                arrays[f"class_sums_{k}"] = torch.stack(a["sums"][k]).numpy()
+                arrays[f"top10_{k}"] = torch.stack(a["tops"][k]).numpy()
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = out_path.with_name(out_path.name[:-len(".npz")] + ".tmp.npz") if out_path.name.endswith(".npz")             else out_path.with_name(out_path.name + ".tmp.npz")
+        np.savez(tmp, **arrays)
+        os.replace(tmp, out_path)
+        written.append(out_path)
+    return written

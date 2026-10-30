@@ -12,7 +12,14 @@ torch = pytest.importorskip("torch")
 import generate_fixture as gf  # noqa: E402
 from eval.harness import frame_to_tensor  # noqa: E402
 from eval.metrics import ConfusionMatrix  # noqa: E402
-from foveation.cache import build_cache, cache_path, context_cells, glimpse_cells, per_cell_confusion  # noqa: E402
+from foveation.cache import (  # noqa: E402
+    build_cache,
+    build_model_caches,
+    cache_path,
+    context_cells,
+    glimpse_cells,
+    per_cell_confusion,
+)
 from foveation.ops import SCORE_KINDS, GlimpseGrid  # noqa: E402
 
 
@@ -68,6 +75,23 @@ def test_cache_files_hold_every_labelled_frame(tmp_path, vps, oracle_backbone):
     assert dc["class_sums_entropy"].shape == (vps.num_labeled_frames(), grid.num_cells, 19)
     assert np.array_equal(dc["clip_index"], d["clip_index"]) and np.array_equal(dc["t"], d["t"])
     assert not list(tmp_path.glob("*.tmp.npz"))
+
+
+def test_one_pass_builds_the_same_files_as_one_cache_at_a_time(tmp_path, vps, oracle_backbone):
+    grids = [GlimpseGrid((gf.OH, gf.OW), 12, 2), GlimpseGrid((gf.OH, gf.OW), 16, 2)]
+    scales = [0.25, 0.5]
+    jobs = [("glimpse", g, None, tmp_path / "one" / f"gl{g.size}.npz") for g in grids]
+    jobs += [("context", g, s, tmp_path / "one" / f"ctx{g.size}_{s}.npz") for g in grids for s in scales]
+    written = build_model_caches(vps, oracle_backbone, "dummy", jobs, "cpu", allow_any_frame_size=True,
+                                 extra_meta={"split": "val"})
+    assert written == [j[3] for j in jobs]
+    for i, (kind, grid, scale, path) in enumerate(jobs):
+        single = build_cache(vps, kind, oracle_backbone, "dummy", grid, tmp_path / f"single{i}.npz", "cpu",
+                             scale=scale, allow_any_frame_size=True, extra_meta={"split": "val"})
+        with np.load(path) as a, np.load(single) as b:
+            assert sorted(a.files) == sorted(b.files)
+            for key in a.files:
+                assert np.array_equal(a[key], b[key]), (path.name, key)
 
 
 def test_cache_refuses_other_frame_sizes(tmp_path, vps, oracle_backbone):
