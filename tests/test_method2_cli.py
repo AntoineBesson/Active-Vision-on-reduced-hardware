@@ -13,7 +13,7 @@ from scripts import method2, method2_fullframe  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE_CFG = str(REPO / "configs" / "baseline_fixture.yaml")
-GEOM = ["--scales", "0.25,0.5", "--sizes", "12", "--margin", "2"]
+GEOM = ["--scales", "0.25,0.5", "--geoms", "12:2:1,8:1:0.5"]  # a plain grid and a wide one (16 px over 8 px input)
 
 
 def _fake_latency(path: Path) -> Path:
@@ -22,9 +22,9 @@ def _fake_latency(path: Path) -> Path:
         return {"name": name, "level": "graph", "gflops": ms / 10, "cuda_event": {"median_ms": ms, "p95_ms": ms * 1.1}, **kw}
 
     area = [rec(f"area/dummy/{s}", 20 * s * s + 1, model="dummy", kind="frame", scale=s) for s in (1.0, 0.5, 0.25)]
-    batch = [rec(f"batch/dummy/12/k{k}", 0.5 + 0.4 * k, model="dummy", size=12, k=k) for k in (1, 2, 4, 8)]
-    over = [rec(f"overhead/{s}/{k}/{sel}", 0.3, stride=8, context_scale=s, size=12, k=k, selection=sel)
-            for s in (0.25, 0.5) for k in (1, 2, 4, 8) for sel in ("topk", "greedy")]
+    batch = [rec(f"batch/dummy/{q}/k{k}", 0.5 + 0.4 * k, model="dummy", size=q, k=k) for q in (8, 12) for k in (1, 2, 4, 8)]
+    over = [rec(f"overhead/{s}/{q}/{k}/{sel}", 0.3, stride=8, context_scale=s, size=q, k=k, selection=sel)
+            for s in (0.25, 0.5) for q in (8, 12) for k in (1, 2, 4, 8) for sel in ("topk", "greedy")]
     path.write_text(json.dumps({"records": {"area": area, "batch": batch, "overhead": over}}))
     return path
 
@@ -33,7 +33,8 @@ def _fake_latency(path: Path) -> Path:
 def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("m2")
     assert method2_fullframe.main(["--config", FIXTURE_CFG, "--split", "val", "--out", str(d / "ff")]) == 0
-    assert method2.main(["cache", "--fixture", "--split", "val", "--models", "dummy", *GEOM, "--root", str(d / "cache")]) == 0
+    assert method2.main(["cache", "--fixture", "--split", "val", "--models", "dummy", "--pairs", "dummy+dummy", *GEOM,
+                         "--root", str(d / "cache")]) == 0
     _fake_latency(d / "lat.json")
     return d
 
@@ -45,21 +46,27 @@ def _common(d: Path):
 
 def test_cache_writes_the_expected_files_and_skips_existing(work, capsys):
     names = sorted(p.name for p in (work / "cache" / "val").glob("*.npz"))
-    assert names == ["ctx_dummy_s0.25_g12m2.npz", "ctx_dummy_s0.5_g12m2.npz", "gl_dummy_g12m2.npz"]
+    grids = ("g12m2", "g16m2")
+    expected = [f"ctx_dummy_s{s}_{g}.npz" for s in ("0.25", "0.5") for g in grids]
+    expected += ["gl_dummy_g12m2.npz", "gl_dummy_g16m2_i8.npz"]
+    expected += [f"fu_dummy_s{s}_dummy_{g}_{f}.npz" for s in ("0.25", "0.5") for g in ("g12m2", "g16m2_i8")
+                 for f in ("mean", "conf")]
+    assert names == sorted(expected)
     capsys.readouterr()
-    method2.main(["cache", "--fixture", "--split", "val", "--models", "dummy", *GEOM, "--root", str(work / "cache")])
+    method2.main(["cache", "--fixture", "--split", "val", "--models", "dummy", "--pairs", "dummy+dummy", *GEOM,
+                  "--root", str(work / "cache")])
     assert "built 0" in capsys.readouterr().out
 
 
 def test_interrupted_build_is_rebuilt(work, tmp_path):
     root = tmp_path / "cache"
-    method2.main(["cache", "--fixture", "--split", "val", "--models", "dummy", "--scales", "0.25", "--sizes", "12",
-                  "--margin", "2", "--root", str(root)])
+    method2.main(["cache", "--fixture", "--split", "val", "--models", "dummy", "--scales", "0.25", "--geoms", "12:2:1",
+                  "--fusions", "replace", "--root", str(root)])
     final = root / "val" / "gl_dummy_g12m2.npz"
     final.unlink()
     (root / "val" / "gl_dummy_g12m2.tmp.npz").write_bytes(b"partial")
-    method2.main(["cache", "--fixture", "--split", "val", "--models", "dummy", "--scales", "0.25", "--sizes", "12",
-                  "--margin", "2", "--root", str(root)])
+    method2.main(["cache", "--fixture", "--split", "val", "--models", "dummy", "--scales", "0.25", "--geoms", "12:2:1",
+                  "--fusions", "replace", "--root", str(root)])
     assert final.is_file() and not (root / "val" / "gl_dummy_g12m2.tmp.npz").exists()
 
 
@@ -71,16 +78,19 @@ def sweep(work):
 
 
 def test_sweep_lines_and_fields(sweep):
-    # per (scale): 3 ks x (oracle, random, prior, 12 uncertainty) + 1 tiling bound
-    assert len(sweep) == 2 * (3 * 15 + 1)
+    # per (scale, geometry, fusion): 3 ks x (oracle, random, prior, 12 uncertainty) + 1 tiling bound
+    assert len(sweep) == 2 * 2 * 3 * (3 * 15 + 1)
     for r in sweep:
         m, c = r["method"], r["cost"]
-        assert {"pair", "context_model", "glimpse_model", "context_scale", "glimpse_size", "margin", "k", "rule"} <= set(m)
+        assert {"pair", "context_model", "glimpse_model", "context_scale", "glimpse_size", "margin", "glimpse_scale",
+                "fusion", "k", "rule"} <= set(m)
+        approximate = m["fusion"] != "replace" or m["glimpse_scale"] != 1.0
+        assert c["t4_latency_is_lower_bound"] is approximate
         assert "miou" in r["metrics"] and "per_class_iou" in r["metrics"]
         assert {"pixel_fraction", "gflops", "t4_latency", "flops_implied_speedup", "realised_speedup",
                 "delta_miou_at_equal_latency", "latency_saved_at_equal_miou"} <= set(c)
     tiling = [r for r in sweep if r["method"]["rule"]["kind"] == "all"]
-    assert len(tiling) == 2 and all(r["cost"]["t4_latency"] is None for r in tiling)
+    assert len(tiling) == 12 and all(r["cost"]["t4_latency"] is None for r in tiling)
     rand = [r for r in sweep if r["method"]["rule"]["kind"] == "random"]
     assert all(len(r["metrics"]["random_seeds_miou"]) == 5 for r in rand)
 
@@ -90,7 +100,7 @@ def test_oracle_is_best_at_each_point(sweep):
     for r in sweep:
         m = r["method"]
         if m["rule"]["kind"] != "all":
-            groups.setdefault((m["context_scale"], m["k"]), []).append(r)
+            groups.setdefault((m["context_scale"], m["glimpse_scale"], m["fusion"], m["k"]), []).append(r)
     for rows in groups.values():
         oracle = next(r for r in rows if r["method"]["rule"]["kind"] == "oracle")
         correct = oracle["metrics"]["correct_pixels"]
@@ -102,7 +112,8 @@ def test_tune_weights_is_deterministic_and_never_worse(work):
     for i in range(2):
         out = work / f"w{i}.json"
         assert method2.main(["tune-weights", "--split", "val", *_common(work), "--pair", "dummy+dummy",
-                             "--scale", "0.25", "--size", "12", "--score", "entropy", "--ks", "1,2,4",
+                             "--scale", "0.25", "--geom", "12:2:1", "--fusion", "mean", "--score", "entropy",
+                             "--ks", "1,2,4",
                              "--out", str(out)]) == 0
         outs.append(out.read_text())
     assert outs[0] == outs[1]

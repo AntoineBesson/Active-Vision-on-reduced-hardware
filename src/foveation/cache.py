@@ -98,6 +98,12 @@ def glimpse_cells(backbone: torch.nn.Module, frame: torch.Tensor, label: torch.T
     return per_cell_confusion(canvas[:h, :w], label, grid, num_classes, ignore_index)
 
 
+def _conf_tmp(path: Path) -> Path:
+    """The disk-backed per-cell confusion array of a cache being built (deleted when the file is written)."""
+    path = Path(path)
+    return path.with_name(path.name[:-len(".npz")] + ".conf.tmp.npy")
+
+
 @dataclass(frozen=True)
 class CacheJob:
     """One cache file.
@@ -192,8 +198,14 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
     c, ignore = dataset.num_classes, dataset.ignore_index
     indices = list(range(len(dataset)) if clip_indices is None else clip_indices)
     frame_size = tuple(jobs[0].grid.frame_size)
-    acc = [{"conf": [], "sums": {k: [] for k in SCORE_KINDS}, "tops": {k: [] for k in SCORE_KINDS}, "q": 0}
-           for _ in jobs]
+    num_frames = sum(int(np.asarray(dataset.labeled_mask(ci), dtype=bool).sum()) for ci in indices)
+    # per-cell confusions go to disk as they are computed: all jobs of a train split do not fit in RAM
+    acc = []
+    for j in jobs:
+        Path(j.path).parent.mkdir(parents=True, exist_ok=True)
+        conf = np.lib.format.open_memmap(_conf_tmp(j.path), mode="w+", dtype=np.int32,
+                                         shape=(num_frames, j.grid.num_cells, c, c))
+        acc.append({"conf": conf, "sums": {k: [] for k in SCORE_KINDS}, "tops": {k: [] for k in SCORE_KINDS}, "q": 0})
     ctx_keys = sorted({j.ctx_key for j in jobs if j.ctx_key is not None})
     fused_keys = {j.ctx_key for j in jobs if j.kind == "glimpse" and j.fusion != "replace"}
     groups: Dict[Tuple, List[int]] = {}
@@ -219,7 +231,7 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                     if j.kind != "context":
                         continue
                     cells = _context_cells_from(*ctx[j.ctx_key][:2], label, j.grid, c, ignore, SCORE_KINDS)
-                    acc[i]["conf"].append(cells.conf.cpu())
+                    acc[i]["conf"][len(ts)] = cells.conf.cpu().numpy()
                     for k in SCORE_KINDS:
                         acc[i]["sums"][k].append(cells.class_sums[k].cpu())
                         acc[i]["tops"][k].append(cells.top10[k].cpu())
@@ -238,7 +250,8 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                             paste_labels(canvases[i], labels_from_glimpse(up, inner, grid.margin, j.fusion), grid, idx)
                     h, w = frame_size
                     for i in members:
-                        acc[i]["conf"].append(per_cell_confusion(canvases[i][:h, :w], label, grid, c, ignore).cpu())
+                        acc[i]["conf"][len(ts)] = per_cell_confusion(canvases[i][:h, :w], label, grid, c,
+                                                                     ignore).cpu().numpy()
             clip_index.append(ci)
             ts.append(int(t))
         if progress:
@@ -253,7 +266,7 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                 "num_classes": c, "ignore_index": ignore, **(extra_meta or {})}
         if j.kind == "glimpse":
             meta.update(input_size=j.input_size or grid.size, fusion=j.fusion, ctx_model=j.ctx_model)
-        arrays: Dict[str, Any] = {"conf": torch.stack(a["conf"]).numpy(),
+        arrays: Dict[str, Any] = {"conf": a["conf"],
                                   "clip_index": np.array(clip_index, dtype=np.int32),
                                   "t": np.array(ts, dtype=np.int32), "meta": json.dumps(meta, default=str)}
         if j.kind == "context":
@@ -265,7 +278,12 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
         out_path.parent.mkdir(parents=True, exist_ok=True)
         tmp = out_path.with_name(out_path.name[:-len(".npz")] + ".tmp.npz") if out_path.name.endswith(".npz") \
             else out_path.with_name(out_path.name + ".tmp.npz")
-        np.savez(tmp, **arrays)
+        np.savez_compressed(tmp, **arrays)  # per-cell confusions are mostly zeros
         os.replace(tmp, out_path)
+        del arrays
+        conf, a["conf"] = a["conf"], None
+        conf._mmap.close()  # Windows cannot delete a mapped file; nothing else views this array
+        del conf
+        os.remove(_conf_tmp(j.path))
         written.append(out_path)
     return written

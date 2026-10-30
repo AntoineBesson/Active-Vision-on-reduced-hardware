@@ -25,7 +25,9 @@ def test_final_configs_follow_the_finalists_file(tmp_path):
     rule_b = {"kind": "prior", "score": "entropy", "pool": "mean", "class_weights": None, "selection": "topk",
               "suppress": 1, "seed": 0}
     path = tmp_path / "finalists.json"
-    path.write_text(json.dumps({"finalists": [_finalist(rule_a, ctx="pidnet_s", gl="pidnet_s", s=0.25, q=384, k=4),
+    wide = _finalist(rule_a, ctx="pidnet_s", gl="pidnet_s", s=0.25, q=384, k=4)
+    wide["method"].update(glimpse_scale=0.5, fusion="conf")
+    path.write_text(json.dumps({"finalists": [wide,
                                               _finalist(rule_b, ctx="bisenetv2", gl="pidnet_s", s=0.5, q=256, k=8)]}))
     cfgs = final_configs(path)
     assert len(cfgs) == 2
@@ -33,9 +35,12 @@ def test_final_configs_follow_the_finalists_file(tmp_path):
     assert (a["context_model"], a["glimpse_model"]) == ("pidnet_s", "pidnet_s")
     assert a["config"] == FoveationConfig(context_scale=0.25, glimpse_size=384, glimpse_margin=32, k=4,
                                           selection="greedy", suppress=1, score="margin", pool="mean",
-                                          class_weights=tuple([2.0] + [1.0] * 18))
+                                          class_weights=tuple([2.0] + [1.0] * 18), fusion="conf",
+                                          glimpse_scale=0.5)
+    assert "/z0.5/conf/" in a["name"]
     # the prior rule needs no scoring: timed as entropy top-k, an upper bound, and labelled so
     assert b["config"].selection == "topk" and b["timed_as"] == "uncertainty/entropy/mean/topk"
+    assert (b["config"].fusion, b["config"].glimpse_scale) == ("replace", 1.0)  # older finalists files
     # the full-frame reference curve: both models at all five scales, whatever the grid
     assert sorted(fullframe_points()) == sorted((m, s) for m in ("pidnet_s", "bisenetv2")
                                                 for s in (0.25, 0.375, 0.5, 0.75, 1.0))

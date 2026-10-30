@@ -225,8 +225,10 @@ def final_configs(path: Path) -> List[Dict[str, Any]]:
         cfg = FoveationConfig(context_scale=m["context_scale"], glimpse_size=m["glimpse_size"],
                               glimpse_margin=m["margin"], k=m["k"], selection=rule["selection"],
                               suppress=rule["suppress"], score=rule["score"], pool=rule["pool"],
-                              class_weights=None if weights is None else tuple(float(w) for w in weights))
+                              class_weights=None if weights is None else tuple(float(w) for w in weights),
+                              fusion=m.get("fusion", "replace"), glimpse_scale=m.get("glimpse_scale", 1.0))
         name = (f"final/{m['context_model']}+{m['glimpse_model']}/{m['context_scale']:g}/{m['glimpse_size']}"
+                f"/z{cfg.glimpse_scale:g}/{cfg.fusion}"
                 f"/k{m['k']}/{f['method']['rule']['kind']}/{rule['score']}/{rule['pool']}/{rule['selection']}"
                 + ("/weighted" if weights is not None else ""))
         out.append({"name": name, "context_model": m["context_model"], "glimpse_model": m["glimpse_model"],
