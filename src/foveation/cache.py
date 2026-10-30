@@ -70,7 +70,7 @@ def context_cells(backbone: torch.nn.Module, frame: torch.Tensor, label: torch.T
                   kinds: Sequence[str] = SCORE_KINDS) -> ContextCells:
     """Per-cell context confusion and selection features of one (1, 3, H, W) frame."""
     with torch.no_grad():
-        logits, labels = context_pass(backbone, frame, scale)
+        logits, labels, _ = context_pass(backbone, frame, scale)
     return _context_cells_from(logits, labels, label, grid, num_classes, ignore_index, kinds)
 
 
@@ -161,7 +161,7 @@ def build_model_caches(dataset: Any, backbone: torch.nn.Module, model_name: str,
                 ctx = {s: context_pass(backbone, frame, s) for s in scales}
             for (kind, grid, scale, _), a in zip(jobs, acc):
                 if kind == "context":
-                    cells = _context_cells_from(*ctx[scale], label, grid, c, ignore, SCORE_KINDS)
+                    cells = _context_cells_from(*ctx[scale][:2], label, grid, c, ignore, SCORE_KINDS)
                     a["conf"].append(cells.conf.cpu())
                     for k in SCORE_KINDS:
                         a["sums"][k].append(cells.class_sums[k].cpu())

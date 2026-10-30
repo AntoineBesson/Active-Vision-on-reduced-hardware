@@ -185,3 +185,31 @@ All rules read only the context pass of the current frame:
   scales.
 - Class-prior weights are allowed as a selection feature, tuned on train for
   mIoU.
+
+## Addendum (2026-10-30): fusion and wide glimpses
+
+The first train sweep (PIDNet-S) found that glimpses lack context: even with
+every cell glimpsed at full resolution, the tiled prediction scores 53.5 /
+60.3 / 63.0 mIoU (256 / 384 / 512 crops, 32 px margin) against 76.1 for the
+full frame on train. On 5 val clips, accuracy climbs back to the full frame
+as crops and margins grow (1024 px crops with a 256 px margin: 56.4 vs 57.5),
+so this is the network needing context, not a bug. No foveated configuration
+reached the full-frame curve (5–19 points below it at equal latency).
+
+Decided with the user: add two deterministic axes, still without memory,
+learning or retraining.
+
+1. **Fusion** of the glimpse with the context inside each selected cell,
+   instead of overwriting it: `replace` (the original), `mean` (argmax of
+   the average of the two softmax probabilities) and `conf` (per pixel, the
+   prediction whose top probability is higher).
+2. **Wide glimpses**: a glimpse covers a frame region larger than its network
+   input and is downsampled (antialiased bilinear) to it, trading detail for
+   context. `glimpse_scale` = input size / region size; tested at 0.5 (384 px
+   input over 768 px, 512 px over 1024 px, 64 px frame margin) and 0.75
+   (384 px input over 512 px, 32 px frame margin).
+
+Latency: the glimpse backbone runs on the same input sizes as before, so the
+batch table still applies; the crop downsampling and the fusion are not in
+the overhead table, so these configurations' predicted latency is a lower
+bound until the T4 `final` run measures them.

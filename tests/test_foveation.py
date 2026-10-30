@@ -23,7 +23,7 @@ from foveation.ops import (  # noqa: E402
     select_greedy_batch,
     select_topk,
 )
-from foveation.pipeline import FoveatedSegmenter, FoveationConfig, StubBackbone  # noqa: E402
+from foveation.pipeline import FoveatedSegmenter, FoveationConfig, StubBackbone, fuse_labels, glimpse_grid  # noqa: E402
 from models.dummy import DummyBackbone  # noqa: E402
 
 
@@ -181,17 +181,59 @@ def test_stub_backbone_shapes():
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="GPU-only: needs CUDA")
-@pytest.mark.parametrize("score,pool,weights,selection", [
-    ("entropy", "mean", None, "greedy"),
-    ("margin", "mean", None, "topk"),
-    ("maxprob", "top10", None, "topk"),
-    ("entropy", "mean", tuple([2.0] + [1.0] * 18), "greedy"),
+def test_fuse_labels_rules():
+    g = torch.tensor([[[[3.0]], [[0.0]]]])  # glimpse: class 0, p ~ 0.95
+    c = torch.tensor([[[[0.0]], [[1.0]]]])  # context: class 1, p ~ 0.73
+    assert fuse_labels(g, c, "replace").item() == 0
+    assert fuse_labels(g, c, "conf").item() == 0
+    assert fuse_labels(c, g, "conf").item() == 0  # the more confident side wins either way
+    weak = torch.tensor([[[[0.2]], [[0.0]]]])  # glimpse: class 0, p ~ 0.55
+    assert fuse_labels(weak, c, "conf").item() == 1
+    assert fuse_labels(weak, c, "mean").item() == 1  # (0.55 + 0.27) / 2 < (0.45 + 0.73) / 2
+    with pytest.raises(ValueError):
+        fuse_labels(g, c, "vote")
+
+
+def test_wide_glimpse_grid_is_in_frame_pixels():
+    cfg = FoveationConfig(glimpse_size=384, glimpse_margin=32, glimpse_scale=0.5)
+    g = glimpse_grid((1024, 2048), cfg)
+    assert (g.size, g.margin, g.inner, g.rows, g.cols) == (768, 64, 640, 2, 4)
+    with pytest.raises(ValueError):
+        glimpse_grid((1024, 2048), FoveationConfig(glimpse_size=512, glimpse_margin=32, glimpse_scale=0.75))
+
+
+def test_replace_fusion_at_scale_one_is_unchanged():
+    bb = DummyBackbone(num_classes=5)
+    frame = torch.rand(1, 3, 128, 256, generator=torch.Generator().manual_seed(2))
+    base = FoveationConfig(context_scale=0.25, glimpse_size=64, glimpse_margin=8, k=3)
+    with torch.no_grad():
+        ref, ref_idx = FoveatedSegmenter(bb, bb, base, (128, 256))(frame, return_idx=True)
+        for fusion in ("mean", "conf"):
+            cfg = FoveationConfig(context_scale=0.25, glimpse_size=64, glimpse_margin=8, k=3, fusion=fusion)
+            out, idx = FoveatedSegmenter(bb, bb, cfg, (128, 256))(frame, return_idx=True)
+            assert torch.equal(idx, ref_idx) and out.shape == ref.shape
+            outside = torch.ones(128, 256, dtype=torch.bool)  # fusion only changes the selected cells
+            g = glimpse_grid((128, 256), cfg)
+            top, left = g.cell_origin(idx)
+            for t, l in zip(top.tolist(), left.tolist()):
+                outside[t:t + g.inner, l:l + g.inner] = False
+            assert torch.equal(out[outside], ref[outside])
+        wide = FoveationConfig(context_scale=0.25, glimpse_size=32, glimpse_margin=4, k=2, glimpse_scale=0.5)
+        assert FoveatedSegmenter(bb, bb, wide, (128, 256))(frame).shape == (128, 256)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="GPU-only: needs CUDA")
+@pytest.mark.parametrize("score,pool,weights,selection,fusion,gscale", [
+    ("entropy", "mean", None, "greedy", "replace", 1.0),
+    ("margin", "mean", None, "topk", "mean", 1.0),
+    ("maxprob", "top10", None, "topk", "conf", 0.5),
+    ("entropy", "mean", tuple([2.0] + [1.0] * 18), "greedy", "replace", 0.5),
 ])
-def test_pipeline_is_sync_free_and_graph_capturable(score, pool, weights, selection):
+def test_pipeline_is_sync_free_and_graph_capturable(score, pool, weights, selection, fusion, gscale):
     from eval.gpu_timing import cuda_graph
 
     cfg = FoveationConfig(context_scale=0.25, glimpse_size=128, glimpse_margin=16, k=4, selection=selection,
-                          score=score, pool=pool, class_weights=weights)
+                          score=score, pool=pool, class_weights=weights, fusion=fusion, glimpse_scale=gscale)
     stub = StubBackbone(num_classes=19, output_stride=8).cuda()
     seg = FoveatedSegmenter(stub, stub, cfg, frame_size=(256, 512)).cuda().eval()
     frame = torch.rand(1, 3, 256, 512, device="cuda", dtype=torch.float16)
