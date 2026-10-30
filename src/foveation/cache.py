@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from eval.harness import PRECISIONS, frame_to_tensor
 
@@ -45,7 +46,9 @@ def per_cell_confusion(pred: torch.Tensor, label: torch.Tensor, grid: GlimpseGri
                        ignore_index: int) -> torch.Tensor:
     """(cells, C, C) int32 confusion (rows = ground truth) of each cell's in-frame inner square.
 
-    Pixels labelled ``ignore_index`` and predictions outside [0, C) are not counted.
+    Pixels labelled ``ignore_index`` and predictions outside [0, C) are not
+    counted: they go to an extra bin that is dropped, rather than being
+    filtered out first, which would synchronise with the host on every call.
     """
     h, w = grid.frame_size
     c = num_classes
@@ -53,8 +56,9 @@ def per_cell_confusion(pred: torch.Tensor, label: torch.Tensor, grid: GlimpseGri
             + (torch.arange(w, device=pred.device) // grid.inner)[None, :])
     t, p = label.long(), pred.long()
     valid = (t != ignore_index) & (t >= 0) & (t < c) & (p >= 0) & (p < c)
-    code = (cell * c + t) * c + p
-    counts = torch.bincount(code[valid], minlength=grid.num_cells * c * c)
+    dump = grid.num_cells * c * c
+    code = torch.where(valid, (cell * c + t.clamp(0, c - 1)) * c + p.clamp(0, c - 1), dump)
+    counts = torch.bincount(code.flatten(), minlength=dump + 1)[:dump]
     return counts.view(grid.num_cells, c, c).to(torch.int32)
 
 
@@ -223,10 +227,15 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
             frame = frame_to_tensor(image, device).to(dtype)
             label = torch.from_numpy(np.asarray(dataset.load_label(ci, int(t)), dtype=np.int64)).to(device)
             with torch.no_grad():
-                ctx = {}
+                ctx, ctx_probs = {}, {}
                 for key in ctx_keys:
                     logits, labels, up = context_pass(nets[key[0]], frame, key[1])
-                    ctx[key] = (logits, labels, up if key in fused_keys else None)
+                    ctx[key] = (logits, labels)
+                    if key in fused_keys:  # softmax once per frame, shared by every grid and fusion
+                        probs = torch.softmax(up.float(), 1)
+                        top, arg = probs.max(1, keepdim=True)
+                        ctx_probs[key] = (probs, top, arg)
+                    del up
                 for i, j in enumerate(jobs):
                     if j.kind != "context":
                         continue
@@ -244,10 +253,25 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                     for start in range(0, grid.num_cells, chunk):
                         idx = torch.arange(start, min(start + chunk, grid.num_cells), device=frame.device)
                         up = glimpse_logits(nets[model], gather_crops(padded, grid, idx), input_size)
+                        base = labels_from_glimpse(up)
+                        m, n = grid.margin, grid.inner
+                        if any(jobs[i].fusion != "replace" for i in members):
+                            # the glimpse's softmax once per chunk, shared by every fused job of the group
+                            pg = torch.softmax(up[:, :, m:m + n, m:m + n].float(), 1)
+                            pg_top, pg_arg = pg.max(1)
                         for i in members:
                             j = jobs[i]
-                            inner = None if j.fusion == "replace" else gather_inner(ctx[j.ctx_key][2], grid, idx)
-                            paste_labels(canvases[i], labels_from_glimpse(up, inner, grid.margin, j.fusion), grid, idx)
+                            labels = base
+                            if j.fusion != "replace":
+                                probs, top, arg = ctx_probs[j.ctx_key]
+                                labels = base.clone()
+                                if j.fusion == "mean":  # == fuse_labels(..., "mean") on the gathered logits
+                                    fused = (pg + gather_inner(probs, grid, idx)).argmax(1)
+                                else:  # "conf": compare the top probabilities only
+                                    fused = torch.where(pg_top >= gather_inner(top, grid, idx)[:, 0], pg_arg,
+                                                        gather_inner(arg, grid, idx)[:, 0])
+                                labels[:, m:m + n, m:m + n] = fused
+                            paste_labels(canvases[i], labels, grid, idx)
                     h, w = frame_size
                     for i in members:
                         acc[i]["conf"][len(ts)] = per_cell_confusion(canvases[i][:h, :w], label, grid, c,
