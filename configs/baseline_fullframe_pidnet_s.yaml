@@ -1,0 +1,46 @@
+# Full-frame baseline (method 1): PIDNet-S on the Cityscapes-VPS val clips,
+# at full and reduced input resolutions (the reduced ones are the equal-cost
+# baselines for the foveated methods).
+#
+#     export CITYSCAPES_VPS_ROOT=/path/to/cityscapes_vps
+#     export PIDNET_S_WEIGHTS=/path/to/PIDNet_S_Cityscapes_val.pt
+#     python -m scripts.run_baseline --config configs/baseline_fullframe_pidnet_s.yaml
+#
+# Weights: use PIDNet_S_Cityscapes_val.pt (trained on Cityscapes *train*).
+# Do NOT use PIDNet_S_Cityscapes_test.pt: it was trained on train+val, and
+# every Cityscapes-VPS clip is a Cityscapes *val* sequence (leakage).
+# The official README hosts the files on Google Drive (manual download).
+
+run:
+  name: fullframe_pidnet_s
+  seed: 0
+  output_dir: experiments
+
+dataset:
+  type: cityscapes_vps
+  config: configs/cityscapes_vps.yaml
+  split: val
+  root: null   # null -> $CITYSCAPES_VPS_ROOT
+
+backbone:
+  type: pidnet_s
+  num_classes: 19
+  weights: ${PIDNET_S_WEIGHTS}   # local path or direct URL
+  sha256: null                   # optionally pin the file
+  strict: true
+
+eval:
+  # 1024x2048 frames -> 1024x2048, 768x1536, 512x1024, 384x768, 256x512 inputs
+  # (all multiples of 8 and 32: no padding for PIDNet or BiSeNetV2).
+  scales: [1.0, 0.75, 0.5, 0.375, 0.25]
+  precision: fp32   # accuracy pass (PIDNet's own evaluation runs in fp32)
+  frames: labeled   # per-frame method: only labelled frames need inference
+
+cost:
+  latency:
+    enabled: true
+    precision: fp16   # batch 1, fp16, warm-up, synchronised timing
+    warmup: 20
+    iters: 100
+    allow_cpu: false
+  memory: true

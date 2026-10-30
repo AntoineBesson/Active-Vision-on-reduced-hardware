@@ -15,7 +15,11 @@ Examples
     python scripts/verify_data.py --fixture
 
 If neither --root nor $CITYSCAPES_VPS_ROOT is set, the script falls back to the
-tiny test fixture and says so, so it always runs cleanly end-to-end.
+tiny test fixture and says so, so it always runs cleanly end-to-end. The
+default --config is configs/cityscapes_vps.yaml (the verified official layout);
+the fixture used is the matching official-layout one. For a full report on the
+real data (regex matches, label mapping, class histogram) use
+scripts/diagnose_real_data.py.
 """
 
 from __future__ import annotations
@@ -38,7 +42,8 @@ from data.cityscapes_vps import (  # noqa: E402  (after sys.path tweak)
     CityscapesVPSConfig,
 )
 
-FIXTURE_ROOT = _REPO_ROOT / "tests" / "fixtures" / "cityscapes_vps"
+FIXTURE_ROOT = _REPO_ROOT / "tests" / "fixtures" / "cityscapes_vps_official"
+DEFAULT_CONFIG = _REPO_ROOT / "configs" / "cityscapes_vps.yaml"
 DEFAULT_OUT_DIR = _REPO_ROOT / "experiments" / "data_check"
 
 
@@ -47,13 +52,13 @@ def _ensure_fixture() -> Path:
     sys.path.insert(0, str(_REPO_ROOT / "tests" / "fixtures"))
     import generate_fixture
 
-    return generate_fixture.ensure_fixture()
+    return generate_fixture.ensure_official_fixture()
 
 
 def parse_args(argv=None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--root", default=None, help=f"Dataset root (default: ${ROOT_ENV_VAR}).")
-    p.add_argument("--config", default=None, help="Optional YAML config (see configs/cityscapes_vps.yaml).")
+    p.add_argument("--config", default=str(DEFAULT_CONFIG), help="Data config YAML (default: %(default)s).")
     p.add_argument("--split", default="val", choices=["train", "val", "test"])
     p.add_argument("--annotation-subdir", default=None, help="Override the annotation subdir (e.g. labelmap).")
     p.add_argument("--clip-index", type=int, default=0, help="Which clip to visualize.")
@@ -76,8 +81,8 @@ def build_dataset(args: argparse.Namespace) -> tuple[CityscapesVPS, bool]:
         cfg = CityscapesVPSConfig.from_yaml(args.config, split=args.split)
     else:
         cfg = CityscapesVPSConfig(split=args.split)
-    if args.annotation_subdir:
-        cfg = cfg.with_overrides(annotation_subdir=args.annotation_subdir)
+    # Passed to the constructor so they win over the config's split_overrides.
+    overrides = {"annotation_subdir": args.annotation_subdir} if args.annotation_subdir else {}
 
     used_fixture = False
     if args.fixture:
@@ -94,7 +99,7 @@ def build_dataset(args: argparse.Namespace) -> tuple[CityscapesVPS, bool]:
         cfg = cfg.with_overrides(root=str(_ensure_fixture()))
         used_fixture = True
 
-    return CityscapesVPS(cfg), used_fixture
+    return CityscapesVPS(cfg, **overrides), used_fixture
 
 
 def colorize_labels(label_map: np.ndarray) -> np.ndarray:

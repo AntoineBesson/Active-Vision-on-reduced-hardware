@@ -1,0 +1,46 @@
+# Full-frame baseline on the SYNTHETIC fixture with the DUMMY backbone.
+#
+#     python -m scripts.run_baseline --config configs/baseline_fixture.yaml
+#
+# Runs anywhere (CPU, no data, no download) and exercises the exact code path
+# of the real baseline: the official-layout config, the label mapping, the
+# evaluation loop, cost accounting and the JSON writer. The numbers it
+# produces describe a toy dataset and a nearest-colour dummy: they are NOT
+# research results.
+
+run:
+  name: fullframe_dummy_fixture
+  seed: 0
+  output_dir: experiments
+
+fixture: true   # generate + use tests/fixtures/cityscapes_vps_official
+
+dataset:
+  type: cityscapes_vps
+  config: configs/cityscapes_vps.yaml   # the same official-layout config as the real run
+  split: val
+
+backbone:
+  type: dummy
+  num_classes: 19
+  # Nearest-colour classifier on frames painted with the class colours: at
+  # stride 1 and full resolution it must score mIoU 1.0, which checks that the
+  # pipeline is aligned; reduced scales then lose thin structures.
+  output_stride: 1
+  class_colors: dataset_palette
+
+eval:
+  scales: [1.0, 0.5, 0.25]
+  precision: fp32
+  frames: labeled
+
+cost:
+  latency:
+    enabled: true
+    precision: fp16
+    warmup: 20
+    iters: 100
+    allow_cpu: false   # latency is a GPU number; on CPU it is reported as skipped
+  memory: true
+
+notes: "SYNTHETIC FIXTURE + DUMMY BACKBONE: pipeline smoke test, not a research result."

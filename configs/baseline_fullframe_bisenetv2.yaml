@@ -1,0 +1,46 @@
+# Full-frame baseline with BiSeNetV2 (second backbone option).
+#
+#     export CITYSCAPES_VPS_ROOT=/path/to/cityscapes_vps
+#     python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yaml
+#
+# The Cityscapes checkpoint (trained on Cityscapes train) is published as a
+# GitHub release asset of github.com/CoinCheung/BiSeNet and is downloaded on
+# first use into the torch hub cache. Without network, download it elsewhere
+# and pass --set backbone.weights=/local/model_final_v2_city.pth.
+# The sha256 below is that of the file served at the URL on 2026-10-16; this
+# exact file was checked to load strictly into models/bisenetv2.py.
+
+run:
+  name: fullframe_bisenetv2
+  seed: 0
+  output_dir: experiments
+
+dataset:
+  type: cityscapes_vps
+  config: configs/cityscapes_vps.yaml
+  split: val
+  root: null
+
+backbone:
+  type: bisenetv2
+  num_classes: 19
+  weights: https://github.com/CoinCheung/BiSeNet/releases/download/0.0.0/model_final_v2_city.pth
+  sha256: a6f4f9f5967bc6d249ec3fa6524d767f11244fc09e6aefb80dc82c7dba1b8228
+  strict: true
+  # normalisation of that checkpoint (configs/bisenetv2_city.py of the repo)
+  mean: [0.3257, 0.3690, 0.3223]
+  std: [0.2112, 0.2148, 0.2115]
+
+eval:
+  scales: [1.0, 0.75, 0.5, 0.375, 0.25]
+  precision: fp32
+  frames: labeled
+
+cost:
+  latency:
+    enabled: true
+    precision: fp16
+    warmup: 20
+    iters: 100
+    allow_cpu: false
+  memory: true

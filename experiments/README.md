@@ -30,3 +30,15 @@ Rules of thumb:
 `scripts/verify_data.py` writes its sanity-check grids to
 `experiments/data_check/`. That folder is created on demand and its contents are
 gitignored.
+
+## Baseline runs
+
+`python -m scripts.run_baseline --config configs/<baseline>.yaml` follows the
+convention above: `experiments/<YYYY-MM-DD>_<run.name>/` holds the resolved
+`config.yaml` and one JSON per input scale (`<run.name>_s<scale>.json`) with
+the config, git commit, seed, dataset fingerprint, metrics and cost.
+
+## `data_check/diagnose/`
+
+`scripts/diagnose_real_data.py` writes `diagnose_report.json` and the
+`overlay_*.png` images there.

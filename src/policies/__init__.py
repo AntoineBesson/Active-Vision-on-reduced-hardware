@@ -1,5 +1,6 @@
-"""Glimpse / foveation policies.
+"""Gaze / foveation policies: which regions of a frame to inspect.
 
-Will hold the logic that decides where to look next (e.g. uncertainty- or
-motion-driven glimpse selection). Empty for now.
+* :mod:`policies.interfaces` -- the ``GazePolicy`` contract, ``GazeState`` and
+  the normalised ``Box`` convention. Memory-free (e.g. uncertainty-driven) and
+  canvas-aware policies share the same contract. Imports without torch.
 """
