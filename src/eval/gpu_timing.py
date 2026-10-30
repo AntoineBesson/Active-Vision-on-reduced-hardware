@@ -248,7 +248,7 @@ def cuda_graph(fn: Callable[[torch.Tensor], Any], example: torch.Tensor, warmup:
         graph.replay()
         return static_out
 
-    replay.graph = graph  # keep alive
+    replay.graph, replay.static_in = graph, static_in  # the graph reads static_in on every replay
     return replay
 
 

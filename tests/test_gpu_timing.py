@@ -52,3 +52,27 @@ def test_cuda_graph_replays_the_computation():
     replay = cuda_graph(conv, x)
     with torch.no_grad():
         assert torch.allclose(replay(), conv(x))
+
+
+@pytest.mark.skipif(not CUDA, reason="GPU-only: needs CUDA")
+def test_cuda_graph_keeps_its_static_input_alive():
+    # The graph reads its captured input buffer on every replay. A large input
+    # gets its own allocator segment, which empty_cache() (or cuDNN autotuning
+    # under memory pressure) returns to the driver once the tensor is freed:
+    # replay would then read unmapped memory (segfault / illegal address).
+    import gc
+
+    conv = torch.nn.Conv2d(3, 4, 3, padding=1).cuda().eval()
+    x = torch.ones(1, 3, 1024, 2048, device="cuda")  # 24 MiB: a segment of its own
+    with torch.no_grad():
+        expected = conv(x)
+    replay = cuda_graph(conv, x)
+    del x
+    gc.collect()
+    torch.cuda.empty_cache()
+    garbage = torch.full((64, 2**20), 1e4, device="cuda")  # reuses / remaps freed memory
+    with torch.no_grad():
+        out = replay()
+    torch.cuda.synchronize()
+    assert torch.allclose(out, expected)
+    del garbage
