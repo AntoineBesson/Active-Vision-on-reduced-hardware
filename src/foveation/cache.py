@@ -254,10 +254,10 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                         idx = torch.arange(start, min(start + chunk, grid.num_cells), device=frame.device)
                         up = glimpse_logits(nets[model], gather_crops(padded, grid, idx), input_size)
                         base = labels_from_glimpse(up)
-                        m, n = grid.margin, grid.inner
+                        m, inner = grid.margin, grid.inner
                         if any(jobs[i].fusion != "replace" for i in members):
                             # the glimpse's softmax once per chunk, shared by every fused job of the group
-                            pg = torch.softmax(up[:, :, m:m + n, m:m + n].float(), 1)
+                            pg = torch.softmax(up[:, :, m:m + inner, m:m + inner].float(), 1)
                             pg_top, pg_arg = pg.max(1)
                         for i in members:
                             j = jobs[i]
@@ -270,7 +270,7 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                                 else:  # "conf": compare the top probabilities only
                                     fused = torch.where(pg_top >= gather_inner(top, grid, idx)[:, 0], pg_arg,
                                                         gather_inner(arg, grid, idx)[:, 0])
-                                labels[:, m:m + n, m:m + n] = fused
+                                labels[:, m:m + inner, m:m + inner] = fused
                             paste_labels(canvases[i], labels, grid, idx)
                     h, w = frame_size
                     for i in members:
