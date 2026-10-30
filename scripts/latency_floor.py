@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+from dataclasses import asdict
 import json
 import sys
 import time
@@ -50,6 +51,7 @@ import torch  # noqa: E402
 
 from eval.cost import count_flops  # noqa: E402
 from eval.gpu_timing import GpuTelemetry, cuda_graph, gpu_environment, interleaved_benchmark  # noqa: E402
+from foveation.ops import downsample  # noqa: E402
 from foveation.pipeline import FoveatedSegmenter, FoveationConfig, StubBackbone  # noqa: E402
 from models.registry import build_backbone  # noqa: E402
 
@@ -85,7 +87,10 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument("--out", default=str(REPO_ROOT / "experiments" / "latency_floor"))
     p.add_argument("--quick", action="store_true", help="Few configurations, few iterations (smoke test).")
     p.add_argument("--levels", default="eager,graph", help="Comma list of runtime levels: eager, graph.")
-    p.add_argument("--parts", default="area,batch,overhead,e2e")
+    p.add_argument("--parts", default="area,batch,overhead,e2e",
+                   help="Comma list of parts: area, batch, overhead, e2e, final (needs --finalists).")
+    p.add_argument("--finalists", default=str(REPO_ROOT / "results" / "method2" / "finalists.json"),
+                   help="Method 2 finalists to time with the full-frame curve (part 'final').")
     return p.parse_args(argv)
 
 
@@ -200,6 +205,76 @@ def e2e_cases(models: Dict[str, torch.nn.Module], s: Dict[str, Any]) -> List[Dic
     return cases
 
 
+FINAL_SCALES = (0.25, 0.375, 0.5, 0.75, 1.0)  # the full-frame reference curve of method 2
+
+
+def final_configs(path: Path) -> List[Dict[str, Any]]:
+    """Method 2 finalists (``results/method2/finalists.json``) as pipeline configs to time.
+
+    A ``prior`` finalist glimpses fixed cells and needs no scoring; it is timed
+    with entropy top-k scoring, an upper bound, and labelled ``timed_as``.
+    """
+    out = []
+    for f in json.loads(Path(path).read_text())["finalists"]:
+        m, rule = f["method"], f["method"]["rule"]
+        timed_as = None
+        if rule["kind"] != "uncertainty":
+            timed_as = "uncertainty/entropy/mean/topk"
+            rule = {"score": "entropy", "pool": "mean", "class_weights": None, "selection": "topk", "suppress": 1}
+        weights = rule.get("class_weights")
+        cfg = FoveationConfig(context_scale=m["context_scale"], glimpse_size=m["glimpse_size"],
+                              glimpse_margin=m["margin"], k=m["k"], selection=rule["selection"],
+                              suppress=rule["suppress"], score=rule["score"], pool=rule["pool"],
+                              class_weights=None if weights is None else tuple(float(w) for w in weights))
+        name = (f"final/{m['context_model']}+{m['glimpse_model']}/{m['context_scale']:g}/{m['glimpse_size']}"
+                f"/k{m['k']}/{f['method']['rule']['kind']}/{rule['score']}/{rule['pool']}/{rule['selection']}"
+                + ("/weighted" if weights is not None else ""))
+        out.append({"name": name, "context_model": m["context_model"], "glimpse_model": m["glimpse_model"],
+                    "config": cfg, "timed_as": timed_as, "finalist": f})
+    return out
+
+
+def fullframe_points() -> List[Tuple[str, float]]:
+    return [(model, scale) for model in MODELS for scale in FINAL_SCALES]
+
+
+def final_cases(models: Dict[str, torch.nn.Module], finalists: Path) -> List[Dict[str, Any]]:
+    """The finalists and, interleaved in the same rounds, both models' full frame at every scale.
+
+    Both sides run end to end from a full-resolution frame (resize, network,
+    upsampling to the frame, argmax), so the comparison is like for like.
+    """
+    from models.utils import upsample_logits
+
+    cases = []
+    x = frame_of((1, 3, *FRAME))
+    for c in final_configs(finalists):
+        seg = FoveatedSegmenter(models[c["context_model"]], models[c["glimpse_model"]], c["config"], FRAME).cuda().eval()
+        cases.append({"name": c["name"], "kind": "finalist", "context_model": c["context_model"],
+                      "glimpse_model": c["glimpse_model"], "config": asdict(c["config"]), "timed_as": c["timed_as"],
+                      "train_miou": c["finalist"].get("miou"), "predicted_median_ms": c["finalist"].get("latency_ms"),
+                      "gflops": gflops(seg, x), "fn": seg, "x": x})
+    for model, scale in fullframe_points():
+        net = models[model]
+
+        def full(frame, net=net, scale=scale):
+            small = downsample(frame, scale)
+            logits = net(small)
+            return upsample_logits(logits, FRAME, net.output_stride, net.align_corners,
+                                   input_size=tuple(small.shape[-2:])).argmax(1)
+
+        cases.append({"name": f"final/fullframe/{model}/{scale:g}", "kind": "fullframe", "model": model,
+                      "scale": scale, "gflops": gflops(full, x), "fn": full, "x": x})
+    return cases
+
+
+def compare_final(records: Dict[str, List[Dict[str, Any]]]) -> None:
+    """Measured / predicted median for each finalist (prediction: the latency-floor tables)."""
+    for r in records.get("final", []):
+        if r.get("predicted_median_ms"):
+            r["measured_over_predicted"] = r["cuda_event"]["median_ms"] / r["predicted_median_ms"]
+
+
 def predict_e2e(records: Dict[str, List[Dict[str, Any]]]) -> None:
     """Add the floor predicted from area + batch + overhead to each e2e record."""
     def median(part: str, level: str, **match: Any) -> Optional[float]:
@@ -232,7 +307,9 @@ def summary(records: Dict[str, List[Dict[str, Any]]]) -> None:
             tel = r.get("telemetry", {})
             clk = tel.get("sm_clock_mhz", {}).get("median")
             extra = ""
-            if "predicted_ms" in r:
+            if "predicted_median_ms" in r and "measured_over_predicted" in r:
+                extra = f"  predicted {r['predicted_median_ms']:7.2f}  ratio {r['measured_over_predicted']:.2f}"
+            elif "predicted_ms" in r:
                 extra = f"  predicted {r['predicted_ms']['total']:7.2f}  ratio {r['measured_over_predicted']:.2f}"
             g = r.get("gflops")
             print(f"  {r['level']:5s} {r['name']:44s} median {t['median_ms']:7.2f}  p95 {t['p95_ms']:7.2f} ms"
@@ -254,7 +331,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     t0 = time.time()
     with GpuTelemetry() as tel:
         builders = {"area": lambda: area_cases(models, s), "batch": lambda: batch_cases(models, s),
-                    "overhead": lambda: overhead_cases(s), "e2e": lambda: e2e_cases(models, s)}
+                    "overhead": lambda: overhead_cases(s), "e2e": lambda: e2e_cases(models, s),
+                    "final": lambda: final_cases(models, Path(args.finalists))}
         for part in parts:
             cases = builders[part]()
             for level in levels:
@@ -263,6 +341,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             del cases
         session_tel = tel.window(float("-inf"), float("inf"))
     predict_e2e(records)
+    compare_final(records)
     out = {
         "experiment": "latency_floor",
         "session": args.session,
