@@ -52,7 +52,9 @@ def upsample_logits(
     return logits[..., :height, :width]
 
 
-def normalize(images: torch.Tensor, mean: Sequence[float], std: Sequence[float]) -> torch.Tensor:
+def normalize(images: torch.Tensor, mean, std) -> torch.Tensor:
+    """``(images - mean) / std`` per channel. ``mean``/``std`` are sequences or
+    tensors; tensors already on the right device and dtype are used as is (no copy)."""
     m = torch.as_tensor(mean, dtype=images.dtype, device=images.device).view(1, -1, 1, 1)
     sd = torch.as_tensor(std, dtype=images.dtype, device=images.device).view(1, -1, 1, 1)
     return (images - m) / sd

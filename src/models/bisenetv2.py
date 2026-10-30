@@ -283,12 +283,16 @@ class BiSeNetV2Backbone(nn.Module):
         self.num_classes = int(num_classes)
         self.mean = tuple(float(v) for v in mean)
         self.std = tuple(float(v) for v in std)
+        # device-resident copies, so forward() does no host->device copy (and can be
+        # captured in a CUDA graph); non-persistent: checkpoints are unaffected
+        self.register_buffer("_mean", torch.tensor(self.mean).view(1, -1, 1, 1), persistent=False)
+        self.register_buffer("_std", torch.tensor(self.std).view(1, -1, 1, 1), persistent=False)
         self.net = BiSeNetV2(self.num_classes, aux_mode="eval")
         self.weights_info: Dict[str, Any] = {"source": None}
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         h, w = images.shape[-2:]
-        x = pad_to_multiple(normalize(images, self.mean, self.std), self.size_divisor)
+        x = pad_to_multiple(normalize(images, self._mean, self._std), self.size_divisor)
         return self.net(x)[0][..., :h, :w]
 
     def load_weights(
