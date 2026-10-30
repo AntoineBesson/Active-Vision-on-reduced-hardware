@@ -8,8 +8,9 @@ on the features the context cache stored, so a rule picks the same cells here
 as in the pipeline.
 
 Reference rules: ``oracle`` (the k cells whose glimpse adds the most correct
-pixels over the context, chosen with the labels: the ceiling of any rule at a
-given geometry and k), ``random`` (seeded per frame), ``prior`` (the same k
+pixels over the context, chosen with the labels: no rule gets more correct
+pixels at a given geometry and k; mIoU weighs classes equally, so a rule can
+still beat it in mIoU by favouring rare classes), ``random`` (seeded per frame), ``prior`` (the same k
 cells in every frame, ranked by their mean oracle gain on train) and ``all``
 (every cell glimpsed: the tiling bound).
 """
