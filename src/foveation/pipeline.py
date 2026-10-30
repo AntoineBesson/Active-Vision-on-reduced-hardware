@@ -18,14 +18,15 @@ recomposition are research knobs of the method that builds on it.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 
 from models.utils import upsample_logits
 
-from .ops import GlimpseGrid, cell_scores, downsample, entropy_map, gather_crops, paste_labels, select_greedy, select_topk
+from .ops import (SCORE_KINDS, GlimpseGrid, cell_features, downsample, gather_crops, paste_labels, pool_scores,
+                  samples_per_cell, select_greedy, select_topk)
 
 __all__ = ["FoveationConfig", "FoveatedSegmenter", "StubBackbone"]
 
@@ -38,6 +39,9 @@ class FoveationConfig:
     k: int = 4
     selection: str = "topk"  # topk | greedy
     suppress: int = 1  # greedy only: neighbourhood (cells) excluded after a pick
+    score: str = "entropy"  # entropy | margin | maxprob (foveation.ops.score_map)
+    pool: str = "mean"  # mean | top10 (foveation.ops.pool_scores)
+    class_weights: Optional[Tuple[float, ...]] = None  # mean pooling only: weight per predicted class
 
 
 class FoveatedSegmenter(nn.Module):
@@ -46,18 +50,26 @@ class FoveatedSegmenter(nn.Module):
         super().__init__()
         if cfg.selection not in ("topk", "greedy"):
             raise ValueError(f"unknown selection {cfg.selection!r}")
+        if cfg.score not in SCORE_KINDS:
+            raise ValueError(f"unknown score {cfg.score!r}, expected one of {SCORE_KINDS}")
+        if cfg.pool not in ("mean", "top10") or (cfg.pool == "top10" and cfg.class_weights is not None):
+            raise ValueError(f"invalid pooling {cfg.pool!r} (class weights need mean pooling)")
         self.ctx, self.glimpse, self.cfg = backbone_ctx, backbone_glimpse, cfg
         self.frame_size = (int(frame_size[0]), int(frame_size[1]))
         self.grid = GlimpseGrid(self.frame_size, cfg.glimpse_size, cfg.glimpse_margin)
         if cfg.k > self.grid.num_cells:
             raise ValueError(f"k={cfg.k} exceeds the {self.grid.num_cells} grid cells")
+        weights = None if cfg.class_weights is None else torch.tensor(cfg.class_weights, dtype=torch.float32)
+        self.register_buffer("_class_weights", weights, persistent=False)  # moves with .cuda(): no copy in forward
 
-    def forward(self, frame: torch.Tensor) -> torch.Tensor:
+    def forward(self, frame: torch.Tensor,
+                return_idx: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         cfg, grid = self.cfg, self.grid
         h, w = self.frame_size
         small = downsample(frame, cfg.context_scale)
         ctx_logits = self.ctx(small)
-        scores = cell_scores(entropy_map(ctx_logits)[0], grid)
+        sums, top10 = cell_features(ctx_logits, grid, [cfg.score])[cfg.score]
+        scores = pool_scores(sums, top10, samples_per_cell(ctx_logits.shape[-2], grid), cfg.pool, self._class_weights)
         idx = select_topk(scores, cfg.k) if cfg.selection == "topk" else select_greedy(scores, grid, cfg.k, cfg.suppress)
         crops = gather_crops(grid.pad_frame(frame), grid, idx)
         crop_logits = self.glimpse(crops)
@@ -66,7 +78,7 @@ class FoveatedSegmenter(nn.Module):
         labels = upsample_logits(ctx_logits, (h, w), self.ctx.output_stride, self.ctx.align_corners,
                                  input_size=tuple(small.shape[-2:])).argmax(1)[0]
         canvas = paste_labels(grid.to_canvas(labels), crop_labels, grid, idx)
-        return canvas[:h, :w]
+        return (canvas[:h, :w], idx) if return_idx else canvas[:h, :w]
 
     def describe(self) -> Dict[str, Any]:
         g = self.grid

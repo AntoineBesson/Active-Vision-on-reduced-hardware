@@ -2,18 +2,25 @@
 
 from __future__ import annotations
 
+import math
+
 import pytest
 
 torch = pytest.importorskip("torch")
 
 from foveation.ops import (  # noqa: E402
     GlimpseGrid,
+    cell_features,
     cell_scores,
     downsample,
     entropy_map,
     gather_crops,
     paste_labels,
+    pool_scores,
+    samples_per_cell,
+    score_map,
     select_greedy,
+    select_greedy_batch,
     select_topk,
 )
 from foveation.pipeline import FoveatedSegmenter, FoveationConfig, StubBackbone  # noqa: E402
@@ -38,6 +45,68 @@ def test_entropy_map():
     assert e.shape == (1, 2, 2)
     assert e[0, 0, 0] < 1e-6
     assert torch.allclose(e[0, 1, 1], torch.log(torch.tensor(4.0)))
+
+
+def test_score_kinds_on_known_logits():
+    logits = torch.tensor([[[[10.0]], [[0.0]], [[0.0]]]])  # confident pixel, C=3
+    assert score_map(logits, "maxprob").item() < 1e-3
+    assert score_map(logits, "margin").item() < 1e-3
+    flat = torch.zeros(1, 3, 1, 1)
+    assert torch.isclose(score_map(flat, "entropy"), torch.tensor(math.log(3))).all()
+    assert torch.isclose(score_map(flat, "margin"), torch.tensor(1.0)).all()
+    assert torch.equal(score_map(logits, "entropy"), entropy_map(logits))
+    with pytest.raises(ValueError):
+        score_map(flat, "variance")
+
+
+def test_pool_mean_with_unit_weights_equals_plain_mean():
+    grid = GlimpseGrid((1024, 2048), 384, 32)
+    logits = torch.randn(1, 19, 128, 256, generator=torch.Generator().manual_seed(0))
+    sums, top = cell_features(logits, grid, ["entropy"])["entropy"]
+    q = samples_per_cell(128, grid)
+    assert sums.shape == (grid.num_cells, 19) and top.shape == (grid.num_cells,)
+    plain = pool_scores(sums, top, q, "mean", None)
+    ones = pool_scores(sums, top, q, "mean", torch.ones(19))
+    assert torch.allclose(plain, ones, atol=1e-6)
+    assert torch.allclose(plain, cell_scores(score_map(logits, "entropy")[0], grid), atol=1e-5)
+    assert (top >= plain - 1e-6).all()  # top-10% mean >= cell mean
+
+
+def test_class_weights_scale_the_cells_of_that_class():
+    grid = GlimpseGrid((64, 128), 32, 8)  # 4 x 8 cells
+    logits = torch.zeros(1, 3, 8, 16)
+    logits[0, 0] = 5.0
+    logits[0, 2, :2, :2] = 10.0  # cell 0 predicted class 2
+    sums, top = cell_features(logits, grid, ["maxprob"])["maxprob"]
+    q = samples_per_cell(8, grid)
+    w = torch.tensor([1.0, 1.0, 100.0])
+    plain, weighted = pool_scores(sums, top, q, "mean", None), pool_scores(sums, top, q, "mean", w)
+    assert torch.allclose(weighted[1:], plain[1:]) and weighted[0] > plain[0]
+
+
+def test_top10_with_class_weights_is_rejected():
+    with pytest.raises(ValueError):
+        pool_scores(torch.zeros(28, 19), torch.zeros(28), 10, "top10", torch.ones(19))
+
+
+def test_greedy_batch_matches_row_by_row():
+    grid = GlimpseGrid((1024, 2048), 256, 32)
+    s = torch.rand(5, grid.num_cells, generator=torch.Generator().manual_seed(1))
+    batch = select_greedy_batch(s, grid, 4, 1)
+    assert batch.shape == (5, 4)
+    for i in range(5):
+        assert torch.equal(batch[i], select_greedy(s[i], grid, 4, 1))
+
+
+def test_segmenter_returns_the_selected_cells():
+    cfg = FoveationConfig(context_scale=0.25, glimpse_size=64, glimpse_margin=8, k=3)
+    bb = DummyBackbone(num_classes=5)
+    seg = FoveatedSegmenter(bb, bb, cfg, frame_size=(128, 256)).eval()
+    frame = torch.rand(1, 3, 128, 256)
+    with torch.no_grad():
+        labels, idx = seg(frame, return_idx=True)
+        assert torch.equal(labels, seg(frame))
+    assert idx.shape == (3,) and len(set(idx.tolist())) == 3
 
 
 def test_grid_geometry_and_canvas():
@@ -112,10 +181,17 @@ def test_stub_backbone_shapes():
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="GPU-only: needs CUDA")
-def test_pipeline_is_sync_free_and_graph_capturable():
+@pytest.mark.parametrize("score,pool,weights,selection", [
+    ("entropy", "mean", None, "greedy"),
+    ("margin", "mean", None, "topk"),
+    ("maxprob", "top10", None, "topk"),
+    ("entropy", "mean", tuple([2.0] + [1.0] * 18), "greedy"),
+])
+def test_pipeline_is_sync_free_and_graph_capturable(score, pool, weights, selection):
     from eval.gpu_timing import cuda_graph
 
-    cfg = FoveationConfig(context_scale=0.25, glimpse_size=128, glimpse_margin=16, k=4, selection="greedy")
+    cfg = FoveationConfig(context_scale=0.25, glimpse_size=128, glimpse_margin=16, k=4, selection=selection,
+                          score=score, pool=pool, class_weights=weights)
     stub = StubBackbone(num_classes=19, output_stride=8).cuda()
     seg = FoveatedSegmenter(stub, stub, cfg, frame_size=(256, 512)).cuda().eval()
     frame = torch.rand(1, 3, 256, 512, device="cuda", dtype=torch.float16)
