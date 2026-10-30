@@ -118,17 +118,19 @@ resolution with a 0.5 context, mIoU (overwrite / mean / conf):
 
 So even glimpsing everything adds at most ~2-3 points over the context alone,
 and the full frame at a slightly higher scale gives more for less time. Mean
-fusion beats conf by ~0.1-0.5 points; both beat overwriting by ~0.5 points at
-the best operating points (more for large k).
+fusion beats conf by 0.3-1.0 points in this bound but by only ~0.1 at the best
+operating points; at those points fusion beats overwriting by 0.1-1.3 points.
 
 **Wide glimpses hurt.** A 768-1024 px region shrunk to half resolution has no
 more detail than the 0.5 context, so fusing it lowers accuracy (PIDNet-S, every
 cell 384:32:0.5 fused with context 0.5: 65.6 vs 67.9 for the context alone).
 The 0.75 geometry sits between the two.
 
-**Selection.** For BiSeNetV2 the pixel oracle is now *above* the curve (+1.0
-to +2.0 points), so a better rule would have some headroom there; for the
-PidNet-S glimpse pairs even the oracle stays below (-1.3 to -6.1).
+**Selection.** For BiSeNetV2 with full-resolution glimpses the pixel oracle is
+now *above* the curve (+0.9 to +2.0 points), so a better rule would have some
+headroom there (the oracle maximises correct pixels, so this is indicative, not
+a ceiling); with wide glimpses it is +0.3 to -2.2, and for the PIDNet-S glimpse
+pairs it stays below (-1.3 to -6.1).
 
 **Why the full frame is hard to beat on a T4.** Full-frame latency grows
 slower than its pixel count at these sizes, so the step from scale 0.5 to
