@@ -13,7 +13,9 @@ import generate_fixture as gf  # noqa: E402
 from eval.harness import frame_to_tensor  # noqa: E402
 from eval.metrics import ConfusionMatrix  # noqa: E402
 from foveation.cache import (  # noqa: E402
+    CacheJob,
     build_cache,
+    build_caches,
     build_model_caches,
     cache_path,
     context_cells,
@@ -105,3 +107,62 @@ def test_cache_paths():
     root = __import__("pathlib").Path("c")
     assert cache_path(root, "train", "context", "pidnet_s", grid, 0.25).as_posix() == "c/train/ctx_pidnet_s_s0.25_g384m32.npz"
     assert cache_path(root, "val", "glimpse", "bisenetv2", grid).as_posix() == "c/val/gl_bisenetv2_g384m32.npz"
+
+
+class _FailAfter(torch.nn.Module):
+    """``inner``, but raises on forward call number ``fail_at`` (None: never); counts calls."""
+
+    def __init__(self, inner, fail_at=None):
+        super().__init__()
+        self.inner, self.fail_at, self.calls = inner, fail_at, 0
+
+    def __getattr__(self, name):  # the backbone's attributes (output_stride, align_corners, ...)
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(super().__getattr__("inner"), name)
+
+    def forward(self, x):
+        self.calls += 1
+        if self.fail_at is not None and self.calls >= self.fail_at:
+            raise RuntimeError("simulated cuDNN failure")
+        return self.inner(x)
+
+
+def _resume_jobs(root):
+    grid = GlimpseGrid((gf.OH, gf.OW), 12, 2)
+    return [CacheJob("context", "dummy", grid, root / "ctx.npz", scale=0.25),
+            CacheJob("glimpse", "dummy", grid, root / "gl.npz"),
+            CacheJob("glimpse", "dummy", grid, root / "fu.npz", scale=0.25, fusion="mean", ctx_model="dummy")]
+
+
+def test_an_interrupted_build_resumes_from_its_last_clip(tmp_path, vps, oracle_backbone):
+    assert len(vps) >= 2
+    counter = _FailAfter(oracle_backbone)
+    build_caches(vps, {"dummy": counter}, _resume_jobs(tmp_path / "ref"), "cpu", allow_any_frame_size=True)
+    with pytest.raises(RuntimeError, match="simulated"):
+        build_caches(vps, {"dummy": _FailAfter(oracle_backbone, fail_at=int(counter.calls * 0.7))},
+                     _resume_jobs(tmp_path / "run"), "cpu", allow_any_frame_size=True)
+    assert not list((tmp_path / "run").glob("*.npz"))  # nothing that looks finished
+    resumed = _FailAfter(oracle_backbone)
+    build_caches(vps, {"dummy": resumed}, _resume_jobs(tmp_path / "run"), "cpu", allow_any_frame_size=True)
+    assert 0 < resumed.calls < counter.calls  # the clips done before the failure are not run again
+    for name in ("ctx.npz", "gl.npz", "fu.npz"):
+        with np.load(tmp_path / "run" / name) as a, np.load(tmp_path / "ref" / name) as b:
+            assert sorted(a.files) == sorted(b.files)
+            for key in a.files:
+                assert np.array_equal(a[key], b[key]), (name, key)
+    assert sorted(p.name for p in (tmp_path / "run").iterdir()) == ["ctx.npz", "fu.npz", "gl.npz"]
+
+
+def test_a_checkpoint_of_other_jobs_is_not_resumed(tmp_path, vps, oracle_backbone):
+    counter = _FailAfter(oracle_backbone)
+    build_caches(vps, {"dummy": counter}, _resume_jobs(tmp_path / "ref"), "cpu", allow_any_frame_size=True)
+    jobs = _resume_jobs(tmp_path / "run")
+    with pytest.raises(RuntimeError, match="simulated"):
+        build_caches(vps, {"dummy": _FailAfter(oracle_backbone, fail_at=int(counter.calls * 0.7))}, jobs, "cpu",
+                     allow_any_frame_size=True)
+    fresh = _FailAfter(oracle_backbone)
+    build_caches(vps, {"dummy": fresh}, jobs[:2], "cpu", allow_any_frame_size=True)  # a different set of jobs
+    with np.load(tmp_path / "run" / "gl.npz") as a, np.load(tmp_path / "ref" / "gl.npz") as b:
+        assert np.array_equal(a["conf"], b["conf"]) and np.array_equal(a["t"], b["t"])

@@ -102,10 +102,76 @@ def glimpse_cells(backbone: torch.nn.Module, frame: torch.Tensor, label: torch.T
     return per_cell_confusion(canvas[:h, :w], label, grid, num_classes, ignore_index)
 
 
-def _conf_tmp(path: Path) -> Path:
-    """The disk-backed per-cell confusion array of a cache being built (deleted when the file is written)."""
+def _tmp(path: Path, what: str) -> Path:
+    """A disk-backed array (``conf``, ``sums``, ``tops``) of a cache being built (deleted when the file is written)."""
     path = Path(path)
-    return path.with_name(path.name[:-len(".npz")] + ".conf.tmp.npy")
+    return path.with_name(path.name[:-len(".npz")] + f".{what}.tmp.npy")
+
+
+def _conf_tmp(path: Path) -> Path:
+    return _tmp(path, "conf")
+
+
+def _state_path(jobs: Sequence[CacheJob]) -> Path:
+    """The checkpoint of an interrupted :func:`build_caches` (one per directory)."""
+    return Path(jobs[0].path).parent / "_build_state.json"
+
+
+def _signature(jobs: Sequence[CacheJob], indices: Sequence[int], precision: str, num_frames: int) -> str:
+    return json.dumps({"jobs": [[j.kind, j.model, str(Path(j.path)), j.scale, j.grid.size, j.grid.margin,
+                                 list(j.grid.frame_size), j.input_size, j.fusion, j.ctx_model] for j in jobs],
+                       "clips": [int(i) for i in indices], "precision": precision, "frames": num_frames})
+
+
+def _shapes(job: CacheJob, num_frames: int, c: int) -> Dict[str, Tuple[int, ...]]:
+    cells, k = job.grid.num_cells, len(SCORE_KINDS)
+    shapes = {"conf": (num_frames, cells, c, c)}
+    if job.kind == "context":
+        shapes.update(sums=(k, num_frames, cells, c), tops=(k, num_frames, cells))
+    return shapes
+
+
+def _open_accumulators(jobs: Sequence[CacheJob], num_frames: int, c: int, signature: str) -> Tuple[List, Dict]:
+    """Disk-backed accumulators, reopened with the checkpoint's progress when it is of these very jobs."""
+    state_path = _state_path(jobs)
+    state = None
+    if state_path.exists():
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+        except ValueError:
+            state = None
+    if state is not None and state.get("signature") != signature:
+        state = None
+    if state is not None:
+        for j in jobs:
+            for what, shape in _shapes(j, num_frames, c).items():
+                f = _tmp(j.path, what)
+                if not f.exists() or tuple(np.load(f, mmap_mode="r").shape) != shape:
+                    state = None
+    mode = "r+" if state is not None else "w+"
+    acc = []
+    for j, q in zip(jobs, (state or {}).get("q", [0] * len(jobs))):
+        Path(j.path).parent.mkdir(parents=True, exist_ok=True)
+        a = {what: np.lib.format.open_memmap(_tmp(j.path, what), mode=mode,
+                                             dtype=np.int32 if what == "conf" else np.float32, shape=shape)
+             for what, shape in _shapes(j, num_frames, c).items()}
+        a["q"] = q
+        acc.append(a)
+    if state is None:
+        state = {"signature": signature, "clips_done": 0, "clip_index": [], "t": []}
+    return acc, state
+
+
+def _checkpoint(jobs: Sequence[CacheJob], acc: List, state: Dict) -> None:
+    for a in acc:
+        for what in ("conf", "sums", "tops"):
+            if what in a:
+                a[what].flush()
+    state["q"] = [int(a["q"]) for a in acc]
+    path = _state_path(jobs)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(state), encoding="utf-8")
+    os.replace(tmp, path)
 
 
 @dataclass(frozen=True)
@@ -180,7 +246,9 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
     every grid and fusion; each (glimpse model, grid, input size) runs once and
     serves every fusion. Labels come from the pipeline's own functions. Each
     file is written as ``<name>.tmp.npz`` and renamed when complete, so an
-    interrupted build never leaves a file that looks finished.
+    interrupted build never leaves a file that looks finished. Progress is
+    checkpointed after every clip: called again with the same jobs and clips,
+    an interrupted build resumes after its last finished clip.
     """
     for job in jobs:
         if job.kind not in ("context", "glimpse"):
@@ -203,21 +271,18 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
     indices = list(range(len(dataset)) if clip_indices is None else clip_indices)
     frame_size = tuple(jobs[0].grid.frame_size)
     num_frames = sum(int(np.asarray(dataset.labeled_mask(ci), dtype=bool).sum()) for ci in indices)
-    # per-cell confusions go to disk as they are computed: all jobs of a train split do not fit in RAM
-    acc = []
-    for j in jobs:
-        Path(j.path).parent.mkdir(parents=True, exist_ok=True)
-        conf = np.lib.format.open_memmap(_conf_tmp(j.path), mode="w+", dtype=np.int32,
-                                         shape=(num_frames, j.grid.num_cells, c, c))
-        acc.append({"conf": conf, "sums": {k: [] for k in SCORE_KINDS}, "tops": {k: [] for k in SCORE_KINDS}, "q": 0})
+    # per-cell arrays go to disk as they are computed: all jobs of a train split do not fit in RAM
+    acc, state = _open_accumulators(jobs, num_frames, c, _signature(jobs, indices, precision, num_frames))
     ctx_keys = sorted({j.ctx_key for j in jobs if j.ctx_key is not None})
     fused_keys = {j.ctx_key for j in jobs if j.kind == "glimpse" and j.fusion != "replace"}
     groups: Dict[Tuple, List[int]] = {}
     for i, j in enumerate(jobs):
         if j.kind == "glimpse":
             groups.setdefault((j.model, j.grid.size, j.grid.margin, j.input_size), []).append(i)
-    clip_index, ts = [], []
+    clip_index, ts = state["clip_index"], state["t"]
     for n, ci in enumerate(indices):
+        if n < state["clips_done"]:
+            continue
         for t in np.flatnonzero(np.asarray(dataset.labeled_mask(ci), dtype=bool)):
             image = dataset.load_frame(ci, int(t))
             if tuple(image.shape[:2]) != frame_size:
@@ -241,9 +306,9 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                         continue
                     cells = _context_cells_from(*ctx[j.ctx_key][:2], label, j.grid, c, ignore, SCORE_KINDS)
                     acc[i]["conf"][len(ts)] = cells.conf.cpu().numpy()
-                    for k in SCORE_KINDS:
-                        acc[i]["sums"][k].append(cells.class_sums[k].cpu())
-                        acc[i]["tops"][k].append(cells.top10[k].cpu())
+                    for ki, k in enumerate(SCORE_KINDS):
+                        acc[i]["sums"][ki, len(ts)] = cells.class_sums[k].float().cpu().numpy()
+                        acc[i]["tops"][ki, len(ts)] = cells.top10[k].float().cpu().numpy()
                     acc[i]["q"] = cells.q
                 for (model, _, _, input_size), members in groups.items():
                     grid = jobs[members[0]].grid
@@ -276,8 +341,10 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                     for i in members:
                         acc[i]["conf"][len(ts)] = per_cell_confusion(canvases[i][:h, :w], label, grid, c,
                                                                      ignore).cpu().numpy()
-            clip_index.append(ci)
+            clip_index.append(int(ci))
             ts.append(int(t))
+        state["clips_done"] = n + 1
+        _checkpoint(jobs, acc, state)
         if progress:
             print(f"\r[cache] clip {n + 1}/{len(indices)}", end="", flush=True)
     if progress:
@@ -295,9 +362,9 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
                                   "t": np.array(ts, dtype=np.int32), "meta": json.dumps(meta, default=str)}
         if j.kind == "context":
             arrays["q"] = np.int32(a["q"])
-            for k in SCORE_KINDS:
-                arrays[f"class_sums_{k}"] = torch.stack(a["sums"][k]).numpy()
-                arrays[f"top10_{k}"] = torch.stack(a["tops"][k]).numpy()
+            for ki, k in enumerate(SCORE_KINDS):
+                arrays[f"class_sums_{k}"] = a["sums"][ki]
+                arrays[f"top10_{k}"] = a["tops"][ki]
         out_path = Path(j.path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         tmp = out_path.with_name(out_path.name[:-len(".npz")] + ".tmp.npz") if out_path.name.endswith(".npz") \
@@ -305,9 +372,12 @@ def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequ
         np.savez_compressed(tmp, **arrays)  # per-cell confusions are mostly zeros
         os.replace(tmp, out_path)
         del arrays
-        conf, a["conf"] = a["conf"], None
-        conf._mmap.close()  # Windows cannot delete a mapped file; nothing else views this array
-        del conf
-        os.remove(_conf_tmp(j.path))
+        for what in ("conf", "sums", "tops"):
+            if what in a:
+                arr, a[what] = a[what], None
+                arr._mmap.close()  # Windows cannot delete a mapped file; nothing else views this array
+                del arr
+                os.remove(_tmp(j.path, what))
         written.append(out_path)
+    os.remove(_state_path(jobs))
     return written
