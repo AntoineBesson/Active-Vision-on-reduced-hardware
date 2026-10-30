@@ -68,3 +68,21 @@ whole regions correctly.
 context inside the cell instead of overwriting it (try 2), and wide glimpses
 that see more of the scene at reduced resolution (try 2). Larger margins at
 full resolution were set aside for now (more pixels for the same cell).
+
+---
+
+## Try 2: fuse glimpses with the context; wide glimpses at reduced resolution (in progress)
+
+**Setup.** Context and glimpse pairs PIDNet-S + PIDNet-S, BiSeNetV2 +
+BiSeNetV2, BiSeNetV2 context + PIDNet-S glimpses. Fusion inside a selected
+cell: `replace` (try 1), `mean` (argmax of the mean of the two softmaxes),
+`conf` (the more confident of the two per pixel). Glimpse geometries
+(frame px : margin : resolution) 256:32:1, 384:32:1, 512:32:1, 768:64:0.5,
+1024:64:0.5, 512:32:0.75. Same scales, k, selection rules and references as
+try 1.
+
+**Run notes.** The first train cache pass (138 caches in one pass over 2400
+frames, laptop RTX 2060) crashed after 1099 frames with a cuDNN execution
+failure at ~87 °C; the builder could not resume, so it restarted from zero
+(2026-10-30 19:39), now checkpointing every clip and retrying after a crash.
+No result was lost to the crash, only time.
