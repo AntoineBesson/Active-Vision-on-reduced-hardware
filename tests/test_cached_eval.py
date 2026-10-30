@@ -135,3 +135,40 @@ def test_cache_matches_the_pipeline_on_real_data(tmp_path, ctx_name, selection):
         assert diff <= 1e-4 * cm.matrix.sum(), f"frame {n}: {diff} pixels differ"
     total = cached.sum(0)
     assert total.sum() > 0
+
+
+# --------------------------------------------------------------------------- #
+# Fused and wide glimpses: the multi-backbone builder against the pipeline
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("fusion,size,margin,gscale", [("mean", 12, 2, 1.0), ("conf", 12, 2, 1.0),
+                                                       ("replace", 8, 1, 0.5), ("conf", 8, 1, 0.5)])
+def test_fused_and_wide_caches_match_the_pipeline(tmp_path, vps, fusion, size, margin, gscale):
+    from foveation.cache import CacheJob, build_caches
+    from foveation.pipeline import glimpse_grid
+    from models.dummy import DummyBackbone
+
+    # two different dummies (a stride-2 context, a stride-1 glimpse model) so fusion has something to do
+    ctx_bb = DummyBackbone(num_classes=19, output_stride=2, class_colors=vps.palette / 255.0, temperature=0.3).eval()
+    gl_bb = DummyBackbone(num_classes=19, output_stride=1, class_colors=vps.palette / 255.0, temperature=0.5).eval()
+    cfg = FoveationConfig(context_scale=0.5, glimpse_size=size, glimpse_margin=margin, k=2, fusion=fusion,
+                          glimpse_scale=gscale, score="margin")
+    grid = glimpse_grid((gf.OH, gf.OW), cfg)
+    jobs = [CacheJob("context", "ctx", grid, tmp_path / "ctx.npz", scale=0.5),
+            CacheJob("glimpse", "gl", grid, tmp_path / "gl.npz", scale=0.5, input_size=size, fusion=fusion,
+                     ctx_model="ctx" if fusion != "replace" else None)]
+    build_caches(vps, {"ctx": ctx_bb, "gl": gl_bb}, jobs, "cpu", allow_any_frame_size=True)
+    pair = CachedPair.load(tmp_path / "ctx.npz", tmp_path / "gl.npz")
+    cached = compose(pair, select_cells(pair, Rule("uncertainty", score="margin"), 2)).sum(0)
+    ref = evaluate(vps, FoveatedMethod(ctx_bb, gl_bb, cfg))["confusion"].matrix
+    assert np.array_equal(cached, ref)
+
+
+def test_fused_cache_must_match_its_context(tmp_path, vps, oracle_backbone):
+    from foveation.cache import CacheJob, build_caches
+
+    grid = GlimpseGrid((gf.OH, gf.OW), 12, 2)
+    jobs = [CacheJob("context", "a", grid, tmp_path / "ctx25.npz", scale=0.25),
+            CacheJob("glimpse", "a", grid, tmp_path / "fu50.npz", scale=0.5, fusion="mean", ctx_model="a")]
+    build_caches(vps, {"a": oracle_backbone}, jobs, "cpu", allow_any_frame_size=True)
+    with pytest.raises(ValueError, match="context"):
+        CachedPair.load(tmp_path / "ctx25.npz", tmp_path / "fu50.npz")

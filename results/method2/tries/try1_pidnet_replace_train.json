@@ -1,0 +1,839 @@
+{
+ "try": 1,
+ "date": "2026-10-30",
+ "split": "train (VPS, 400 clips x 6 labelled frames)",
+ "pair": "pidnet_s+pidnet_s",
+ "fusion": "replace",
+ "glimpse_scale": 1.0,
+ "margin_px": 32,
+ "git_commit": "55c46658e84ee6827713d05f620b31c15060160f",
+ "latency": "predicted T4 median (latency-floor tables), full frame = backbone only",
+ "fullframe_curve": {
+  "scales": [
+   1.0,
+   0.75,
+   0.5,
+   0.375,
+   0.25
+  ],
+  "miou": [
+   0.7608271785202243,
+   0.7479547825283435,
+   0.6794208938639265,
+   0.6173515073443419,
+   0.528506245273344
+  ],
+  "latency_ms": [
+   19.346176147460938,
+   10.740303993225098,
+   5.217280149459839,
+   3.591823935508728,
+   2.73145592212677
+  ]
+ },
+ "tiling_bound": {
+  "s0.25_g256": 0.535117691954462,
+  "s0.25_g384": 0.6026287034863919,
+  "s0.25_g512": 0.6300923569807262,
+  "s0.375_g256": 0.535117691954462,
+  "s0.375_g384": 0.6026287034863919,
+  "s0.375_g512": 0.6300923569807262,
+  "s0.5_g256": 0.535117691954462,
+  "s0.5_g384": 0.6026287034863919,
+  "s0.5_g512": 0.6300923569807262
+ },
+ "points": [
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 256,
+   "k": 1,
+   "t4_median_ms": 6.903295814990997,
+   "miou": {
+    "oracle": 0.5612779616610021,
+    "uncertainty": 0.535739493168983,
+    "prior": 0.5357465220417711,
+    "random": 0.5274377369376566
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.16460276789824002
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 256,
+   "k": 2,
+   "t4_median_ms": 7.455759942531586,
+   "miou": {
+    "oracle": 0.5830819845174117,
+    "uncertainty": 0.5426235332856533,
+    "prior": 0.5452895118616715,
+    "random": 0.5259979943720038
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.16457412368044722
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 256,
+   "k": 4,
+   "t4_median_ms": 8.672224044799805,
+   "miou": {
+    "oracle": 0.612754046933107,
+    "uncertainty": 0.5541879153565218,
+    "prior": 0.5587915392055475,
+    "random": 0.5240065696347935
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.16810455519493417
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 256,
+   "k": 8,
+   "t4_median_ms": 11.221887946128845,
+   "miou": {
+    "oracle": 0.6471548344815689,
+    "uncertainty": 0.5743501683806824,
+    "prior": 0.5842284982693162,
+    "random": 0.5210853046406585
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.174324952450858
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 384,
+   "k": 1,
+   "t4_median_ms": 7.458064079284668,
+   "miou": {
+    "oracle": 0.5838046784792411,
+    "uncertainty": 0.5407345422872272,
+    "prior": 0.5487606394095156,
+    "random": 0.5294263159351535
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.16649170616356912
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 384,
+   "k": 2,
+   "t4_median_ms": 8.761151909828186,
+   "miou": {
+    "oracle": 0.6166746297088295,
+    "uncertainty": 0.5565391171427764,
+    "prior": 0.5657658600119821,
+    "random": 0.529967052258083
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.16685683812528085
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 384,
+   "k": 4,
+   "t4_median_ms": 11.371456027030945,
+   "miou": {
+    "oracle": 0.6587762707226306,
+    "uncertainty": 0.5806209461018338,
+    "prior": 0.6072364336273658,
+    "random": 0.5328706120141532
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.16827789401470317
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 384,
+   "k": 8,
+   "t4_median_ms": 17.286415934562683,
+   "miou": {
+    "oracle": 0.6936712119075733,
+    "uncertainty": 0.6127837885313955,
+    "prior": 0.6343032507490826,
+    "random": 0.5401985633644324
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.144962464705074
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 512,
+   "k": 1,
+   "t4_median_ms": 8.401535868644714,
+   "miou": {
+    "oracle": 0.5882981641890065,
+    "uncertainty": 0.5406571392666418,
+    "prior": 0.5530889314189986,
+    "random": 0.5329438495200514
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.17827642611761507
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 512,
+   "k": 2,
+   "t4_median_ms": 10.70036768913269,
+   "miou": {
+    "oracle": 0.6266688389652121,
+    "uncertainty": 0.5542266844920295,
+    "prior": 0.5783539224421314,
+    "random": 0.538020866335523
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "margin",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.19323253794174244
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 512,
+   "k": 4,
+   "t4_median_ms": 15.524816155433655,
+   "miou": {
+    "oracle": 0.6707241326983207,
+    "uncertainty": 0.5832881022778708,
+    "prior": 0.6047016556648505,
+    "random": 0.5498642739611203
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "margin",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.17182320478117985
+  },
+  {
+   "context_scale": 0.25,
+   "glimpse_size": 512,
+   "k": 8,
+   "t4_median_ms": 26.610656142234802,
+   "miou": {
+    "oracle": 0.7040896987641524,
+    "uncertainty": 0.6252930113072968,
+    "prior": 0.6527722608888235,
+    "random": 0.5774327816620624
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "margin",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": null
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 256,
+   "k": 1,
+   "t4_median_ms": 7.926447868347168,
+   "miou": {
+    "oracle": 0.6437016162252129,
+    "uncertainty": 0.621257002006536,
+    "prior": 0.6208001790086559,
+    "random": 0.6142582001206238
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.09178130943002194
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 256,
+   "k": 2,
+   "t4_median_ms": 8.476912021636963,
+   "miou": {
+    "oracle": 0.6590260969203059,
+    "uncertainty": 0.6242404837266189,
+    "prior": 0.6233076835814726,
+    "random": 0.6106355207140033
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.09562840640423564
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 256,
+   "k": 4,
+   "t4_median_ms": 9.688736081123352,
+   "miou": {
+    "oracle": 0.6778443116500682,
+    "uncertainty": 0.630165894702676,
+    "prior": 0.6323873169578286,
+    "random": 0.6048855637644064
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.10474023182676029
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 256,
+   "k": 8,
+   "t4_median_ms": 12.246463894844055,
+   "miou": {
+    "oracle": 0.6979967285390604,
+    "uncertainty": 0.6340545727225244,
+    "prior": 0.6406291581357564,
+    "random": 0.5946000281987296
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.11615307695667354
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 384,
+   "k": 1,
+   "t4_median_ms": 8.489776015281677,
+   "miou": {
+    "oracle": 0.6589318781397666,
+    "uncertainty": 0.6235884756257835,
+    "prior": 0.6290715390925552,
+    "random": 0.6142958203536367
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.09644004074119938
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 384,
+   "k": 2,
+   "t4_median_ms": 9.791663885116577,
+   "miou": {
+    "oracle": 0.6790240244957705,
+    "uncertainty": 0.6297278950464292,
+    "prior": 0.6374269927100683,
+    "random": 0.6109477901210063
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.10645543811091396
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 384,
+   "k": 4,
+   "t4_median_ms": 12.404864072799683,
+   "miou": {
+    "oracle": 0.7025812516538479,
+    "uncertainty": 0.6433658732130708,
+    "prior": 0.6604607939496455,
+    "random": 0.6063998503622325
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.10707870652728613
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 384,
+   "k": 8,
+   "t4_median_ms": 18.325600028038025,
+   "miou": {
+    "oracle": 0.7207268981330137,
+    "uncertainty": 0.650076779116363,
+    "prior": 0.6637535993031537,
+    "random": 0.6000868678420672
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.10922385337649532
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 512,
+   "k": 1,
+   "t4_median_ms": 9.416063904762268,
+   "miou": {
+    "oracle": 0.6597278183140712,
+    "uncertainty": 0.6214852199326258,
+    "prior": 0.6300116432674489,
+    "random": 0.6142458053558941
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.11003738244315142
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 512,
+   "k": 2,
+   "t4_median_ms": 11.738319754600525,
+   "miou": {
+    "oracle": 0.6831985128424368,
+    "uncertainty": 0.6267278356476639,
+    "prior": 0.6445101674773172,
+    "random": 0.6128452795671132
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.12271974782593176
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 512,
+   "k": 4,
+   "t4_median_ms": 16.556544184684753,
+   "miou": {
+    "oracle": 0.7086535488587519,
+    "uncertainty": 0.638149202580674,
+    "prior": 0.6584512145817281,
+    "random": 0.6133048761915442
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.11850533118572504
+  },
+  {
+   "context_scale": 0.375,
+   "glimpse_size": 512,
+   "k": 8,
+   "t4_median_ms": 27.654063820838928,
+   "miou": {
+    "oracle": 0.7206588903538457,
+    "uncertainty": 0.6479358483910542,
+    "prior": 0.6668463688002563,
+    "random": 0.618346586390558
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "margin",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": null
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 256,
+   "k": 1,
+   "t4_median_ms": 9.517760038375854,
+   "miou": {
+    "oracle": 0.6977767274149127,
+    "uncertainty": 0.6794498499424959,
+    "prior": 0.6802681665348194,
+    "random": 0.6750657133981541
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.05333467555652538
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 256,
+   "k": 2,
+   "t4_median_ms": 10.067392230033875,
+   "miou": {
+    "oracle": 0.7082339443436554,
+    "uncertainty": 0.6789175534137387,
+    "prior": 0.6799839179633504,
+    "random": 0.6700776672476341
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.06068722716565722
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 256,
+   "k": 4,
+   "t4_median_ms": 11.269184231758118,
+   "miou": {
+    "oracle": 0.7193225635560154,
+    "uncertainty": 0.6772943642826205,
+    "prior": 0.6797748014620112,
+    "random": 0.6619163177347139
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.07145150086241359
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 256,
+   "k": 8,
+   "t4_median_ms": 13.854080200195312,
+   "miou": {
+    "oracle": 0.7289181757244684,
+    "uncertainty": 0.6726238189268503,
+    "prior": 0.6797260156780848,
+    "random": 0.6470925966619203
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "entropy",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.07998845323739123
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 384,
+   "k": 1,
+   "t4_median_ms": 10.074928164482117,
+   "miou": {
+    "oracle": 0.7073723676506062,
+    "uncertainty": 0.6790985431141744,
+    "prior": 0.6827627800910715,
+    "random": 0.6740390420596706
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.06059974908260135
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 384,
+   "k": 2,
+   "t4_median_ms": 11.481664061546326,
+   "miou": {
+    "oracle": 0.7190175278262106,
+    "uncertainty": 0.6779405060509782,
+    "prior": 0.6880008612659406,
+    "random": 0.6680448586794695
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "greedy",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.07112317981696481
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 384,
+   "k": 4,
+   "t4_median_ms": 13.992016196250916,
+   "miou": {
+    "oracle": 0.7302168471597232,
+    "uncertainty": 0.6763946150396533,
+    "prior": 0.6921476852619195,
+    "random": 0.6589988665778341
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.07642397749873986
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 384,
+   "k": 8,
+   "t4_median_ms": 19.898624181747437,
+   "miou": {
+    "oracle": 0.7365848956294969,
+    "uncertainty": 0.6697457377175405,
+    "prior": 0.6901886136452273,
+    "random": 0.6434973068273254
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": null
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 512,
+   "k": 1,
+   "t4_median_ms": 11.018144130706787,
+   "miou": {
+    "oracle": 0.7078866527059252,
+    "uncertainty": 0.6716196314403303,
+    "prior": 0.6816597895358653,
+    "random": 0.6712954447649266
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.07675073572696722
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 512,
+   "k": 2,
+   "t4_median_ms": 13.345216035842896,
+   "miou": {
+    "oracle": 0.72148307066719,
+    "uncertainty": 0.6677913460715953,
+    "prior": 0.6853986579202948,
+    "random": 0.6655338899057714
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "margin",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.08405978289736904
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 512,
+   "k": 4,
+   "t4_median_ms": 18.154096364974976,
+   "miou": {
+    "oracle": 0.7330907001510953,
+    "uncertainty": 0.6636872733444905,
+    "prior": 0.6890218642404512,
+    "random": 0.6570055649137768
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "margin",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": -0.09535682930160272
+  },
+  {
+   "context_scale": 0.5,
+   "glimpse_size": 512,
+   "k": 8,
+   "t4_median_ms": 29.23857617378235,
+   "miou": {
+    "oracle": 0.7320080069910297,
+    "uncertainty": 0.6543666212105653,
+    "prior": 0.6748734354080568,
+    "random": 0.6457833165149239
+   },
+   "best_uncertainty_rule": {
+    "kind": "uncertainty",
+    "score": "maxprob",
+    "pool": "top10",
+    "class_weights": null,
+    "selection": "topk",
+    "suppress": 1,
+    "seed": 0
+   },
+   "delta_miou_at_equal_latency": null
+  }
+ ]
+}

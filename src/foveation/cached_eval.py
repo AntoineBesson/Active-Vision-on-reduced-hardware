@@ -56,6 +56,9 @@ class CachedPair:
         for key in ("size", "margin", "rows", "cols", "frame_size", "num_classes"):
             if mc[key] != mg[key]:
                 raise ValueError(f"caches disagree on {key}: {mc[key]} vs {mg[key]}")
+        if mg.get("fusion", "replace") != "replace" and (mg["ctx_model"], mg["scale"]) != (mc["model"], mc["scale"]):
+            raise ValueError(f"the glimpse cache is fused with the context of {mg['ctx_model']} at {mg['scale']}, "
+                             f"not {mc['model']} at {mc['scale']}")
         if not (np.array_equal(ctx["clip_index"], gl["clip_index"]) and np.array_equal(ctx["t"], gl["t"])):
             raise ValueError("caches cover different frames (or a different order)")
         feats = {k: (torch.from_numpy(ctx[f"class_sums_{k}"]), torch.from_numpy(ctx[f"top10_{k}"])) for k in SCORE_KINDS}

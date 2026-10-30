@@ -33,9 +33,10 @@ import torch
 from eval.harness import PRECISIONS, frame_to_tensor
 
 from .ops import SCORE_KINDS, GlimpseGrid, cell_features, gather_crops, paste_labels, samples_per_cell
-from .pipeline import context_pass, glimpse_labels
+from .pipeline import (FUSIONS, context_pass, gather_inner, glimpse_labels, glimpse_logits,
+                       labels_from_glimpse)
 
-__all__ = ["FRAME", "per_cell_confusion", "ContextCells", "context_cells", "glimpse_cells", "build_cache", "build_model_caches", "cache_path"]
+__all__ = ["FRAME", "per_cell_confusion", "ContextCells", "context_cells", "glimpse_cells", "CacheJob", "build_cache", "build_model_caches", "build_caches", "cache_path"]
 
 FRAME = (1024, 2048)  # the frame the T4 latency tables were measured at
 
@@ -85,25 +86,57 @@ def _context_cells_from(logits: torch.Tensor, labels: torch.Tensor, label: torch
 
 
 def glimpse_cells(backbone: torch.nn.Module, frame: torch.Tensor, label: torch.Tensor, grid: GlimpseGrid,
-                  num_classes: int, ignore_index: int, chunk: int = 16) -> torch.Tensor:
+                  num_classes: int, ignore_index: int, chunk: int = 16, input_size: Optional[int] = None) -> torch.Tensor:
     """(cells, C, C) int32 confusion of every cell's glimpse (inner square only, as pasted)."""
     padded = grid.pad_frame(frame)
     canvas = grid.to_canvas(torch.zeros(grid.frame_size, dtype=torch.long, device=frame.device))
     with torch.no_grad():
         for start in range(0, grid.num_cells, chunk):
             idx = torch.arange(start, min(start + chunk, grid.num_cells), device=frame.device)
-            paste_labels(canvas, glimpse_labels(backbone, gather_crops(padded, grid, idx)), grid, idx)
+            paste_labels(canvas, glimpse_labels(backbone, gather_crops(padded, grid, idx), input_size), grid, idx)
     h, w = grid.frame_size
     return per_cell_confusion(canvas[:h, :w], label, grid, num_classes, ignore_index)
 
 
-def cache_path(root: Path, split: str, kind: str, model: str, grid: GlimpseGrid, scale: Optional[float] = None) -> Path:
+@dataclass(frozen=True)
+class CacheJob:
+    """One cache file.
+
+    ``context``: per-cell confusion + selection features of ``model``'s context
+    pass at ``scale``. ``glimpse``: per-cell confusion of ``model``'s glimpse of
+    every cell (network input ``input_size``, default the crop size), either on
+    its own (``fusion="replace"``) or fused with the context of ``ctx_model``
+    at ``scale``.
+    """
+
+    kind: str
+    model: str
+    grid: GlimpseGrid
+    path: Path
+    scale: Optional[float] = None
+    input_size: Optional[int] = None
+    fusion: str = "replace"
+    ctx_model: Optional[str] = None
+
+    @property
+    def ctx_key(self) -> Optional[Tuple[str, float]]:
+        if self.kind == "context":
+            return (self.model, self.scale)
+        return None if self.fusion == "replace" else (self.ctx_model, self.scale)
+
+
+def cache_path(root: Path, split: str, kind: str, model: str, grid: GlimpseGrid, scale: Optional[float] = None,
+               input_size: Optional[int] = None, fusion: str = "replace", ctx_model: Optional[str] = None) -> Path:
     g = f"g{grid.size}m{grid.margin}"
     if kind == "context":
         return Path(root) / split / f"ctx_{model}_s{scale:g}_{g}.npz"
-    if kind == "glimpse":
+    if kind != "glimpse":
+        raise ValueError(f"kind must be 'context' or 'glimpse', got {kind!r}")
+    if input_size is not None and input_size != grid.size:
+        g += f"_i{input_size}"
+    if fusion == "replace":
         return Path(root) / split / f"gl_{model}_{g}.npz"
-    raise ValueError(f"kind must be 'context' or 'glimpse', got {kind!r}")
+    return Path(root) / split / f"fu_{ctx_model}_s{scale:g}_{model}_{g}_{fusion}.npz"
 
 
 Job = Tuple[str, GlimpseGrid, Optional[float], Path]  # (kind, grid, context scale or None, output path)
@@ -113,41 +146,61 @@ def build_cache(dataset: Any, kind: str, backbone: torch.nn.Module, model_name: 
                 out_path: Path, device: Any, scale: Optional[float] = None,
                 clip_indices: Optional[Sequence[int]] = None, precision: str = "fp32",
                 allow_any_frame_size: bool = False, extra_meta: Optional[Dict[str, Any]] = None) -> Path:
-    """One cache file: see :func:`build_model_caches`."""
+    """One cache file: see :func:`build_caches`."""
     return build_model_caches(dataset, backbone, model_name, [(kind, grid, scale, Path(out_path))], device,
                               clip_indices=clip_indices, precision=precision,
                               allow_any_frame_size=allow_any_frame_size, extra_meta=extra_meta)[0]
 
 
 def build_model_caches(dataset: Any, backbone: torch.nn.Module, model_name: str, jobs: Sequence[Job], device: Any,
-                       clip_indices: Optional[Sequence[int]] = None, precision: str = "fp32",
-                       allow_any_frame_size: bool = False, extra_meta: Optional[Dict[str, Any]] = None,
-                       progress: bool = False) -> List[Path]:
-    """Every cache of one backbone in a single pass over the labelled frames of ``clip_indices``.
+                       **kwargs: Any) -> List[Path]:
+    """Context and plain glimpse caches of one backbone: see :func:`build_caches`."""
+    return build_caches(dataset, {model_name: backbone},
+                        [CacheJob(kind, model_name, grid, Path(path), scale) for kind, grid, scale, path in jobs],
+                        device, **kwargs)
 
-    Each frame is loaded once; the context pass runs once per scale and serves
-    every grid. Each file is written as ``<name>.tmp.npz`` and renamed when
-    complete, so an interrupted build never leaves a file that looks finished.
+
+def build_caches(dataset: Any, backbones: Dict[str, torch.nn.Module], jobs: Sequence[CacheJob], device: Any,
+                 clip_indices: Optional[Sequence[int]] = None, precision: str = "fp32",
+                 allow_any_frame_size: bool = False, extra_meta: Optional[Dict[str, Any]] = None,
+                 progress: bool = False, chunk: int = 16) -> List[Path]:
+    """Every cache of ``jobs`` in a single pass over the labelled frames of ``clip_indices``.
+
+    Each frame is loaded once; each (context model, scale) runs once and serves
+    every grid and fusion; each (glimpse model, grid, input size) runs once and
+    serves every fusion. Labels come from the pipeline's own functions. Each
+    file is written as ``<name>.tmp.npz`` and renamed when complete, so an
+    interrupted build never leaves a file that looks finished.
     """
-    for kind, grid, scale, _ in jobs:
-        if kind not in ("context", "glimpse"):
-            raise ValueError(f"kind must be 'context' or 'glimpse', got {kind!r}")
-        if kind == "context" and scale is None:
+    for job in jobs:
+        if job.kind not in ("context", "glimpse"):
+            raise ValueError(f"kind must be 'context' or 'glimpse', got {job.kind!r}")
+        if job.kind == "context" and job.scale is None:
             raise ValueError("a context cache needs its scale")
-        if not allow_any_frame_size and tuple(grid.frame_size) != FRAME:
-            raise ValueError(f"grid frame {grid.frame_size[0]}x{grid.frame_size[1]}: "
+        if job.fusion not in FUSIONS:
+            raise ValueError(f"unknown fusion {job.fusion!r}")
+        if job.kind == "glimpse" and job.fusion != "replace" and (job.ctx_model is None or job.scale is None):
+            raise ValueError("a fused glimpse cache needs ctx_model and scale")
+        if not allow_any_frame_size and tuple(job.grid.frame_size) != FRAME:
+            raise ValueError(f"grid frame {job.grid.frame_size[0]}x{job.grid.frame_size[1]}: "
                              f"the T4 latency tables are for 1024x2048")
     dtype = PRECISIONS[precision]
-    if dtype != torch.float32:
-        backbone = copy.deepcopy(backbone)  # don't convert the caller's model in place
-    backbone = backbone.to(device=device, dtype=dtype).eval()
+    nets = {}
+    for name in {j.model for j in jobs} | {j.ctx_model for j in jobs if j.ctx_model}:
+        net = backbones[name] if dtype == torch.float32 else copy.deepcopy(backbones[name])  # caller's model untouched
+        nets[name] = net.to(device=device, dtype=dtype).eval()
     c, ignore = dataset.num_classes, dataset.ignore_index
     indices = list(range(len(dataset)) if clip_indices is None else clip_indices)
-    frame_size = tuple(jobs[0][1].frame_size)
+    frame_size = tuple(jobs[0].grid.frame_size)
     acc = [{"conf": [], "sums": {k: [] for k in SCORE_KINDS}, "tops": {k: [] for k in SCORE_KINDS}, "q": 0}
            for _ in jobs]
+    ctx_keys = sorted({j.ctx_key for j in jobs if j.ctx_key is not None})
+    fused_keys = {j.ctx_key for j in jobs if j.kind == "glimpse" and j.fusion != "replace"}
+    groups: Dict[Tuple, List[int]] = {}
+    for i, j in enumerate(jobs):
+        if j.kind == "glimpse":
+            groups.setdefault((j.model, j.grid.size, j.grid.margin, j.input_size), []).append(i)
     clip_index, ts = [], []
-    scales = sorted({scale for kind, _, scale, _ in jobs if kind == "context"})
     for n, ci in enumerate(indices):
         for t in np.flatnonzero(np.asarray(dataset.labeled_mask(ci), dtype=bool)):
             image = dataset.load_frame(ci, int(t))
@@ -158,39 +211,60 @@ def build_model_caches(dataset: Any, backbone: torch.nn.Module, model_name: str,
             frame = frame_to_tensor(image, device).to(dtype)
             label = torch.from_numpy(np.asarray(dataset.load_label(ci, int(t)), dtype=np.int64)).to(device)
             with torch.no_grad():
-                ctx = {s: context_pass(backbone, frame, s) for s in scales}
-            for (kind, grid, scale, _), a in zip(jobs, acc):
-                if kind == "context":
-                    cells = _context_cells_from(*ctx[scale][:2], label, grid, c, ignore, SCORE_KINDS)
-                    a["conf"].append(cells.conf.cpu())
+                ctx = {}
+                for key in ctx_keys:
+                    logits, labels, up = context_pass(nets[key[0]], frame, key[1])
+                    ctx[key] = (logits, labels, up if key in fused_keys else None)
+                for i, j in enumerate(jobs):
+                    if j.kind != "context":
+                        continue
+                    cells = _context_cells_from(*ctx[j.ctx_key][:2], label, j.grid, c, ignore, SCORE_KINDS)
+                    acc[i]["conf"].append(cells.conf.cpu())
                     for k in SCORE_KINDS:
-                        a["sums"][k].append(cells.class_sums[k].cpu())
-                        a["tops"][k].append(cells.top10[k].cpu())
-                    a["q"] = cells.q
-                else:
-                    a["conf"].append(glimpse_cells(backbone, frame, label, grid, c, ignore).cpu())
+                        acc[i]["sums"][k].append(cells.class_sums[k].cpu())
+                        acc[i]["tops"][k].append(cells.top10[k].cpu())
+                    acc[i]["q"] = cells.q
+                for (model, _, _, input_size), members in groups.items():
+                    grid = jobs[members[0]].grid
+                    padded = grid.pad_frame(frame)
+                    canvases = {i: grid.to_canvas(torch.zeros(frame_size, dtype=torch.long, device=frame.device))
+                                for i in members}
+                    for start in range(0, grid.num_cells, chunk):
+                        idx = torch.arange(start, min(start + chunk, grid.num_cells), device=frame.device)
+                        up = glimpse_logits(nets[model], gather_crops(padded, grid, idx), input_size)
+                        for i in members:
+                            j = jobs[i]
+                            inner = None if j.fusion == "replace" else gather_inner(ctx[j.ctx_key][2], grid, idx)
+                            paste_labels(canvases[i], labels_from_glimpse(up, inner, grid.margin, j.fusion), grid, idx)
+                    h, w = frame_size
+                    for i in members:
+                        acc[i]["conf"].append(per_cell_confusion(canvases[i][:h, :w], label, grid, c, ignore).cpu())
             clip_index.append(ci)
             ts.append(int(t))
         if progress:
-            print(f"\r[cache] {model_name}: clip {n + 1}/{len(indices)}", end="", flush=True)
+            print(f"\r[cache] clip {n + 1}/{len(indices)}", end="", flush=True)
     if progress:
         print()
     written = []
-    for (kind, grid, scale, out_path), a in zip(jobs, acc):
-        meta = {"kind": kind, "model": model_name, "scale": scale, "size": grid.size, "margin": grid.margin,
+    for j, a in zip(jobs, acc):
+        grid = j.grid
+        meta = {"kind": j.kind, "model": j.model, "scale": j.scale, "size": grid.size, "margin": grid.margin,
                 "rows": grid.rows, "cols": grid.cols, "frame_size": list(grid.frame_size), "precision": precision,
                 "num_classes": c, "ignore_index": ignore, **(extra_meta or {})}
+        if j.kind == "glimpse":
+            meta.update(input_size=j.input_size or grid.size, fusion=j.fusion, ctx_model=j.ctx_model)
         arrays: Dict[str, Any] = {"conf": torch.stack(a["conf"]).numpy(),
                                   "clip_index": np.array(clip_index, dtype=np.int32),
                                   "t": np.array(ts, dtype=np.int32), "meta": json.dumps(meta, default=str)}
-        if kind == "context":
+        if j.kind == "context":
             arrays["q"] = np.int32(a["q"])
             for k in SCORE_KINDS:
                 arrays[f"class_sums_{k}"] = torch.stack(a["sums"][k]).numpy()
                 arrays[f"top10_{k}"] = torch.stack(a["tops"][k]).numpy()
-        out_path = Path(out_path)
+        out_path = Path(j.path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = out_path.with_name(out_path.name[:-len(".npz")] + ".tmp.npz") if out_path.name.endswith(".npz")             else out_path.with_name(out_path.name + ".tmp.npz")
+        tmp = out_path.with_name(out_path.name[:-len(".npz")] + ".tmp.npz") if out_path.name.endswith(".npz") \
+            else out_path.with_name(out_path.name + ".tmp.npz")
         np.savez(tmp, **arrays)
         os.replace(tmp, out_path)
         written.append(out_path)

@@ -32,7 +32,7 @@ from .ops import (SCORE_KINDS, GlimpseGrid, cell_features, downsample, gather_cr
                   samples_per_cell, select_greedy, select_topk)
 
 __all__ = ["FoveationConfig", "FoveatedSegmenter", "StubBackbone", "FUSIONS", "context_pass", "glimpse_labels",
-           "fuse_labels", "gather_inner", "glimpse_grid"]
+           "glimpse_logits", "labels_from_glimpse", "fuse_labels", "gather_inner", "glimpse_grid"]
 
 FUSIONS = ("replace", "mean", "conf")
 
@@ -80,21 +80,31 @@ def gather_inner(up: torch.Tensor, grid: GlimpseGrid, idx: torch.Tensor) -> torc
     return up[0][:, rows, cols].permute(1, 0, 2, 3)
 
 
-def glimpse_labels(backbone: nn.Module, crops: torch.Tensor, input_size: Optional[int] = None,
-                   ctx_inner: Optional[torch.Tensor] = None, margin: int = 0, fusion: str = "replace") -> torch.Tensor:
-    """(k, 3, S, S) crops of the frame -> (k, S, S) labels.
+def glimpse_logits(backbone: nn.Module, crops: torch.Tensor, input_size: Optional[int] = None) -> torch.Tensor:
+    """(k, 3, S, S) crops of the frame -> (k, C, S, S) logits at frame resolution.
 
     With ``input_size`` < S the crops are resized (antialiased bilinear) to the
-    network's input and its logits upsampled back to S. With a fusion other
-    than ``replace``, the inner square (offset ``margin``) fuses with
-    ``ctx_inner``, the (k, C, n, n) context logits there.
+    network's input and its logits upsampled back to S.
     """
     size = tuple(crops.shape[-2:])
     x = crops
     if input_size is not None and input_size != size[0]:
         x = F.interpolate(crops, size=(input_size, input_size), mode="bilinear", align_corners=False, antialias=True)
-    up = upsample_logits(backbone(x), size, backbone.output_stride, backbone.align_corners,
-                         input_size=tuple(x.shape[-2:]))
+    return upsample_logits(backbone(x), size, backbone.output_stride, backbone.align_corners,
+                           input_size=tuple(x.shape[-2:]))
+
+
+def glimpse_labels(backbone: nn.Module, crops: torch.Tensor, input_size: Optional[int] = None,
+                   ctx_inner: Optional[torch.Tensor] = None, margin: int = 0, fusion: str = "replace") -> torch.Tensor:
+    """(k, 3, S, S) crops of the frame -> (k, S, S) labels (:func:`glimpse_logits`, :func:`labels_from_glimpse`)."""
+    return labels_from_glimpse(glimpse_logits(backbone, crops, input_size), ctx_inner, margin, fusion)
+
+
+def labels_from_glimpse(up: torch.Tensor, ctx_inner: Optional[torch.Tensor] = None, margin: int = 0,
+                        fusion: str = "replace") -> torch.Tensor:
+    """(k, C, S, S) glimpse logits -> (k, S, S) labels. With a fusion other than
+    ``replace``, the inner square (offset ``margin``) fuses with ``ctx_inner``,
+    the (k, C, n, n) context logits there."""
     labels = up.argmax(1)
     if fusion != "replace":
         n = ctx_inner.shape[-1]
