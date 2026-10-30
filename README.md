@@ -17,6 +17,66 @@ Nothing outside one dataset adapter is Cityscapes-specific: preprocessing,
 policies and evaluation are written against a dataset-agnostic interface so
 they can be retrained or reused on other video segmentation datasets.
 
+## Where we are (2026-10-30)
+
+**Method 1 (full frame) is done and validated on real data.** The data
+layer, backbones, evaluation harness and baseline CLI run end to end on
+Cityscapes-VPS val. The pipeline reproduces the published Cityscapes val
+numbers of both backbones (PIDNet-S 78.76 vs 78.8, BiSeNetV2 74.95 vs 74.95),
+so the full-frame curves below are the reference the foveated methods must
+beat at equal cost. See [Real-data results](#real-data-results).
+
+Reference points on VPS val (300 labelled frames, mIoU):
+
+| Pixel fraction | 1.0 | 0.56 | 0.25 | 0.14 | 0.06 |
+| --- | --- | --- | --- | --- | --- |
+| PIDNet-S | 71.5 | 70.1 | 64.8 | 58.6 | 50.1 |
+| BiSeNetV2 | 70.4 | 69.9 | 67.6 | 64.3 | 59.1 |
+
+PIDNet-S is better and cheaper at full resolution, but BiSeNetV2 degrades
+much more gracefully at low resolution: the context view of a foveated
+method will run at those low scales, so this matters for the choice below.
+
+### Next steps
+
+1. **Method 2: foveation without memory.** Implement a `FrameMethod` that
+   runs the backbone on a low-resolution context view (e.g. scale 0.25),
+   then on K high-resolution crops chosen by an uncertainty-driven
+   `GazePolicy` (e.g. top-K entropy boxes), pastes the crop predictions back
+   into the full-frame map, and reports `context`, `glimpses`, `policy` and
+   `recomposition` to the cost ledger. Success = above the full-frame
+   mIoU-vs-pixel-fraction curve above. Decide first which backbone serves as
+   context (see the low-scale numbers).
+2. **Method 3: persistent canvas.** Implement `SceneMemory` (canvas of
+   logits/confidence with age) and a canvas-aware policy; this is where the
+   unlabelled in-between frames of each 30-frame clip are used.
+3. **Final latency on a T4** (Colab): the numbers here are from a laptop
+   RTX 2060 and are only indicative.
+4. Optional: Method 4 (RL policy); a secondary evaluation on the 500 official
+   val images (frame `_000019`) for less noisy rare-class IoUs.
+
+## Quickstart
+
+```bash
+# 1. Environment (Windows: .venv\Scripts\activate)
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,torch]"   # CUDA wheels: add --index-url https://download.pytorch.org/whl/cu126
+pytest                          # 131 tests, synthetic data, seconds
+
+# 2. Data (once, ~45 GB on disk, details in "Getting the real Cityscapes-VPS data")
+pip install remotezip requests
+python scripts/get_val.py --out /data/cityscapes            # Cityscapes login, ~3.5 h
+#    + VPS zip from Dropbox, official VPSNet prep scripts (2 patches on Windows)
+export CITYSCAPES_VPS_ROOT=/data/cityscapes_vps
+
+# 3. Check the data, then run the full-frame baselines
+python scripts/diagnose_real_data.py --config configs/diagnose_cityscapes_vps.yaml
+export PIDNET_S_WEIGHTS=/path/to/PIDNet_S_Cityscapes_val.pt     # manual Google Drive download
+python -m scripts.run_baseline --config configs/baseline_fullframe_pidnet_s.yaml
+python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yaml
+# -> experiments/<date>_<run>/<run>_s<scale>.json
+```
+
 ## Status
 
 | Piece | State |
@@ -63,6 +123,7 @@ src/                       library code (importable package root)
     harness.py             evaluation loop + full-frame method (torch)
 scripts/
   run_baseline.py          full-frame baseline:  python -m scripts.run_baseline
+  get_val.py               downloads only the Cityscapes val folders needed
   diagnose_real_data.py    checks a local copy of the data before trusting it
   verify_data.py           quick visual grid of one clip
   common.py                YAML / --set / seeding helpers for the CLIs
@@ -114,7 +175,7 @@ module imports with torch blocked.
 # Smoke test: synthetic fixture + dummy backbone, CPU, no data or download.
 python -m scripts.run_baseline --config configs/baseline_fixture.yaml
 
-# Real data (see "To run once data is available"):
+# Real data (see "Running on the real data"):
 python -m scripts.run_baseline --config configs/baseline_fullframe_pidnet_s.yaml \
     --set backbone.weights=/path/to/PIDNet_S_Cityscapes_val.pt
 ```
