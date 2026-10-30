@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import statistics
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 __all__ = ["LatencyTables", "STRIDE"]
 
@@ -35,22 +35,27 @@ def _missing(part: str, args: Mapping[str, Any]) -> KeyError:
 
 
 class LatencyTables:
-    def __init__(self, records: Mapping[str, List[Dict[str, Any]]], sessions: int = 1):
-        """``records``: part -> one entry per measured point (graph level), already merged over sessions."""
+    def __init__(self, records: Mapping[str, List[Dict[str, Any]]], sessions: int = 1,
+                 strides: Optional[Mapping[str, int]] = None):
+        """``records``: part -> one entry per measured point (graph level), already merged over sessions.
+        ``strides``: logit stride per model name (default :data:`STRIDE`)."""
         self.records = {part: list(v) for part, v in records.items()}
         self.sessions = sessions
+        self.strides = dict(STRIDE if strides is None else strides)
 
     @classmethod
-    def from_records(cls, records: Mapping[str, Iterable[Mapping[str, Any]]]) -> "LatencyTables":
+    def from_records(cls, records: Mapping[str, Iterable[Mapping[str, Any]]],
+                     strides: Optional[Mapping[str, int]] = None) -> "LatencyTables":
         """One session's ``records`` (latency-floor JSON format); only graph-level entries are kept."""
-        return cls._merge([records])
+        return cls._merge([records], strides)
 
     @classmethod
-    def load(cls, paths: Iterable[Path]) -> "LatencyTables":
-        return cls._merge([json.loads(Path(p).read_text())["records"] for p in paths])
+    def load(cls, paths: Iterable[Path], strides: Optional[Mapping[str, int]] = None) -> "LatencyTables":
+        return cls._merge([json.loads(Path(p).read_text())["records"] for p in paths], strides)
 
     @classmethod
-    def _merge(cls, sessions: List[Mapping[str, Iterable[Mapping[str, Any]]]]) -> "LatencyTables":
+    def _merge(cls, sessions: List[Mapping[str, Iterable[Mapping[str, Any]]]],
+               strides: Optional[Mapping[str, int]] = None) -> "LatencyTables":
         by_name: Dict[str, Dict[str, List[Mapping[str, Any]]]] = {}
         for recs in sessions:
             for part, items in recs.items():
@@ -65,7 +70,7 @@ class LatencyTables:
                 base["p95_ms"] = statistics.median(r["cuda_event"]["p95_ms"] for r in rs)
                 base["sessions"] = len(rs)
                 merged.setdefault(part, []).append(base)
-        return cls(merged, sessions=len(sessions))
+        return cls(merged, sessions=len(sessions), strides=strides)
 
     def _find(self, part: str, **match: Any) -> Dict[str, Any]:
         for r in self.records.get(part, []):
@@ -80,7 +85,7 @@ class LatencyTables:
 
     def predict(self, ctx_model: str, ctx_scale: float, glimpse_model: str, size: int, k: int,
                 selection: str) -> Dict[str, Any]:
-        stride = 1 if 1 in (STRIDE[ctx_model], STRIDE[glimpse_model]) else 8
+        stride = 1 if 1 in (self.strides[ctx_model], self.strides[glimpse_model]) else 8
         parts = {
             "context": self._find("area", model=ctx_model, kind="frame", scale=ctx_scale),
             "glimpses": self._find("batch", model=glimpse_model, size=size, k=k),

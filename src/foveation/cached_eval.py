@@ -140,9 +140,11 @@ def select_cells(pair: CachedPair, rule: Rule, k: int, prior_order: Optional[tor
 
 def compose(pair: CachedPair, mask: torch.Tensor) -> np.ndarray:
     """(n_clips, C, C) int64 confusion of a selection, per clip in :attr:`CachedPair.clip_ids` order."""
-    m = mask.numpy().astype(np.int64)
-    ctx = pair.ctx_conf.astype(np.int64)
-    frames = ctx.sum(1) + np.einsum("nc,ncij->nij", m, pair.gl_conf.astype(np.int64) - ctx)
+    if not hasattr(pair, "_terms"):  # computed once per pair: sweeps compose thousands of selections
+        # int32 is enough: a frame has ~2M pixels; it halves the memory of train-sized caches
+        pair._terms = (pair.ctx_conf.sum(1, dtype=np.int64), pair.gl_conf - pair.ctx_conf)
+    ctx_total, diff = pair._terms
+    frames = ctx_total + np.einsum("nc,ncij->nij", mask.numpy().astype(np.int32), diff).astype(np.int64)
     clips = pair.clip_ids
     out = np.zeros((len(clips),) + frames.shape[1:], dtype=np.int64)
     np.add.at(out, np.searchsorted(clips, pair.clip_index), frames)
