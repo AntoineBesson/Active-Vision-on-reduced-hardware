@@ -50,8 +50,13 @@ method will run at those low scales, so this matters for the choice below.
 2. **Method 3: persistent canvas.** Implement `SceneMemory` (canvas of
    logits/confidence with age) and a canvas-aware policy; this is where the
    unlabelled in-between frames of each 30-frame clip are used.
-3. **Final latency on a T4** (Colab): the numbers here are from a laptop
-   RTX 2060 and are only indicative.
+3. **Latency on a T4** (Colab): the latency floor is measured (3 sessions,
+   CUDA graphs, FP16, batch 1), see
+   [results/latency_floor](results/latency_floor/README.md). Full frame:
+   PIDNet-S 19.4 ms, BiSeNetV2 31.2 ms; the best foveated configuration
+   tested is 1.6–1.7× (PIDNet-S) and 2.1–2.2× (BiSeNetV2) faster, before any
+   accuracy is measured. The laptop RTX 2060 numbers below are only
+   indicative.
 4. Optional: Method 4 (RL policy); a secondary evaluation on the 500 official
    val images (frame `_000019`) for less noisy rare-class IoUs.
 
