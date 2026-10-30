@@ -175,7 +175,8 @@ def pool_scores(class_sums: torch.Tensor, top10: torch.Tensor, q: int, pool: str
         return top10
     if pool != "mean":
         raise ValueError(f"unknown pooling {pool!r}, expected 'mean' or 'top10'")
-    total = class_sums.sum(1) if class_weights is None else class_sums @ class_weights.to(class_sums)
+    # last axis = classes, so (frames, cells, C) features pool in one call too
+    total = class_sums.sum(-1) if class_weights is None else class_sums @ class_weights.to(class_sums)
     return total / (q * q)
 
 
