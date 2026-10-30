@@ -71,7 +71,9 @@ full resolution were set aside for now (more pixels for the same cell).
 
 ---
 
-## Try 2: fuse glimpses with the context; wide glimpses at reduced resolution (in progress)
+## Try 2: fuse glimpses with the context; wide glimpses at reduced resolution (failed)
+
+**Date:** 2026-10-30. **Summary:** `tries/try2_fusion_wide_train.json`.
 
 **Setup.** Context and glimpse pairs PIDNet-S + PIDNet-S, BiSeNetV2 +
 BiSeNetV2, BiSeNetV2 context + PIDNet-S glimpses. Fusion inside a selected
@@ -86,3 +88,52 @@ frames, laptop RTX 2060) crashed after 1099 frames with a cuDNN execution
 failure at ~87 °C; the builder could not resume, so it restarted from zero
 (2026-10-30 19:39), now checkpointing every clip and retrying after a crash.
 No result was lost to the crash, only time.
+
+**Result.** Still no configuration reaches the full-frame curve, for any
+pair. Best non-oracle rule at equal T4 latency (mIoU points; fused and wide
+latencies are lower bounds, so the true gap is somewhat larger):
+
+| Pair | Overwrite (try 1 rule) | Fused (mean / conf) | Wide (0.5 / 0.75) |
+| --- | --- | --- | --- |
+| PIDNet-S + PIDNet-S | -5.3 to -6.6 | -5.2 to -5.9 | -5.7 to -7.2 |
+| BiSeNetV2 + BiSeNetV2 | -1.8 to -2.2 | **-0.6** to -1.7 | -1.8 to -3.2 |
+| BiSeNetV2 ctx + PIDNet-S glimpses | -4.8 to -5.2 | -4.3 to -5.1 | -5.0 to -6.3 |
+
+Every best rule uses the 0.5 context. The closest point is BiSeNetV2, context
+0.5 + 8 fused 384 px glimpses: 72.8 mIoU at >= 30.6 ms, against 73.4 for the
+BiSeNetV2 full frame at scale 0.75 in 17.8 ms. (The mixed pair is compared with
+the PIDNet-S full-frame curve, its glimpse model's.)
+
+Full frame on train, BiSeNetV2: 73.3 (scale 1.0, 31.2 ms), 73.4 (0.75,
+17.8 ms), 70.5 (0.5, 8.1 ms), 66.8 (0.375, 4.7 ms), 59.2 (0.25, 2.7 ms).
+PIDNet-S as in try 1.
+
+**Fusion lifts the tiling bound but not enough.** Every cell glimpsed at full
+resolution with a 0.5 context, mIoU (overwrite / mean / conf):
+
+| Pair | 256 px | 384 px | 512 px | context 0.5 alone | full frame best |
+| --- | --- | --- | --- | --- | --- |
+| PIDNet-S | 53.5 / 65.9 / 65.2 | 60.3 / 69.2 / 68.6 | 63.0 / 70.7 / 70.2 | 67.9 | 76.1 |
+| BiSeNetV2 | 59.4 / 70.0 / 69.5 | 64.3 / 71.9 / 71.6 | 65.1 / 72.7 / 72.3 | 70.5 | 73.4 |
+
+So even glimpsing everything adds at most ~2-3 points over the context alone,
+and the full frame at a slightly higher scale gives more for less time. Mean
+fusion beats conf by ~0.1-0.5 points; both beat overwriting by ~0.5 points at
+the best operating points (more for large k).
+
+**Wide glimpses hurt.** A 768-1024 px region shrunk to half resolution has no
+more detail than the 0.5 context, so fusing it lowers accuracy (PIDNet-S, every
+cell 384:32:0.5 fused with context 0.5: 65.6 vs 67.9 for the context alone).
+The 0.75 geometry sits between the two.
+
+**Selection.** For BiSeNetV2 the pixel oracle is now *above* the curve (+1.0
+to +2.0 points), so a better rule would have some headroom there; for the
+PidNet-S glimpse pairs even the oracle stays below (-1.3 to -6.1).
+
+**Why the full frame is hard to beat on a T4.** Full-frame latency grows
+slower than its pixel count at these sizes, so the step from scale 0.5 to
+0.75 is cheap (PIDNet-S: 5.2 -> 10.7 ms for +6.9 mIoU), while each glimpse
+pays a launch, a resize and the recomposition, and each crop sees too
+little of the scene to be accurate.
+
+**Next:** open; to decide with the user.
