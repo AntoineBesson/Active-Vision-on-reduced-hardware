@@ -138,4 +138,46 @@ slower than its pixel count at these sizes, so the step from scale 0.5 to
 pays a launch, a resize and the recomposition, and each crop sees too
 little of the scene to be accurate.
 
-**Next:** open; to decide with the user.
+**Next (decided with the user):** finish the plan with what exists: tune
+class weights, freeze finalists on train, report on val once.
+
+---
+
+## Class weights, finalists and val (2026-11-01)
+
+**Class weights** were tuned on train for the best score kind of each of the
+162 (pair, scale, geometry, fusion) combinations. Each run uses coordinate
+ascent over the mean mIoU for k = 1, 2, 4, 8 (`class_weights.json`). In
+sample, the tuned objective improves by +0.1 to +5.8 mIoU (median +1.1). At
+the best operating points the effect is small: the best ΔmIoU moves by
++0.2 (PIDNet-S), -0.3 (mixed pair) and -0.5 (BiSeNetV2), because those
+points use the fixed prior or other rules.
+
+**Finalists:** 55 (`finalists.json`): the train Pareto front plus the best
+configuration under each full-frame latency, frozen and committed before
+val.
+
+**Val (run once, `val.json`). Failed.** 0 of 55 finalists have a positive
+ΔmIoU at equal latency. Only two have an interval that contains 0, both
+BiSeNetV2 with a 0.5 context and fused 384 px glimpses chosen by the prior:
+
+- k = 4: -0.5 [-1.7, +0.3];
+- k = 8: -0.6 [-2.1, +0.6].
+
+In latency saved at equal mIoU they are -5.5 and -13.3 ms (slower). The best
+of the other pairs:
+
+- BiSeNetV2 context + PIDNet-S glimpses: -2.1 [-4.0, -0.5];
+- PIDNet-S + PIDNet-S: -3.2 [-5.5, -1.6].
+
+The fp16 check passes: |ΔmIoU| ≤ 0.016 points (`fp16_check.json`).
+
+**Conclusion for the paper.** Memoryless foveation with off-the-shelf
+segmentation backbones doesn't beat simply running the full frame at a
+lower scale on a T4. The two reasons:
+
+- crops lack the scene context these networks need;
+- on this GPU, full-frame latency scales sublinearly in pixels, while each
+  glimpse pays a fixed overhead.
+
+Write-up: [README.md](README.md).

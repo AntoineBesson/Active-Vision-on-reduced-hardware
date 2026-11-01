@@ -1,0 +1,6614 @@
+{
+ "split": "train",
+ "sweep": "experiments/method2/sweep_train_weighted.jsonl (not committed)",
+ "note": "Pareto front over (predicted T4 median latency, mIoU) of the selection rules (oracle, random and every-cell excluded); fused/wide latencies are lower bounds",
+ "pairs": {
+  "pidnet_s+pidnet_s": {
+   "fullframe_curve": {
+    "scales": [
+     1.0,
+     0.75,
+     0.5,
+     0.375,
+     0.25
+    ],
+    "latency_ms": [
+     19.346176147460938,
+     10.740303993225098,
+     5.217280149459839,
+     3.591823935508728,
+     2.73145592212677
+    ],
+    "miou": [
+     0.7608271785202243,
+     0.7479547825283435,
+     0.6794208938639265,
+     0.6173515073443419,
+     0.528506245273344
+    ]
+   },
+   "pareto": [
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "margin",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.25,
+        0.25,
+        0.5,
+        0.5,
+        4.0,
+        1.0,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        2.0,
+        1.0,
+        4.0,
+        2.0,
+        4.0,
+        2.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5452865753956431,
+     "t4_median_ms": 6.903295814990997,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.1550556856715799
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "margin",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.25,
+        0.25,
+        0.5,
+        0.5,
+        4.0,
+        1.0,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        2.0,
+        1.0,
+        4.0,
+        2.0,
+        4.0,
+        2.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5569911761664142,
+     "t4_median_ms": 7.455759942531586,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.15020648079968624
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 1,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5725338701915901,
+     "t4_median_ms": 7.458064079284668,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.1346923782592062
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.25,
+        0.25,
+        0.5,
+        0.5,
+        4.0,
+        2.0,
+        0.5,
+        1.0,
+        0.5,
+        2.0,
+        2.0,
+        1.0,
+        0.25,
+        0.25,
+        4.0,
+        2.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6266345812901919,
+     "t4_median_ms": 7.926447868347168,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.08640373014636604
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.25,
+        0.25,
+        0.5,
+        0.5,
+        4.0,
+        2.0,
+        0.5,
+        1.0,
+        0.5,
+        2.0,
+        2.0,
+        1.0,
+        0.25,
+        0.25,
+        4.0,
+        2.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6328916286779637,
+     "t4_median_ms": 8.476912021636963,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.08697726145289086
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 1,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6354227075017519,
+     "t4_median_ms": 8.489776015281677,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.08460580886523095
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 1,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6472048347096764,
+     "t4_median_ms": 9.416063904762268,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.08431776766610088
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "margin",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        1.0,
+        0.5,
+        0.25,
+        2.0,
+        0.25,
+        4.0,
+        1.0,
+        1.0,
+        4.0,
+        0.25,
+        4.0,
+        0.5,
+        0.5,
+        0.25,
+        4.0,
+        4.0,
+        1.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6830385249063432,
+     "t4_median_ms": 9.517760038375854,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.049746000592678086
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "margin",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        1.0,
+        0.5,
+        0.25,
+        2.0,
+        0.25,
+        4.0,
+        1.0,
+        1.0,
+        4.0,
+        0.25,
+        4.0,
+        0.5,
+        0.5,
+        0.25,
+        4.0,
+        4.0,
+        1.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6859572635684096,
+     "t4_median_ms": 10.067392230033875,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.053647517010986356
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        0.5,
+        2.0,
+        4.0,
+        0.5,
+        4.0,
+        0.25,
+        4.0,
+        4.0,
+        1.0,
+        0.25,
+        4.0,
+        4.0,
+        0.25,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6860258436179726,
+     "t4_median_ms": 10.074928164482117,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.053672448578803156
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "margin",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        1.0,
+        0.5,
+        0.25,
+        2.0,
+        0.25,
+        4.0,
+        1.0,
+        1.0,
+        4.0,
+        0.25,
+        4.0,
+        0.5,
+        0.5,
+        0.25,
+        4.0,
+        4.0,
+        1.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6883568142269101,
+     "t4_median_ms": 11.269184231758118,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.060389050918123965
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        0.5,
+        2.0,
+        4.0,
+        0.5,
+        4.0,
+        0.25,
+        4.0,
+        4.0,
+        1.0,
+        0.25,
+        4.0,
+        4.0,
+        0.25,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6903773635645971,
+     "t4_median_ms": 11.380064129829407,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.05853435228446002
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6919521944618634,
+     "t4_median_ms": 13.345216035842896,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.05989893450710093
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.699710767037551,
+     "t4_median_ms": 13.992016196250916,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.05310782550084214
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7015109915249124,
+     "t4_median_ms": 18.154096364974976,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.05753311112118087
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7085448115574472,
+     "t4_median_ms": 19.898624181747437,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7093830566503858,
+     "t4_median_ms": 29.23857617378235,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    }
+   ],
+   "best_oracle": {
+    "method": {
+     "name": "foveated",
+     "pair": "pidnet_s+pidnet_s",
+     "context_model": "pidnet_s",
+     "glimpse_model": "pidnet_s",
+     "context_scale": 0.5,
+     "glimpse_size": 384,
+     "margin": 32,
+     "glimpse_scale": 1.0,
+     "fusion": "replace",
+     "k": 4,
+     "rule": {
+      "kind": "oracle",
+      "score": "entropy",
+      "pool": "mean",
+      "class_weights": null,
+      "selection": "topk",
+      "suppress": 1,
+      "seed": 0
+     }
+    },
+    "miou": 0.7302168471597232,
+    "t4_median_ms": 13.992016196250916,
+    "t4_latency_is_lower_bound": false,
+    "delta_miou_at_equal_latency": -0.02260174537866988
+   },
+   "every_cell": [
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.535117691954462,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6163885959438079,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6087138933313255,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6026287034863919,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6537189570324373,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.648999040881899,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6300923569807262,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6692914302302316,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6653691301356848,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5791212676275905,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6071412342534281,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6046979173317635,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5925740365385713,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6167237745199591,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6135380233925942,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5876675837069875,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6308336334304855,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.626332902739993,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.535117691954462,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6397831041029015,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6314214669185978,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6026287034863919,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6751981035596807,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6693561128501923,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6300923569807262,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6911221967802238,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6854029434866473,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5791212676275905,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6323040680056871,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6285450696325159,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5925740365385713,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6379261143506938,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6331756323200866,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5876675837069875,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6553361214389317,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.649315268205246,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.535117691954462,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6593608100489469,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6518380569700788,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6026287034863919,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6919584597132501,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.686228988609163,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6300923569807262,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7068052945538966,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7016966764272754,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5791212676275905,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6564066511396636,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6537717977111684,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5925740365385713,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6613231297945297,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6572889691930732,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5876675837069875,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.676219444010532,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "pidnet_s+pidnet_s",
+      "context_model": "pidnet_s",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6705841286749669,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    }
+   ]
+  },
+  "bisenetv2+bisenetv2": {
+   "fullframe_curve": {
+    "scales": [
+     1.0,
+     0.75,
+     0.5,
+     0.375,
+     0.25
+    ],
+    "latency_ms": [
+     31.15846347808838,
+     17.78348731994629,
+     8.057936191558838,
+     4.7201759815216064,
+     2.687071919441223
+    ],
+    "miou": [
+     0.7334850594040474,
+     0.7339003247292235,
+     0.7054556349211358,
+     0.668497922681514,
+     0.5918760862830932
+    ]
+   },
+   "pareto": [
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.5,
+        0.25,
+        0.5,
+        0.5,
+        4.0,
+        1.0,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        1.0,
+        1.0,
+        4.0,
+        4.0,
+        2.0,
+        4.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.607539654303602,
+     "t4_median_ms": 7.156255900859833,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.08793202772134279
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.5,
+        0.25,
+        0.5,
+        0.5,
+        4.0,
+        1.0,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        1.0,
+        1.0,
+        4.0,
+        4.0,
+        2.0,
+        4.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6186631459228217,
+     "t4_median_ms": 7.9742560386657715,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.08586593142192223
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        1.0,
+        4.0,
+        0.5,
+        0.25,
+        4.0,
+        1.0,
+        4.0,
+        0.5,
+        4.0,
+        4.0,
+        4.0,
+        0.25,
+        0.5
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6224674974687289,
+     "t4_median_ms": 8.319103956222534,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.08375198476097201
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.25,
+        0.5,
+        0.5,
+        0.25,
+        0.5,
+        0.5,
+        4.0,
+        1.0,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        1.0,
+        1.0,
+        4.0,
+        4.0,
+        2.0,
+        4.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6319336907507145,
+     "t4_median_ms": 9.576464176177979,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.07796324080412209
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 1,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6367957772890648,
+     "t4_median_ms": 9.85259199142456,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.07390875580406908
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        4.0,
+        2.0,
+        1.0,
+        0.25,
+        0.5,
+        4.0,
+        4.0,
+        2.0,
+        1.0,
+        4.0,
+        4.0,
+        4.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6756558706269155,
+     "t4_median_ms": 9.93152004480362,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.03527950635011612
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        4.0,
+        2.0,
+        1.0,
+        0.25,
+        0.5,
+        4.0,
+        4.0,
+        2.0,
+        1.0,
+        4.0,
+        4.0,
+        4.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6798870111852741,
+     "t4_median_ms": 10.756911993026733,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.033462421059923364
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "top10",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6853812560252368,
+     "t4_median_ms": 12.392048120498657,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.03275052113038712
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        2.0,
+        4.0,
+        1.0,
+        0.5,
+        0.25,
+        1.0,
+        4.0,
+        4.0,
+        1.0,
+        4.0,
+        4.0,
+        4.0,
+        4.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6862825647859381,
+     "t4_median_ms": 13.094079852104187,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.03390247131381574
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        2.0,
+        4.0,
+        1.0,
+        0.25,
+        0.25,
+        4.0,
+        2.0,
+        1.0,
+        0.25,
+        1.0,
+        4.0,
+        4.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7089740448595429,
+     "t4_median_ms": 14.505984127521515,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.01534044145056812
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        2.0,
+        4.0,
+        1.0,
+        0.25,
+        0.25,
+        4.0,
+        2.0,
+        1.0,
+        0.25,
+        1.0,
+        4.0,
+        4.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7107460695676016,
+     "t4_median_ms": 15.34603238105774,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.016025337865047895
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        2.0,
+        4.0,
+        1.0,
+        0.25,
+        0.25,
+        4.0,
+        2.0,
+        1.0,
+        0.25,
+        1.0,
+        4.0,
+        4.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7133822638880094,
+     "t4_median_ms": 16.969568252563477,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.018137560744616366
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.714948003236297,
+     "t4_median_ms": 17.780688047409058,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.018944134353919284
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        2.0,
+        4.0,
+        1.0,
+        0.25,
+        0.25,
+        4.0,
+        2.0,
+        1.0,
+        0.25,
+        1.0,
+        4.0,
+        4.0,
+        1.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7156559836559377,
+     "t4_median_ms": 20.755776166915894,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.018152057656854903
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7170334632909937,
+     "t4_median_ms": 21.759584426879883,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.016743411853085144
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7234427382527545,
+     "t4_median_ms": 21.99390459060669,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.0103268617352541
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7279877949244264,
+     "t4_median_ms": 30.64547300338745,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.005513191772034021
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7309899086561208,
+     "t4_median_ms": 45.01463985443115,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    }
+   ],
+   "best_oracle": {
+    "method": {
+     "name": "foveated",
+     "pair": "bisenetv2+bisenetv2",
+     "context_model": "bisenetv2",
+     "glimpse_model": "bisenetv2",
+     "context_scale": 0.5,
+     "glimpse_size": 384,
+     "margin": 32,
+     "glimpse_scale": 1.0,
+     "fusion": "replace",
+     "k": 8,
+     "rule": {
+      "kind": "oracle",
+      "score": "entropy",
+      "pool": "mean",
+      "class_weights": null,
+      "selection": "topk",
+      "suppress": 1,
+      "seed": 0
+     }
+    },
+    "miou": 0.7536819281305638,
+    "t4_median_ms": 30.64547300338745,
+    "t4_latency_is_lower_bound": false,
+    "delta_miou_at_equal_latency": 0.020180941434103317
+   },
+   "every_cell": [
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5942879551088631,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6683083631723667,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.663115447964714,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.643218286166877,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6913581696704708,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6894396184736971,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6510447266202386,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.696061250856008,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6946000463753543,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6099648805409492,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6529846926027529,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6489296428783558,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6239601155557993,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.665051849444192,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6639627158740709,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.626111834279093,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.674824031721746,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6721237570660797,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5942879551088631,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6912586933860114,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6854491185957338,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.643218286166877,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7109515259563541,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7077147487915285,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6510447266202386,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7180677027258059,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7145433381363001,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6099648805409492,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6749104174466655,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6695702942206391,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6239601155557993,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6856743280145147,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6828199075274393,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.626111834279093,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6987865988330254,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6943189829370366,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5942879551088631,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6998386066513919,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6945582173482062,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.643218286166877,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7193110608595713,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7160901517427729,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6510447266202386,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7266376715494668,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7233555444624354,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6099648805409492,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6828598302078172,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6787568710692502,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6239601155557993,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6935590806920879,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6911466344325771,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.626111834279093,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7081435734394939,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+bisenetv2",
+      "context_model": "bisenetv2",
+      "glimpse_model": "bisenetv2",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7044452763516893,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    }
+   ]
+  },
+  "bisenetv2+pidnet_s": {
+   "fullframe_curve": {
+    "scales": [
+     1.0,
+     0.75,
+     0.5,
+     0.375,
+     0.25
+    ],
+    "latency_ms": [
+     19.346176147460938,
+     10.740303993225098,
+     5.217280149459839,
+     3.591823935508728,
+     2.73145592212677
+    ],
+    "miou": [
+     0.7608271785202243,
+     0.7479547825283435,
+     0.6794208938639265,
+     0.6173515073443419,
+     0.528506245273344
+    ]
+   },
+   "pareto": [
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.5,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        0.5,
+        4.0,
+        1.0,
+        0.5,
+        0.5,
+        0.25,
+        2.0,
+        2.0,
+        1.0,
+        1.0,
+        4.0,
+        0.5,
+        1.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6056962648653981,
+     "t4_median_ms": 7.585503816604614,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.10311135296130036
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        0.5,
+        0.5,
+        0.5,
+        0.25,
+        1.0,
+        0.5,
+        4.0,
+        1.0,
+        0.5,
+        0.5,
+        0.25,
+        2.0,
+        2.0,
+        1.0,
+        1.0,
+        4.0,
+        0.5,
+        1.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6148805110300762,
+     "t4_median_ms": 8.090896010398865,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.1001983982704876
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "margin",
+       "pool": "mean",
+       "class_weights": [
+        0.5,
+        0.25,
+        0.5,
+        0.5,
+        0.25,
+        2.0,
+        0.25,
+        2.0,
+        1.0,
+        0.25,
+        4.0,
+        1.0,
+        4.0,
+        0.5,
+        4.0,
+        4.0,
+        0.25,
+        1.0,
+        2.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6177115637906916,
+     "t4_median_ms": 8.1321120262146,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.09787878524270899
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6273061939890251,
+     "t4_median_ms": 9.087119936943054,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.10013462096285708
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6355447489032181,
+     "t4_median_ms": 9.361167907714844,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.09529666210779308
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.5,
+        1.0,
+        0.5,
+        2.0,
+        0.5,
+        1.0,
+        1.0,
+        0.25,
+        4.0,
+        4.0,
+        2.0,
+        1.0,
+        4.0,
+        1.0,
+        1.0,
+        4.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.674331285026572,
+     "t4_median_ms": 10.3607679605484,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.06891392518352724
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.5,
+        1.0,
+        0.5,
+        2.0,
+        0.5,
+        1.0,
+        1.0,
+        0.25,
+        4.0,
+        4.0,
+        2.0,
+        1.0,
+        4.0,
+        1.0,
+        1.0,
+        4.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6780492066804724,
+     "t4_median_ms": 10.873551964759827,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.0701048840207058
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        0.5,
+        1.0,
+        0.5,
+        2.0,
+        0.5,
+        1.0,
+        1.0,
+        0.25,
+        4.0,
+        4.0,
+        2.0,
+        1.0,
+        4.0,
+        1.0,
+        1.0,
+        4.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6819670789036767,
+     "t4_median_ms": 12.052096009254456,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.06794984133560245
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "top10",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6859461057400811,
+     "t4_median_ms": 12.219167947769165,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.06422071551017627
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6880513138802526,
+     "t4_median_ms": 14.294991970062256,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.06522046040039142
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6881065082978886,
+     "t4_median_ms": 14.517231941223145,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.06549768562166447
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6988244504595041,
+     "t4_median_ms": 14.742048144340515,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.05511601654661724
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        2.0,
+        1.0,
+        1.0,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        0.25,
+        4.0,
+        2.0,
+        0.25,
+        0.25,
+        4.0,
+        1.0,
+        1.0,
+        4.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7075670776758617,
+     "t4_median_ms": 14.935232043266296,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.046662347799739656
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        2.0,
+        1.0,
+        1.0,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        0.25,
+        4.0,
+        2.0,
+        0.25,
+        0.25,
+        4.0,
+        1.0,
+        1.0,
+        4.0
+       ],
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7087259598636254,
+     "t4_median_ms": 15.462672352790833,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.04629239442762634
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "uncertainty",
+       "score": "maxprob",
+       "pool": "mean",
+       "class_weights": [
+        2.0,
+        1.0,
+        1.0,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        0.25,
+        1.0,
+        2.0,
+        0.25,
+        4.0,
+        2.0,
+        0.25,
+        0.25,
+        4.0,
+        1.0,
+        1.0,
+        4.0
+       ],
+       "selection": "greedy",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7087965830453861,
+     "t4_median_ms": 15.534736275672913,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.04632956222107898
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 1,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7111174458838957,
+     "t4_median_ms": 15.685088038444519,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.04423359087453993
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 2,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7139287754444028,
+     "t4_median_ms": 16.905776143074036,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": -0.043248128626927396
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 4,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7167989752392272,
+     "t4_median_ms": 19.43177628517151,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7186315743981895,
+     "t4_median_ms": 25.15123224258423,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "prior",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7206268781845458,
+     "t4_median_ms": 34.76740837097168,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    }
+   ],
+   "best_oracle": {
+    "method": {
+     "name": "foveated",
+     "pair": "bisenetv2+pidnet_s",
+     "context_model": "bisenetv2",
+     "glimpse_model": "pidnet_s",
+     "context_scale": 0.5,
+     "glimpse_size": 256,
+     "margin": 32,
+     "glimpse_scale": 1.0,
+     "fusion": "mean",
+     "k": 8,
+     "rule": {
+      "kind": "oracle",
+      "score": "entropy",
+      "pool": "mean",
+      "class_weights": null,
+      "selection": "topk",
+      "suppress": 1,
+      "seed": 0
+     }
+    },
+    "miou": 0.747054483603425,
+    "t4_median_ms": 19.1144802570343,
+    "t4_latency_is_lower_bound": true,
+    "delta_miou_at_equal_latency": -0.013426131407859088
+   },
+   "every_cell": [
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.535117691954462,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.617488338417357,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6073623511451295,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6026287034863919,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6609211081149201,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.652595689509256,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6300923569807262,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6824048141931144,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.674883606588467,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5791212676275905,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6346862007730808,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6282761732278963,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5925740365385713,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.639329753192017,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6320762404472331,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5876675837069875,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6427139710554856,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.25,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.635297278561166,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.535117691954462,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6338792731493367,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6236181055894278,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6026287034863919,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6774658910225475,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6689082956296949,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6300923569807262,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6980985750578604,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.69023228005102,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5791212676275905,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6554631761115307,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6484605322290127,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5925740365385713,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6612574365818238,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.65293852584578,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5876675837069875,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.662701579585186,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.375,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6549064725922156,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.535117691954462,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.640398978419038,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 256,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 66,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6304926205633528,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6026287034863919,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6836009508104807,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 28,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6746690119413659,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6300923569807262,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": false,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.7042412153687672,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 1.0,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.696247150505039,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5791212676275905,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6683741141908186,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 8,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6608937161360654,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "replace",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5925740365385713,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "mean",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.673897832178819,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 512,
+      "margin": 32,
+      "glimpse_scale": 0.5,
+      "fusion": "conf",
+      "k": 6,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6652491897709344,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "replace",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.5876675837069875,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "mean",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.672071235162775,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    },
+    {
+     "method": {
+      "name": "foveated",
+      "pair": "bisenetv2+pidnet_s",
+      "context_model": "bisenetv2",
+      "glimpse_model": "pidnet_s",
+      "context_scale": 0.5,
+      "glimpse_size": 384,
+      "margin": 24,
+      "glimpse_scale": 0.75,
+      "fusion": "conf",
+      "k": 15,
+      "rule": {
+       "kind": "all",
+       "score": "entropy",
+       "pool": "mean",
+       "class_weights": null,
+       "selection": "topk",
+       "suppress": 1,
+       "seed": 0
+      }
+     },
+     "miou": 0.6641921114360019,
+     "t4_median_ms": null,
+     "t4_latency_is_lower_bound": true,
+     "delta_miou_at_equal_latency": null
+    }
+   ]
+  }
+ }
+}
