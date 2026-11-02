@@ -46,3 +46,9 @@ Accuracy is unchanged on the tests (a known 12 × 20 px shift is still recovered
 within 1 px; replay = method pixel for pixel). Even so, homography + motion +
 warps cost about 13 ms per frame on the laptop GPU, so the room left for
 glimpses under PIDNet-S's 10.7–19 ms full frames is small. The T4 numbers decide.
+
+## 2026-11-02 — `method3 stats` on one real train clip (CPU, ORB)
+
+Smoke run of the CLI on train_all clip 0001 (29 frame pairs): no identity fallback;
+aligned |diff| percentiles 95/98/99 = 35/54/71; at g = 384 the share of moving cells is
+1.5–37% across the 9 (theta, rho) pairs. One clip only: theta is fixed by chunk 0 on Colab.

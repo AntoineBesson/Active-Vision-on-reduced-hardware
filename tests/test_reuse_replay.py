@@ -147,18 +147,20 @@ def test_replay_matches_the_method_on_real_val_clips(tmp_path):
     from models.registry import build_backbone
 
     repo = Path(__file__).resolve().parents[1]
-    ds = CityscapesVPS(CityscapesVPSConfig.from_yaml(repo / "configs" / "cityscapes_vps.yaml", split="val"))
+    split = os.environ.get("M3_EQUIV_SPLIT", "val")  # the Colab notebook passes the split it has on disk
+    ds = CityscapesVPS(CityscapesVPSConfig.from_yaml(repo / "configs" / "cityscapes_vps.yaml", split=split))
     import yaml
 
     bcfg = yaml.safe_load((repo / "configs" / "baseline_fullframe_pidnet_s.yaml").read_text())["backbone"]
     bcfg["weights"] = os.environ["PIDNET_S_WEIGHTS"]
     model = build_backbone(bcfg).cuda().eval()
-    cfgs = [MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.05, tau=1.0),
-            MotionReuseConfig(full_scale=0.75, glimpse_size=384, theta=20, rho=0.05, tau=1.0, ctx_scale=0.25),
-            MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.02, tau=0.2)]
+    cfgs = [MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.05, tau=1.0, homography="iclk"),
+            MotionReuseConfig(full_scale=0.75, glimpse_size=384, theta=20, rho=0.05, tau=1.0, ctx_scale=0.25,
+                              homography="iclk"),
+            MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.02, tau=0.2, homography="iclk")]
     for i in range(2):
         cache = ClipCache.load(build_clip_cache(ds, i, model, tmp_path, full_scales=(1.0, 0.75), glimpse_sizes=(384,),
-                                                ctx_scales=(0.25,), device="cuda"))
+                                                ctx_scales=(0.25,), device="cuda", homography="iclk"))
         for cfg in cfgs:
             _, preds = replay_clip(cache, cfg, "cuda", return_predictions=True)
             m = MotionReuseMethod(model, cfg)

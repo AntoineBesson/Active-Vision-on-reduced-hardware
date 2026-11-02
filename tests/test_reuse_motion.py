@@ -112,3 +112,15 @@ def test_iclk_from_a_cuda_graph_equals_the_eager_fit():
     again = motion._iclk(gc, gp, graphed=True)  # the captured graph takes new inputs
     assert torch.allclose(eager[0], graphed[0], atol=1e-6) and eager[1] == graphed[1]
     assert again[0][0, 2] < 0  # the reverse motion
+
+
+def test_cell_share_above_rho_is_moving_cells():
+    from reuse.motion import cell_share
+
+    g = torch.Generator().manual_seed(0)
+    motion = torch.randint(0, 256, (256, 512), generator=g, dtype=torch.uint8)
+    grid = GlimpseGrid((1024, 2048), 384, 32)
+    share = cell_share(motion, grid, 128)
+    assert share.shape == (grid.num_cells,) and float(share.min()) >= 0 and float(share.max()) <= 1
+    for rho in (0.0, 0.3, 0.5, 0.7):
+        assert torch.equal(share > rho, moving_cells(motion, grid, 128, rho))

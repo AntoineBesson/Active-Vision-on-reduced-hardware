@@ -131,10 +131,13 @@ class LatencyTables:
         Frame 0: the full pass. Later frames: gray + homography + motion, then either the
         full pass (fallback) or the warps, the glimpses of the ``moved_cells`` cells and, in
         3b, the context pass and the fusion. A full or context pass = backbone (area) +
-        its post-processing (upsample, argmax, confidence)."""
+        its post-processing (upsample, argmax, confidence). ``gflops``: the backbone passes only."""
         stride = self.strides[model]
+        gflops = 0.0
 
         def frame_pass(scale: float) -> Dict[str, Dict[str, float]]:
+            nonlocal gflops
+            gflops += self._find("area", model=model, kind="frame", scale=scale)["gflops"]
             return {"backbone": self._part_ms("area", model=model, kind="frame", scale=scale),
                     "post": self._part_ms("reuse", op="post", stride=stride, scale=scale)}
 
@@ -151,13 +154,14 @@ class LatencyTables:
                 parts["warp"] = self._part_ms("reuse", op="warp")
                 if moved_cells:
                     parts["glimpses"] = self._part_ms("batch", model=model, size=cfg.glimpse_size, k=moved_cells)
+                    gflops += self._find("batch", model=model, size=cfg.glimpse_size, k=moved_cells)["gflops"]
                     parts["glimpse_post"] = self._part_ms("reuse", op="glimpse_post", stride=stride,
                                                           size=cfg.glimpse_size, k=moved_cells)
                 if cfg.ctx_scale is not None:
                     parts.update({f"context_{k}": v for k, v in frame_pass(cfg.ctx_scale).items()})
                     parts["fusion"] = self._part_ms("reuse", op="fusion")
         return {"median_ms": sum(p["median_ms"] for p in parts.values()),
-                "p95_ms": sum(p["p95_ms"] for p in parts.values()), "parts": parts}
+                "p95_ms": sum(p["p95_ms"] for p in parts.values()), "gflops": gflops, "parts": parts}
 
 
 def frame_latency_summary(per_frame_ms: Iterable[float]) -> Dict[str, float]:

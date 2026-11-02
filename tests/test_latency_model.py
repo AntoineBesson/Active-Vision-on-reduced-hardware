@@ -128,3 +128,16 @@ def test_summary_mean_and_p95():
     ms = [1.0] * 95 + [10.0] * 5
     out = frame_latency_summary(ms)
     assert out["mean_ms"] == pytest.approx(1.45) and out["p95_ms"] == pytest.approx(float(np.percentile(ms, 95)))
+
+
+def test_reuse_frame_counts_the_network_gflops():
+    from reuse.method import MotionReuseConfig
+
+    t = _reuse_tables()
+    a = MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.05, tau=1.0, homography="iclk")
+    b = MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.05, tau=1.0, homography="iclk",
+                          ctx_scale=0.25)
+    assert t.predict_reuse_frame("pidnet_s", a, 28, False, True)["gflops"] == pytest.approx(1.0)  # the full pass
+    assert t.predict_reuse_frame("pidnet_s", a, 3, False, False)["gflops"] == pytest.approx(1.0)  # 3 glimpses
+    assert t.predict_reuse_frame("pidnet_s", a, 0, False, False)["gflops"] == 0
+    assert t.predict_reuse_frame("pidnet_s", b, 2, False, False)["gflops"] == pytest.approx(2.0)  # glimpses + context

@@ -239,8 +239,8 @@ def motion_map(prev: torch.Tensor, cur: torch.Tensor, H: torch.Tensor,
     return diff.round().clamp(0, 255).to(torch.uint8)
 
 
-def moving_cells(motion: torch.Tensor, grid: GlimpseGrid, theta: int, rho: float) -> torch.Tensor:
-    """(num_cells,) bool: cells whose share of in-frame pixels with motion > theta exceeds rho.
+def cell_share(motion: torch.Tensor, grid: GlimpseGrid, theta: int) -> torch.Tensor:
+    """(num_cells,) float: each cell's share of in-frame pixels with motion > theta.
 
     ``motion`` is at 1/f of the grid's frame size; the cell's inner square must be a
     whole number of motion pixels."""
@@ -252,5 +252,9 @@ def moving_cells(motion: torch.Tensor, grid: GlimpseGrid, theta: int, rho: float
     ch, cw = grid.rows * s, grid.cols * s
     hot = F.pad((motion > theta).float()[None, None], (0, cw - w, 0, ch - h))
     inside = F.pad(torch.ones(1, 1, h, w, device=motion.device), (0, cw - w, 0, ch - h))
-    share = F.avg_pool2d(hot, s) / F.avg_pool2d(inside, s).clamp_min(1e-9)
-    return (share > rho).flatten()
+    return (F.avg_pool2d(hot, s) / F.avg_pool2d(inside, s).clamp_min(1e-9)).flatten()
+
+
+def moving_cells(motion: torch.Tensor, grid: GlimpseGrid, theta: int, rho: float) -> torch.Tensor:
+    """(num_cells,) bool: cells whose share of in-frame pixels with motion > theta exceeds rho."""
+    return cell_share(motion, grid, theta) > rho

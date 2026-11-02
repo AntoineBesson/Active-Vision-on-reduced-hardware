@@ -157,6 +157,13 @@ def _confusion(label: np.ndarray, pred: np.ndarray) -> np.ndarray:
                        minlength=NUM_CLASSES * NUM_CLASSES).reshape(NUM_CLASSES, NUM_CLASSES)
 
 
+def _confusion_t(label: torch.Tensor, pred: torch.Tensor) -> torch.Tensor:
+    """:func:`_confusion` on the device (the replay's predictions never leave it)."""
+    ok = label != IGNORE
+    return torch.bincount(label[ok].long() * NUM_CLASSES + pred[ok].long(),
+                          minlength=NUM_CLASSES * NUM_CLASSES).reshape(NUM_CLASSES, NUM_CLASSES)
+
+
 def _blocks(image: torch.Tensor, cell: int, cols: int, idx: torch.Tensor) -> torch.Tensor:
     """(k, cell, cell) blocks of the cells ``idx`` of an (h, w) image (zero beyond the frame)."""
     h, w = image.shape
@@ -182,7 +189,15 @@ def replay_clip(cache: ClipCache, cfg: MotionReuseConfig, device, motion_key: st
     t_of = lambda key, t: torch.from_numpy(cache[key][t]).to(dev)  # noqa: E731
     full, full_conf = _key("full", cfg.full_scale), _key("full_conf", cfg.full_scale)
     labels, conf = t_of(full, 0).long(), t_of(full_conf, 0)
-    preds = [labels.clone()]
+    row = {int(t): j for j, t in enumerate(cache.labeled_t)}
+    confs: List[torch.Tensor] = []
+    preds = [labels.clone()] if return_predictions else None
+
+    def score(t: int, pred: torch.Tensor) -> None:
+        if t in row:
+            confs.append(_confusion_t(torch.from_numpy(cache["labels"][row[t]]).to(dev), pred))
+
+    score(0, labels)
     moved, fallback = [grid.num_cells], [False]
     for t in range(1, cache.num_frames):
         H = torch.from_numpy(cache["H"][t])
@@ -219,9 +234,10 @@ def replay_clip(cache: ClipCache, cfg: MotionReuseConfig, device, motion_key: st
             labels, conf = base, base_conf
             moved.append(k)
             fallback.append(False)
-        preds.append(labels.clone())
-    conf_m = np.stack([_confusion(cache["labels"][j], preds[t].cpu().numpy()) for j, t in enumerate(cache.labeled_t)])
-    result = ClipResult(conf=conf_m.astype(np.int64), moved_cells=np.array(moved, np.int32),
+        score(t, labels)
+        if preds is not None:
+            preds.append(labels.clone())
+    result = ClipResult(conf=torch.stack(confs).cpu().numpy().astype(np.int64), moved_cells=np.array(moved, np.int32),
                         fallback=np.array(fallback, bool), num_cells=grid.num_cells)
     return (result, preds) if return_predictions else result
 
