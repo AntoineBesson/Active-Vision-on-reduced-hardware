@@ -1,7 +1,9 @@
 # Method 3 (previous-frame reuse): recompute where things move
 
-Status: draft for approval, 2026-11-02. Implementation starts only once the
-Method 2 finalists' T4 `final` runs are in (decided 2026-11-02).
+Status: draft for approval, 2026-11-02. No implementation at all (code,
+caches, latency runs) starts until the Method 2 finalists' T4 `final` runs
+are in (decided 2026-11-02). Points marked *(my call)* were settled by
+Claude, not the user.
 
 ## Intent
 
@@ -45,11 +47,16 @@ latency, and latency saved at equal mIoU.
    4. **Fallback:** if the share of moving cells is above τ (a fast turn,
       a crowd crossing), run a full-frame pass at s_full instead and reset
       the memory. τ = 1 means never. The value is picked from the results,
-      not in advance (decided 2026-11-02).
+      not in advance (decided 2026-11-02). A fallback frame and frame 0
+      count as 100% of cells recomputed; 3b runs no context pass on them
+      *(my call)*.
    5. **Otherwise:** warp the memory with the same H, nearest-neighbour for
       the labels. Recompute the moving cells as Method 2 glimpses: full
-      resolution, margin 32, with the replace rule. The result is the
-      prediction for frame t and the new memory.
+      resolution, margin 32, with Method 2's replace rule unchanged (the
+      cell's inner square comes from its glimpse, seams with the warped
+      memory included) *(my call)*. The glimpse model is the full pass's
+      model. The result is the prediction for frame t and the new memory;
+      a recomputed cell's confidence is its glimpse's max probability.
 3. Everything is deterministic, with fixed seeds wherever a step is random
    (RANSAC).
 
@@ -60,8 +67,10 @@ latency, and latency saved at equal mIoU.
   a clip.
 - **3b, reuse plus a low-res pass:** each frame also gets a context pass at
   scale s_ctx, as in Method 2. In static cells, the warped memory and the
-  low-res prediction are fused with Method 2's mean or conf rules. The
-  user accepts a slightly higher latency if 3a's accuracy loss is too
+  low-res prediction are fused with Method 2's conf rule: per pixel, the
+  more confident one wins, and the memory keeps that confidence. The mean
+  rule is left out, because it would need the 19 class probabilities in
+  memory *(my call)*. The user accepts a slightly higher latency if 3a's accuracy loss is too
   large.
 
 ## Goals
@@ -75,10 +84,14 @@ latency, and latency saved at equal mIoU.
      difference, to measure what the homography fix buys;
    - **zone oracle:** at the same number of recomputed cells, the cells
      where the warped memory is most wrong. Labels exist only every 5th
-     frame, so the oracle compares against the scale-1 full-frame
-     prediction as a teacher. This is the ceiling for any motion rule.
+     frame, so the oracle picks cells against the scale-1 full-frame
+     prediction as a teacher; it is still scored against the labels on the
+     labelled frames. It is a ceiling relative to that teacher, not an
+     absolute one *(my call)*.
 2. **Sweep on VPS train**, then report chosen configurations once on VPS
-   val with clip-bootstrap 95% intervals, as in Method 2.
+   val with clip-bootstrap 95% intervals, as in Method 2. Finalists, as in
+   Method 2: the Pareto front plus the best configuration under each
+   full-frame latency, taken against both judges (the union) *(my call)*.
 3. **Report per configuration:**
    - mIoU, per-class IoU, and mIoU by position in the clip (frames 4, 9,
      …, 29), so drift is visible;
@@ -86,7 +99,10 @@ latency, and latency saved at equal mIoU.
      the mean share of cells recomputed;
    - both trade-off readings against both judges.
 4. **Measure the finalists end to end on the T4** (3 sessions, interleaved
-   with the full frame), streaming whole clips so the memory is real.
+   with the full frame), streaming whole clips so the memory is real, on a
+   fixed subset of val clips. The sweep's mean and p95 are predicted from
+   the floor tables; these runs validate that prediction and replace it in
+   the final tables, as in Method 2 *(my call)*.
 5. **Ledger every try**, failures included, in `results/method3/TRIES.md`,
    as for Method 2.
 
@@ -116,7 +132,9 @@ latency, and latency saved at equal mIoU.
 - **Data.** Method 3 runs on all 30 frames of each clip. Labels are on
   frames 4, 9, 14, 19, 24, 29. Locally, VPS `train/` has only the labelled
   frames, while the raw Cityscapes download (`leftImg8bit_sequence/val`)
-  has all 30 frames of every VPS clip (val already has `img_all/`). The
+  has all 30 frames of every VPS clip, train included: all VPS clips are
+  Cityscapes val sequences, and that download is already local
+  (`C:/Users/trash/cityscapes`). Val already has `img_all/`. The
   adapter must load the in-between train frames from there, matched by
   Cityscapes sequence and frame number. Check that every train clip has 30
   consecutive frames before building anything.
@@ -143,8 +161,10 @@ latency, and latency saved at equal mIoU.
   It runs on the T4 in 3 sessions before tuning starts.
 - **Homography estimator.** It must be deterministic, run on downscaled
   grayscale frames, and be timed. Feature matching with RANSAC (OpenCV, on
-  the CPU) is the default. If it dominates the latency, a GPU estimator is
-  allowed; record which one in the ledger.
+  the CPU) is the default. The latency extension times it on the Colab T4
+  host's CPU, which is the canonical number, and also times one GPU
+  estimator, so the choice rests on data *(my call)*. Record the choice in
+  the ledger.
 
 ## How it works: evaluation
 
@@ -154,13 +174,15 @@ inputs don't depend on history, though:
 
 - the full-frame prediction at each s_full;
 - the every-cell glimpse prediction at each glimpse size;
-- the 3b context probabilities;
+- the 3b context prediction and its max-probability map;
 - the homography and the motion map.
 
 So they can be computed once per frame on the laptop GPU and stored. A
 cheap simulation then replays each configuration's memory, warps,
-fallbacks and fusion over the clip, and scores the labelled frames. The
-storage format is left to the builder; compressed label maps of 12,000
+fallbacks and fusion over the clip, and scores the labelled frames. Only
+label maps and max-probability maps (uint8-quantised) are stored, no full
+probabilities *(my call)*. The storage format is left to the builder;
+compressed maps of 12,000
 train frames are a few GB per geometry.
 
 **Validation.** On 2 val clips and 3 configurations (3a, 3b, one with
