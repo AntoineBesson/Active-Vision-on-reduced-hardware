@@ -52,3 +52,28 @@ glimpses under PIDNet-S's 10.7–19 ms full frames is small. The T4 numbers deci
 Smoke run of the CLI on train_all clip 0001 (29 frame pairs): no identity fallback;
 aligned |diff| percentiles 95/98/99 = 35/54/71; at g = 384 the share of moving cells is
 1.5–37% across the 9 (theta, rho) pairs. One clip only: theta is fixed by chunk 0 on Colab.
+
+## 2026-11-02 — motion statistics on chunk 0 (100 train clips, 2,900 frame pairs, CPU)
+
+| homography | identity fallbacks | aligned \|diff\| p95 / p98 / p99 | moving cells at g = 384, ρ = 0.05 (θ = p95 / p98 / p99) |
+|---|---|---|---|
+| ORB | 0 | 30 / 50 / 75 | 28.2% / 13.5% / 7.7% |
+| IC-LK | 0 | 25 / 38 / 51 | 28.3% / 12.1% / 6.2% |
+
+IC-LK leaves smaller residuals after alignment, as on the 6 pairs checked earlier; it is
+kept, and θ ∈ {25, 38, 51}. Files: `motion_stats_train_all{,_orb,_iclk}.json`.
+
+## 2026-11-02 — replay on the GPU: exactness and speed
+
+- **Exactness on real val clips (laptop GPU):** the replay and the streaming method give the
+  same moving cells and fallbacks on every frame; predictions differ on at most 2.4e-6 of a
+  frame's pixels. Cause, confirmed directly: the cache glimpses all 28 cells in one batch,
+  the method only the moving ones, and cuDNN's float noise across batch sizes flips the
+  argmax of 2 pixels in one cell. Exact on the CPU fixture.
+- **Speed:** one replay took 0.32 s per clip (launch- and copy-bound: 428 ms CPU for 152 ms
+  GPU), i.e. ~190 s per clip for the 1,296-config grid. Cache arrays kept on the GPU
+  (0.24 s), then configs sharing (glimpse, θ, ρ) replayed in one batch (48 configs in 2.7 s,
+  equal to the single replays bit for bit): the full grid now takes 25 s per clip, 480
+  replays after merging the τ values with the same fallback frames. A sub-histogram trick
+  for the batched confusion gave nothing (2.69 → 2.77 s) and was dropped.
+- One real clip cache (3 full scales, 3 glimpse sizes, 3 context scales): 23 s, 24 MB.

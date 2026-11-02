@@ -141,6 +141,9 @@ def test_reuse_bound_of_a_static_clip_equals_the_full_pass(tmp_path, vps, oracle
 @pytest.mark.skipif(not (torch.cuda.is_available() and os.environ.get("CITYSCAPES_VPS_ROOT")
                          and os.environ.get("PIDNET_S_WEIGHTS")), reason="needs CUDA, $CITYSCAPES_VPS_ROOT and $PIDNET_S_WEIGHTS")
 def test_replay_matches_the_method_on_real_val_clips(tmp_path):
+    """On a GPU the cache glimpses every cell in one batch while the method glimpses only the
+    moving ones: cuDNN's float noise across batch sizes flips the argmax of a few pixels
+    (2 of 2M seen on val). The cells, fallbacks and all but 1e-4 of each frame must match."""
     from pathlib import Path
 
     from data.cityscapes_vps import CityscapesVPS, CityscapesVPSConfig
@@ -158,15 +161,54 @@ def test_replay_matches_the_method_on_real_val_clips(tmp_path):
             MotionReuseConfig(full_scale=0.75, glimpse_size=384, theta=20, rho=0.05, tau=1.0, ctx_scale=0.25,
                               homography="iclk"),
             MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.02, tau=0.2, homography="iclk")]
+    worst = 0.0
     for i in range(2):
         cache = ClipCache.load(build_clip_cache(ds, i, model, tmp_path, full_scales=(1.0, 0.75), glimpse_sizes=(384,),
                                                 ctx_scales=(0.25,), device="cuda", homography="iclk"))
         for cfg in cfgs:
-            _, preds = replay_clip(cache, cfg, "cuda", return_predictions=True)
+            res, preds = replay_clip(cache, cfg, "cuda", return_predictions=True)
             m = MotionReuseMethod(model, cfg)
             m.reset({})
             for t in range(ds.num_frames(i)):
                 ledger = CostLedger()
                 ledger.begin_frame(1024 * 2048)
                 ref = m.predict(frame_to_tensor(ds.load_frame(i, t), "cuda"), t, ledger)
-                assert torch.equal(preds[t].cuda(), ref), (cfg.name(), i, t)
+                assert res.moved_cells[t] == m.last_step["moved_cells"], (cfg.name(), i, t)
+                assert bool(res.fallback[t]) == bool(m.last_step["fallback"]), (cfg.name(), i, t)
+                frac = float((preds[t].cuda() != ref).float().mean())
+                worst = max(worst, frac)
+                assert frac <= 1e-4, (cfg.name(), i, t, frac)
+    print(f"worst share of differing pixels in a frame: {worst:.2e}")
+
+
+def test_device_arrays_are_uploaded_once_per_clip(caches):
+    cache = caches[0]
+    a = cache.tensor("full_1", "cpu")
+    assert a is cache.tensor("full_1", "cpu")  # shared by every config replayed on the clip
+    assert np.array_equal(a.numpy(), cache["full_1"])
+
+
+GROUP = [MotionReuseConfig(full_scale=f, theta=2, rho=0.0, tau=u, ctx_scale=c, **GEOM)
+         for f in (1.0, 0.5) for c in (None, 0.25) for u in (1.0, 0.5)]
+
+
+def test_replay_many_equals_replay_clip_for_each_config(caches):
+    from reuse.replay import replay_many
+
+    for cache in caches:
+        many, many_preds = replay_many(cache, GROUP, "cpu", return_predictions=True)
+        assert any(r.fallback.any() for r in many) and not all(r.fallback.any() for r in many)
+        for cfg, res, preds in zip(GROUP, many, many_preds):
+            ref, ref_preds = replay_clip(cache, cfg, "cpu", return_predictions=True)
+            assert np.array_equal(res.conf, ref.conf), cfg.name()
+            assert np.array_equal(res.moved_cells, ref.moved_cells) and np.array_equal(res.fallback, ref.fallback)
+            assert res.num_cells == ref.num_cells
+            for t, (a, b) in enumerate(zip(preds, ref_preds)):
+                assert torch.equal(a, b), (cfg.name(), t)
+
+
+def test_replay_many_refuses_a_mixed_group(caches):
+    from reuse.replay import replay_many
+
+    with pytest.raises(ValueError, match="share"):
+        replay_many(caches[0], [GROUP[0], MotionReuseConfig(full_scale=1.0, theta=3, rho=0.0, tau=1.0, **GEOM)], "cpu")

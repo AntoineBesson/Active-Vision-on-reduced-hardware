@@ -321,7 +321,7 @@ def cmd_sweep(args: argparse.Namespace) -> int:
     if args.split == "val" and not args.finalists and not args.fixture:
         raise SystemExit("val is the reporting split: sweep it with --finalists only")
     from reuse.method import MotionReuseConfig
-    from reuse.replay import replay_clip
+    from reuse.replay import replay_many
 
     device = resolve_device(args.device)
     dataset, clips = _dataset_and_clips(args)
@@ -335,22 +335,27 @@ def cmd_sweep(args: argparse.Namespace) -> int:
 
         def rows():
             t0 = time.time()
+            by_key: Dict[Tuple[int, int, float], List[Any]] = {}
+            for base, taus in groups:  # configs sharing (glimpse, theta, rho) replay as one batch
+                by_key.setdefault((base.glimpse_size, base.theta, base.rho), []).extend(
+                    replace(base, tau=tau) for tau in taus)
             for n, (clip_id, cache) in enumerate(_caches(args, model, clips, dataset)):
-                counts: Dict[Tuple[int, int, float], List[int]] = {}
                 replays = 0
-                for base, taus in groups:
-                    grid = cache.grid(base.glimpse_size)
-                    key = (base.glimpse_size, base.theta, base.rho)
-                    if key not in counts:
-                        counts[key] = _moving_counts(cache, grid, base.theta, base.rho, device)
-                    done: Dict[Tuple[bool, ...], Any] = {}
-                    for tau in taus:
-                        cfg = replace(base, tau=tau)
-                        fb = _fallbacks(counts[key], grid.num_cells, tau)
-                        if fb not in done:
-                            done[fb] = replay_clip(cache, cfg, device)
-                            replays += 1
-                        res = done[fb]
+                for (g, theta, rho), cfgs in by_key.items():
+                    grid = cache.grid(g)
+                    counts = _moving_counts(cache, grid, theta, rho, device)
+                    unique: Dict[Tuple[Any, ...], Any] = {}
+                    for cfg in cfgs:  # same fallback frames -> same replay (they differ only in tau)
+                        unique.setdefault((cfg.full_scale, cfg.ctx_scale, _fallbacks(counts, grid.num_cells, cfg.tau)), cfg)
+                    reps = list(unique.values())
+                    results: Dict[Tuple[Any, ...], Any] = {}
+                    for start in range(0, len(reps), args.batch):
+                        for key, res in zip(list(unique)[start:start + args.batch],
+                                            replay_many(cache, reps[start:start + args.batch], device)):
+                            results[key] = res
+                    replays += len(reps)
+                    for cfg in cfgs:
+                        res = results[(cfg.full_scale, cfg.ctx_scale, _fallbacks(counts, grid.num_cells, cfg.tau))]
                         yield {"split": args.split, "model": model, "clip_id": clip_id, "name": cfg.name(),
                                "config": asdict(cfg), "num_cells": res.num_cells, "conf": res.conf.tolist(),
                                "moved_cells": res.moved_cells.tolist(), "fallback": res.fallback.tolist(),
@@ -718,6 +723,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     common(w)
     grid(w)
     w.add_argument("--part", default="0/1", help="i/M: every M-th tau group of the grid, from the i-th.")
+    w.add_argument("--batch", type=int, default=48, help="Configs replayed together (GPU memory: ~45 MB each).")
     w.add_argument("--finalists", default=None, help="Run only these configs (finalists.json); required on val.")
     w.set_defaults(fn=cmd_sweep)
 

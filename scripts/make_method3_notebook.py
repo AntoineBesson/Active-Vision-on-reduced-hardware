@@ -22,8 +22,8 @@ already on Drive are skipped, so a runtime that is cut off can simply be run aga
 and `PIDNet_S_Cityscapes_val.pt`. BiSeNetV2's checkpoint is downloaded from its release URL.
 
 **Order** (one chunk per model per session):
-1. `STAGE = "stats"`, `CHUNK = 0`: motion statistics, which fix θ. Commit
-   `method3/train_all/motion_stats_train_all.json` to `results/method3/` before the sweeps.
+1. `STAGE = "stats"`, `CHUNK = 0`: motion statistics, which fix θ (skip it if
+   `results/method3/motion_stats_train_all.json` is already committed: the notebook uses that file).
 2. `STAGE = "cache+sweep+bounds"` for `CHUNK` 0–3 × `MODEL` `pidnet_s`, `bisenetv2`. The
    caches stay on the runtime's local disk (`KEEP_CACHE = True` also copies them to Drive,
    several GB per chunk and model). If one session cannot finish a chunk, split the grid with
@@ -106,7 +106,9 @@ def keep(name):
 steps = set(STAGE.split("+"))
 TAG = "val" if SPLIT == "val" else f"chunk{CHUNK}"
 PART_SUFFIX = "" if PART == "0/1" else "_p" + PART.replace("/", "of")
-STATS = f"{DRIVE}/method3/train_all/motion_stats_train_all.json"
+STATS = "results/method3/motion_stats_train_all.json"   # committed: theta is fixed before any sweep
+if not os.path.exists(STATS):
+    STATS = f"{DRIVE}/method3/train_all/motion_stats_train_all.json"
 if "stats" in steps:
     name = f"motion_stats_{SPLIT}.json"
     if saved(name):
