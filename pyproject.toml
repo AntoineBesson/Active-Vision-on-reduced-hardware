@@ -32,6 +32,8 @@ viz = ["matplotlib>=3.4"]
 # Deep-learning stack. Pin the CPU/T4 build in your environment as appropriate;
 # left unversioned here so Colab/Kaggle's preinstalled CUDA torch is reused.
 torch = ["torch", "torchvision"]
+# Method 3's motion cue (homography with ORB + RANSAC); Colab ships it already.
+reuse = ["opencv-python-headless"]
 # Dev / test tooling.
 dev = ["pytest>=7.0", "matplotlib>=3.4"]
 
