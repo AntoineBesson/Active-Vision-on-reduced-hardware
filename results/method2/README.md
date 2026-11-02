@@ -1,8 +1,9 @@
 # Method 2: foveation without memory — results
 
 **Outcome: negative.** On a T4, no configuration of Method 2 beats the full
-frame. Every one of the 55 finalists chosen on VPS train lands below the
-full-frame mIoU-vs-latency curve on VPS val. The best one,
+frame. On VPS val, 49 of the 55 finalists chosen on VPS train land below
+the full-frame mIoU-vs-latency curve; the other 6 are slower than the full
+frame at scale 1 and less accurate, so they are dominated. The best one,
 BiSeNetV2 with a 0.5 context, 4 fused 384 px glimpses and the fixed prior,
 is **-0.5 mIoU [-1.7, +0.3]** at equal latency. That is statistically tied on
 accuracy, but it costs about **5.5 ms more** than a full frame of the same
@@ -132,7 +133,7 @@ class weights.
 | 0.5 | 384:32:1 | mean | 2 | prior | 68.8 [63.4, 71.0] | ≥17.8 / ≥18.2 | 76.9 | 39% | 1.8x / 2.6x | -1.1 [-2.6, -0.2] | -4.6 [-7.4, -1.3] |
 | 0.5 | 512:32:1 | mean | 2 | prior | 69.0 [63.8, 70.9] | ≥21.8 / ≥22.3 | 98.4 | 50% | 1.4x / 2.0x | -1.1 [-2.8, -0.0] | -8.0 [-10.6, -2.1] |
 
-Positive ΔmIoU: 0/18; interval above 0: 0; interval containing 0: 2.
+Positive ΔmIoU: 0/17 (ΔmIoU undefined for 1: slower than the full frame at scale 1 and less accurate, so dominated); interval above 0: 0; interval containing 0: 2.
 
 **bisenetv2+pidnet_s** (20 finalists; the 4 best by ΔmIoU)
 
@@ -143,7 +144,7 @@ Positive ΔmIoU: 0/18; interval above 0: 0; interval containing 0: 2.
 | 0.5 | 256:32:1 | mean | 1 | maxprob/mean/topk/w | 67.5 [62.6, 69.6] | ≥14.9 / ≥15.3 | 52.2 | 28% | 1.3x / 1.8x | -3.2 [-5.0, -1.5] | -6.9 [-8.0, -5.6] |
 | 0.5 | 256:32:1 | mean | 2 | maxprob/mean/greedy/w | 67.4 [62.4, 69.5] | ≥15.5 / ≥15.9 | 55.1 | 31% | 1.2x / 1.7x | -3.4 [-5.2, -1.6] | -7.6 [-8.7, -6.4] |
 
-Positive ΔmIoU: 0/20; interval above 0: 0; interval containing 0: 0.
+Positive ΔmIoU: 0/17 (ΔmIoU undefined for 3: slower than the full frame at scale 1 and less accurate, so dominated); interval above 0: 0; interval containing 0: 0.
 
 **pidnet_s+pidnet_s** (17 finalists; the 4 best by ΔmIoU)
 
@@ -154,7 +155,7 @@ Positive ΔmIoU: 0/20; interval above 0: 0; interval containing 0: 0.
 | 0.5 | 256:32:1 | mean | 1 | margin/mean/topk/w | 65.0 [60.3, 66.5] | ≥9.5 / ≥9.8 | 26.5 | 28% | 2.0x / 3.6x | -3.9 [-5.1, -2.6] | -4.1 [-4.3, -3.8] |
 | 0.5 | 512:32:1 | mean | 2 | prior | 66.2 [61.7, 67.7] | ≥13.3 / ≥13.6 | 47.2 | 50% | 1.4x / 2.0x | -4.3 [-5.8, -2.6] | -6.7 [-7.0, -5.5] |
 
-Positive ΔmIoU: 0/17; interval above 0: 0; interval containing 0: 0.
+Positive ΔmIoU: 0/15 (ΔmIoU undefined for 2: slower than the full frame at scale 1 and less accurate, so dominated); interval above 0: 0; interval containing 0: 0.
 
 
 **fp16 check** (`fp16_check.json`). The first finalist of each pair was
@@ -166,8 +167,12 @@ fp32 (threshold 0.1). So the fp32 caches stand for the fp16 deployment.
 - **T4 confirmation of the finalists' latency.** Set `PARTS = "final"` in
   `notebooks/latency_floor_colab.ipynb`, 3 sessions. This replaces the
   lower bounds and the backbone-only full frame with end-to-end timings.
-  That can only widen the gap for fused glimpses, and it doesn't change the
-  conclusion.
+  The two corrections pull in opposite directions: measured fused glimpses
+  can only be slower than their lower bounds, but the end-to-end full frame
+  also pays its resize, upsample and argmax (about 1-2 ms), which the
+  backbone-only curve leaves out. Shifting every full-frame curve by +2 ms
+  turns no finalist positive (best BiSeNetV2: -0.46 -> -0.38; no ΔmIoU
+  moves by more than 2.8 points), so the conclusion does not depend on it.
 - Directions that would change the picture, none of them tried yet (see
   [TRIES.md](TRIES.md)):
   - glimpse models trained on crops;

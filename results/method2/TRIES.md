@@ -37,7 +37,12 @@ Full frame on train: 76.1 (scale 1.0, 19.4 ms), 74.8 (0.75, 10.7 ms), 67.9
 all) the tiled prediction scores only **53.5 / 60.3 / 63.0 mIoU** for 256 /
 384 / 512 px crops, against 76.1 for the full frame. A probe on 5 val clips
 (PIDNet-S, mIoU / pixel accuracy) shows accuracy climbing back to the full
-frame as crops and margins grow, so this is the network, not a bug:
+frame as crops and margins grow, so this is the network, not a bug.
+*Protocol breach, disclosed:* this probe ran on val, not train, and its
+768/64 and 1024/64 rows suggested the wide geometries of try 2 (384:32:0.5,
+512:32:0.5, 384:24:0.75). It only shaped the search space, in foveation's
+favour; tuning and the finalists stayed on train, and the result is
+negative regardless. It should have run on train.
 
 | Input | mIoU | Pixel acc. |
 | --- | --- | --- |

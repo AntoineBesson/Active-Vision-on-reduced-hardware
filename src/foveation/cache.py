@@ -21,6 +21,7 @@ context cache stores the selection features of every score kind
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 from dataclasses import dataclass
@@ -113,8 +114,9 @@ def _conf_tmp(path: Path) -> Path:
 
 
 def _state_path(jobs: Sequence[CacheJob]) -> Path:
-    """The checkpoint of an interrupted :func:`build_caches` (one per directory)."""
-    return Path(jobs[0].path).parent / "_build_state.json"
+    """The checkpoint of an interrupted :func:`build_caches`, one per set of output files."""
+    key = hashlib.sha1("|".join(str(Path(j.path)) for j in jobs).encode("utf-8")).hexdigest()[:12]
+    return Path(jobs[0].path).parent / f"_build_state_{key}.json"
 
 
 def _signature(jobs: Sequence[CacheJob], indices: Sequence[int], precision: str, num_frames: int) -> str:

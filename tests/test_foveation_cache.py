@@ -166,3 +166,21 @@ def test_a_checkpoint_of_other_jobs_is_not_resumed(tmp_path, vps, oracle_backbon
     build_caches(vps, {"dummy": fresh}, jobs[:2], "cpu", allow_any_frame_size=True)  # a different set of jobs
     with np.load(tmp_path / "run" / "gl.npz") as a, np.load(tmp_path / "ref" / "gl.npz") as b:
         assert np.array_equal(a["conf"], b["conf"]) and np.array_equal(a["t"], b["t"])
+
+
+def test_two_interrupted_job_sets_in_one_directory_both_resume(tmp_path, vps, oracle_backbone):
+    full = {}
+    for name, jobs in (("a", _resume_jobs(tmp_path / "ref")[:1]), ("b", _resume_jobs(tmp_path / "ref")[1:2])):
+        counter = _FailAfter(oracle_backbone)
+        build_caches(vps, {"dummy": counter}, jobs, "cpu", allow_any_frame_size=True)
+        full[name] = counter.calls
+    sets = {"a": _resume_jobs(tmp_path / "run")[:1], "b": _resume_jobs(tmp_path / "run")[1:2]}
+    for name, jobs in sets.items():  # both interrupted, one after the other, in the same directory
+        with pytest.raises(RuntimeError, match="simulated"):
+            build_caches(vps, {"dummy": _FailAfter(oracle_backbone, fail_at=int(full[name] * 0.7))}, jobs, "cpu",
+                         allow_any_frame_size=True)
+    for name, jobs in sets.items():
+        resumed = _FailAfter(oracle_backbone)
+        build_caches(vps, {"dummy": resumed}, jobs, "cpu", allow_any_frame_size=True)
+        assert 0 < resumed.calls < full[name], name
+    assert sorted(p.name for p in (tmp_path / "run").iterdir()) == ["ctx.npz", "gl.npz"]

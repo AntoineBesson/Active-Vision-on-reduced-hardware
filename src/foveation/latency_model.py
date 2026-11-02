@@ -14,7 +14,8 @@ each the median over sessions of the per-session median. The p95 is the sum of
 the parts' p95s: a conservative bound, not a measured p95. The overhead was
 measured with entropy scoring, mean pooling and the logit stride of one model
 for both passes; a pair that involves a stride-1 model (BiSeNetV2) uses the
-stride-1 overhead. Only measured points are known: anything else raises.
+stride-1 overhead. Only measured points are known: anything else raises,
+including a glimpse margin other than the measured one (``settings.margin``).
 """
 
 from __future__ import annotations
@@ -36,12 +37,14 @@ def _missing(part: str, args: Mapping[str, Any]) -> KeyError:
 
 class LatencyTables:
     def __init__(self, records: Mapping[str, List[Dict[str, Any]]], sessions: int = 1,
-                 strides: Optional[Mapping[str, int]] = None):
+                 strides: Optional[Mapping[str, int]] = None, margin: Optional[int] = None):
         """``records``: part -> one entry per measured point (graph level), already merged over sessions.
-        ``strides``: logit stride per model name (default :data:`STRIDE`)."""
+        ``strides``: logit stride per model name (default :data:`STRIDE`). ``margin``: the glimpse
+        margin the tables were measured with (None: not recorded, not checked)."""
         self.records = {part: list(v) for part, v in records.items()}
         self.sessions = sessions
         self.strides = dict(STRIDE if strides is None else strides)
+        self.margin = margin
 
     @classmethod
     def from_records(cls, records: Mapping[str, Iterable[Mapping[str, Any]]],
@@ -51,7 +54,13 @@ class LatencyTables:
 
     @classmethod
     def load(cls, paths: Iterable[Path], strides: Optional[Mapping[str, int]] = None) -> "LatencyTables":
-        return cls._merge([json.loads(Path(p).read_text())["records"] for p in paths], strides)
+        runs = [json.loads(Path(p).read_text()) for p in paths]
+        margins = {r.get("settings", {}).get("margin") for r in runs}
+        if len(margins) > 1:
+            raise ValueError(f"latency-floor sessions measured with different glimpse margins: {sorted(map(str, margins))}")
+        tables = cls._merge([r["records"] for r in runs], strides)
+        tables.margin = margins.pop() if margins else None
+        return tables
 
     @classmethod
     def _merge(cls, sessions: List[Mapping[str, Iterable[Mapping[str, Any]]]],
@@ -84,7 +93,10 @@ class LatencyTables:
         return {"median_ms": r["median_ms"], "p95_ms": r["p95_ms"], "gflops": r["gflops"]}
 
     def predict(self, ctx_model: str, ctx_scale: float, glimpse_model: str, size: int, k: int,
-                selection: str) -> Dict[str, Any]:
+                selection: str, margin: Optional[int] = None) -> Dict[str, Any]:
+        """``margin``: the glimpse margin (input pixels); checked against the measured one when both are known."""
+        if margin is not None and self.margin is not None and margin != self.margin:
+            raise _missing("glimpse margin", {"margin": margin, "measured": self.margin})
         stride = 1 if 1 in (self.strides[ctx_model], self.strides[glimpse_model]) else 8
         parts = {
             "context": self._find("area", model=ctx_model, kind="frame", scale=ctx_scale),

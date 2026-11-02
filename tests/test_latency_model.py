@@ -61,3 +61,13 @@ def test_from_records_builds_a_table_without_files():
     })
     p = t.predict("pidnet_s", 0.25, "pidnet_s", 64, 2, "greedy")
     assert p["median_ms"] == pytest.approx(6.0) and p["p95_ms"] == pytest.approx(9.0)
+
+
+def test_tables_know_the_measured_margin():
+    assert TABLES.margin == 32
+
+
+def test_another_margin_names_the_missing_run():
+    assert TABLES.predict("pidnet_s", 0.25, "pidnet_s", 384, 2, "topk", margin=32)["median_ms"] > 0
+    with pytest.raises(KeyError, match="latency_floor"):
+        TABLES.predict("pidnet_s", 0.25, "pidnet_s", 384, 2, "topk", margin=16)

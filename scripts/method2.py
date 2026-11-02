@@ -209,7 +209,8 @@ def cost_of(ctx_model, gl_model, scale, geom: Geom, fusion, k, selection, frame_
     The latency tables were measured with plain glimpses (glimpse scale 1, no
     fusion): the crop resize and the fusion are missing from the overhead, so
     for the other configurations the prediction is a lower bound until the T4
-    ``final`` run measures them.
+    ``final`` run measures them. A plain glimpse must use the measured margin;
+    a wide one (glimpse scale < 1) has its own input margin and is already flagged.
     """
     from eval.tradeoff import delta_miou_at_equal_latency, latency_saved_at_equal_miou
 
@@ -223,7 +224,7 @@ def cost_of(ctx_model, gl_model, scale, geom: Geom, fusion, k, selection, frame_
                             "fullframe_curve": {"scales": ref["scales"], "latency_ms": ref["latency_ms"], "miou": ref["miou"]}}
     if selection is None:
         return cost
-    t4 = tables.predict(ctx_model, scale, gl_model, size, k, selection)
+    t4 = tables.predict(ctx_model, scale, gl_model, size, k, selection, margin=geom[1] if geom[2] == 1.0 else None)
     cost.update(t4_latency=t4, gflops=t4["gflops"],
                 flops_implied_speedup=ref["full"]["gflops"] / t4["gflops"],
                 realised_speedup=ref["full"]["median_ms"] / t4["median_ms"],
@@ -300,9 +301,9 @@ def cmd_cache(args: argparse.Namespace) -> int:
     jobs, skipped = [], 0
     for job in {j.path: j for j in wanted}.values():  # a context cache is shared by grids of equal frame geometry
         stem = job.path.name[:-len(".npz")]
-        for tmp in (job.path.with_name(stem + ".tmp.npz"), job.path.with_name(stem + ".conf.tmp.npy")):
-            if tmp.exists():
-                tmp.unlink()  # left by an interrupted build: never trusted
+        tmp = job.path.with_name(stem + ".tmp.npz")
+        if tmp.exists():
+            tmp.unlink()  # a half-written final file: never trusted (the .tmp.npy accumulators resume)
         if job.path.exists():
             skipped += 1
         else:

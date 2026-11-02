@@ -50,8 +50,9 @@ and a full frame at a slightly higher scale is cheap on a T4. See
 
 1. **Method 2: done (negative), see above.** Still open: confirm the
    finalists' latency on the T4 (`PARTS = "final"` in the latency notebook,
-   3 sessions). The fused glimpses' latencies are lower bounds, so the
-   measured gap can only widen.
+   3 sessions). The fused glimpses' latencies are lower bounds while the
+   full-frame reference leaves out its own resize and argmax (about 1-2 ms);
+   a +2 ms shift of the reference turns no finalist positive.
 2. **Method 3: persistent canvas.** Implement `SceneMemory` (canvas of
    logits/confidence with age) and a canvas-aware policy; this is where the
    unlabelled in-between frames of each 30-frame clip are used.

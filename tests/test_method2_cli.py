@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 pytest.importorskip("torch")
@@ -151,3 +152,46 @@ def test_report_refuses_train(work):
     with pytest.raises(SystemExit, match="val"):
         method2.main(["report", "--split", "train", *_common(work), "--finalists", str(work / "finalists.json"),
                       "--out", str(work / "x.json")])
+
+
+def test_cost_refuses_an_unmeasured_margin_of_a_plain_glimpse():
+    from eval.tradeoff import FullFrameCurve
+    from foveation.latency_model import LatencyTables
+
+    tables = LatencyTables.load(sorted((REPO / "results" / "latency_floor").glob("latency_floor_t4-s*.json")))
+    full = tables.fullframe("pidnet_s", 1.0)
+    ref = {"full": full, "scales": [1.0], "latency_ms": [full["median_ms"]], "miou": [0.7],
+           "curve": FullFrameCurve([2.0, full["median_ms"]], [0.5, 0.7])}
+    args = ("pidnet_s", "pidnet_s", 0.5)
+    tail = ("replace", 2, "topk", (1024, 2048), {"miou": 0.6}, tables, ref)
+    assert method2.cost_of(*args, (384, 32, 1.0), *tail)["t4_latency"] is not None
+    with pytest.raises(KeyError, match="latency_floor"):
+        method2.cost_of(*args, (384, 16, 1.0), *tail)
+    wide = method2.cost_of(*args, (384, 24, 0.75), *tail)  # a wide glimpse is an estimate, flagged as such
+    assert wide["t4_latency"] is not None and wide["t4_latency_is_lower_bound"]
+
+
+def test_an_interrupted_cli_build_resumes(tmp_path, monkeypatch):
+    import foveation.cache as cache
+
+    real, calls = cache.per_cell_confusion, {"n": 0, "fail_at": None}
+
+    def counting(*a, **kw):
+        calls["n"] += 1
+        if calls["fail_at"] is not None and calls["n"] >= calls["fail_at"]:
+            raise RuntimeError("simulated cuDNN failure")
+        return real(*a, **kw)
+
+    monkeypatch.setattr(cache, "per_cell_confusion", counting)
+    argv = ["cache", "--fixture", "--split", "val", "--models", "dummy", "--scales", "0.25", "--geoms", "12:2:1",
+            "--fusions", "replace"]
+    assert method2.main([*argv, "--root", str(tmp_path / "ref")]) == 0
+    full, calls["n"], calls["fail_at"] = calls["n"], 0, int(calls["n"] * 0.7)
+    with pytest.raises(RuntimeError, match="simulated"):
+        method2.main([*argv, "--root", str(tmp_path / "run")])
+    calls["n"], calls["fail_at"] = 0, None
+    assert method2.main([*argv, "--root", str(tmp_path / "run")]) == 0
+    assert 0 < calls["n"] < full  # the clips done before the failure are not run again
+    for p in (tmp_path / "ref" / "val").glob("*.npz"):
+        with np.load(p) as a, np.load(tmp_path / "run" / "val" / p.name) as b:
+            assert all(np.array_equal(a[k], b[k]) for k in a.files), p.name
