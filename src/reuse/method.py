@@ -27,13 +27,13 @@ import torch.nn.functional as F
 
 from eval.cost import CostLedger, count_flops
 from eval.harness import PRECISIONS, FullFrameMethod
-from foveation.ops import GlimpseGrid, gather_crops, paste_labels
+from foveation.ops import GlimpseGrid, gather_crops
 from foveation.pipeline import glimpse_logits
 from models.utils import upsample_logits
 
 from .motion import MOTION_FACTOR, estimate_homography, motion_map, moving_cells, to_gray_small, warp
 
-__all__ = ["MotionReuseConfig", "MotionReuseMethod", "FRAME"]
+__all__ = ["MotionReuseConfig", "MotionReuseMethod", "FRAME", "full_pass", "glimpse_pass", "paste_cells", "advance"]
 
 FRAME = (1024, 2048)  # the frame size the T4 latency tables were measured at
 
@@ -61,6 +61,66 @@ def _confidence(logits: torch.Tensor, size: Tuple[int, int], backbone: torch.nn.
     return (torch.softmax(up, 1).amax(1)[0] * 255).round().to(torch.uint8)
 
 
+def full_pass(model: torch.nn.Module, frame: torch.Tensor, scale: float, small: Tuple[int, int],
+              dtype: torch.dtype = torch.float32) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Full-frame-style pass at ``scale``: (H, W) labels exactly as :class:`FullFrameMethod`, the
+    (small) uint8 confidence, and the network input (for FLOP counting)."""
+    h, w = frame.shape[-2:]
+    x = FullFrameMethod(model, scale=scale)._resize(frame).to(dtype)
+    logits = model(x)
+    labels = upsample_logits(logits.float(), (h, w), model.output_stride, model.align_corners,
+                             input_size=x.shape[-2:]).argmax(1)[0]
+    return labels, _confidence(logits, small, model, tuple(x.shape[-2:])), x
+
+
+def glimpse_pass(model: torch.nn.Module, frame: torch.Tensor, grid: GlimpseGrid, idx: torch.Tensor,
+                 dtype: torch.dtype = torch.float32) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Glimpses of the ``idx`` cells: (k, n, n) inner-square labels, (k, n/f, n/f) uint8 confidence, crops."""
+    crops = gather_crops(grid.pad_frame(frame), grid, idx).to(dtype)
+    up = glimpse_logits(model, crops).float()
+    m, n, s = grid.margin, grid.inner, grid.inner // MOTION_FACTOR
+    inner = up[:, :, m:m + n, m:m + n]
+    small = F.interpolate(inner, size=(s, s), mode="bilinear", align_corners=False)
+    conf = (torch.softmax(small, 1).amax(1) * 255).round().to(torch.uint8)
+    return inner.argmax(1), conf, crops
+
+
+def paste_cells(image: torch.Tensor, blocks: torch.Tensor, cell: int, cols: int, idx: torch.Tensor) -> torch.Tensor:
+    """Write (k, cell, cell) blocks into the cells ``idx`` of an (h, w) image (grid of ``cols``
+    columns, cells of ``cell`` px from the top-left); returns a new (h, w) tensor."""
+    h, w = image.shape
+    rows = -(-h // cell)
+    canvas = F.pad(image, (0, cols * cell - w, 0, rows * cell - h))
+    top, left = (idx // cols) * cell, (idx % cols) * cell
+    ar = torch.arange(cell, device=image.device)
+    r = (top[:, None] + ar)[:, :, None].expand(-1, cell, cell)
+    c = (left[:, None] + ar)[:, None, :].expand(-1, cell, cell)
+    canvas.index_put_((r, c), blocks.to(canvas.dtype))
+    return canvas[:h, :w].contiguous()
+
+
+def advance(labels: torch.Tensor, conf: torch.Tensor, H: torch.Tensor, grid: GlimpseGrid, moving: torch.Tensor,
+            ctx: Optional[Tuple[torch.Tensor, torch.Tensor]],
+            glimpses: Callable[[torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]) -> Tuple[torch.Tensor, torch.Tensor]:
+    """One non-fallback step: warp the memory by H, fuse with the context in 3b (``ctx`` =
+    (labels, conf)), and put ``glimpses(idx)`` = (inner labels, inner conf) in the moving cells."""
+    h, w = labels.shape
+    labels = warp(labels[None, None].float(), H, "nearest")[0][0, 0].round().long()
+    conf = warp(conf[None, None].float(), H, "nearest", frame_size=(h, w))[0][0, 0].round().to(torch.uint8)
+    if ctx is not None:
+        c_labels, c_conf = ctx
+        take = c_conf >= conf  # at the motion resolution; uniform over each block of f x f pixels
+        take_full = take.repeat_interleave(MOTION_FACTOR, 0).repeat_interleave(MOTION_FACTOR, 1)
+        labels = torch.where(take_full, c_labels, labels)
+        conf = torch.where(take, c_conf, conf)
+    if bool(moving.any()):
+        idx = torch.nonzero(moving).flatten().to(labels.device)
+        g_labels, g_conf = glimpses(idx)
+        labels = paste_cells(labels, g_labels, grid.inner, grid.cols, idx)
+        conf = paste_cells(conf, g_conf, grid.inner // MOTION_FACTOR, grid.cols, idx)
+    return labels.contiguous(), conf.contiguous()
+
+
 class MotionReuseMethod:
     """A :class:`eval.harness.FrameMethod` that needs every frame of the clip, in order."""
 
@@ -77,8 +137,6 @@ class MotionReuseMethod:
         ctx = backbone if ctx_backbone is None else ctx_backbone
         self.ctx_backbone = ctx if self.dtype == torch.float32 else copy.deepcopy(ctx).to(self.dtype)
         self.allow_any_frame_size = allow_any_frame_size
-        self._full = FullFrameMethod(self.backbone, scale=cfg.full_scale, precision="fp32")  # resize rule only
-        self._ctx = FullFrameMethod(self.ctx_backbone, scale=cfg.ctx_scale or 1.0, precision="fp32")
         self._flops: Dict[Any, Optional[int]] = {}
         self.grid: Optional[GlimpseGrid] = None
         self.last_step: Dict[str, Any] = {}
@@ -107,30 +165,20 @@ class MotionReuseMethod:
         return self._flops[key] or 0
 
     # -- passes -------------------------------------------------------------- #
-    def _pass(self, which: FullFrameMethod, model: torch.nn.Module, frame: torch.Tensor, small: Tuple[int, int],
+    def _pass(self, model: torch.nn.Module, scale: float, frame: torch.Tensor, small: Tuple[int, int],
               ledger: CostLedger, component: str) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Full-frame-style pass: (H, W) labels (as FullFrameMethod) and (small) uint8 confidence."""
-        h, w = frame.shape[-2:]
-        x = which._resize(frame).to(self.dtype)
-        logits = model(x)
-        labels = upsample_logits(logits.float(), (h, w), model.output_stride, model.align_corners,
-                                 input_size=x.shape[-2:]).argmax(1)[0]
-        flops = self._count((component, tuple(x.shape)), lambda: model(x))
-        ledger.add(component, flops=flops, pixels=x.shape[-2] * x.shape[-1])
-        return labels, _confidence(logits, small, model, tuple(x.shape[-2:]))
+        labels, conf, x = full_pass(model, frame, scale, small, self.dtype)
+        ledger.add(component, flops=self._count((component, tuple(x.shape)), lambda: model(x)),
+                   pixels=x.shape[-2] * x.shape[-1])
+        return labels, conf
 
     def _glimpses(self, frame: torch.Tensor, grid: GlimpseGrid, idx: torch.Tensor,
                   ledger: CostLedger) -> Tuple[torch.Tensor, torch.Tensor]:
-        """(k, S, S) labels and (k, n/f, n/f) uint8 confidence of the inner squares."""
-        crops = gather_crops(grid.pad_frame(frame), grid, idx).to(self.dtype)
-        up = glimpse_logits(self.backbone, crops).float()
-        m, n, s = grid.margin, grid.inner, grid.inner // MOTION_FACTOR
-        inner = F.interpolate(up[:, :, m:m + n, m:m + n], size=(s, s), mode="bilinear", align_corners=False)
-        conf = (torch.softmax(inner, 1).amax(1) * 255).round().to(torch.uint8)
+        labels, conf, crops = glimpse_pass(self.backbone, frame, grid, idx, self.dtype)
         k = int(idx.numel())
         ledger.add("glimpses", flops=self._count(("glimpses", k), lambda: self.backbone(crops)),
                    pixels=k * grid.size * grid.size)
-        return up.argmax(1), conf
+        return labels, conf
 
     # -- one frame ----------------------------------------------------------- #
     def predict(self, frame: torch.Tensor, t: int, ledger: CostLedger) -> torch.Tensor:
@@ -140,7 +188,7 @@ class MotionReuseMethod:
         with torch.no_grad():
             gray = to_gray_small(frame)
             if self.labels is None:
-                self.labels, self.conf = self._pass(self._full, self.backbone, frame, small, ledger, "full")
+                self.labels, self.conf = self._pass(self.backbone, self.cfg.full_scale, frame, small, ledger, "full")
                 self.gray = gray
                 self.last_step = {"fallback": False, "moved_cells": grid.num_cells, "num_cells": grid.num_cells,
                                   "inliers": 0, "first": True}
@@ -156,33 +204,16 @@ class MotionReuseMethod:
             step = {"fallback": False, "moved_cells": moved, "num_cells": grid.num_cells, "inliers": inliers,
                     "first": False}
             if moved / grid.num_cells > self.cfg.tau:
-                self.labels, self.conf = self._pass(self._full, self.backbone, frame, small, ledger, "full")
+                self.labels, self.conf = self._pass(self.backbone, self.cfg.full_scale, frame, small, ledger, "full")
                 step.update(fallback=True, moved_cells=grid.num_cells)
                 self.last_step = step
                 return self.labels.clone()
-            labels = warp(self.labels[None, None].float(), H, "nearest")[0][0, 0].round().long()
-            conf = warp(self.conf[None, None].float(), H, "nearest", frame_size=(h, w))[0][0, 0].round().to(torch.uint8)
-            ledger.add("warp")
+            ctx = None
             if self.cfg.ctx_scale is not None:
-                c_labels, c_conf = self._pass(self._ctx, self.ctx_backbone, frame, small, ledger, "context")
-                take = c_conf >= conf  # at the motion resolution; uniform over each block of f x f pixels
-                take_full = take.repeat_interleave(MOTION_FACTOR, 0).repeat_interleave(MOTION_FACTOR, 1)
-                labels = torch.where(take_full, c_labels, labels)
-                conf = torch.where(take, c_conf, conf)
-                ledger.add("fusion")
-            if moved:
-                idx = torch.nonzero(moving).flatten().to(frame.device)
-                g_labels, g_conf = self._glimpses(frame, grid, idx, ledger)
-                canvas = grid.to_canvas(labels)
-                paste_labels(canvas, g_labels, grid, idx)
-                labels = canvas[:h, :w]
-                s = grid.inner // MOTION_FACTOR
-                cgrid = GlimpseGrid(small, s + 2, 1)  # same cells at the motion resolution (inner s)
-                ccanvas = cgrid.to_canvas(conf)
-                pad = torch.zeros(g_conf.shape[0], s + 2, s + 2, dtype=torch.uint8, device=conf.device)
-                pad[:, 1:1 + s, 1:1 + s] = g_conf
-                paste_labels(ccanvas, pad, cgrid, idx)
-                conf = ccanvas[:small[0], :small[1]]
+                ctx = self._pass(self.ctx_backbone, self.cfg.ctx_scale, frame, small, ledger, "context")
+            labels, conf = advance(self.labels, self.conf, H, grid, moving, ctx,
+                                   lambda idx: self._glimpses(frame, grid, idx, ledger))
+            ledger.add("warp")
             self.labels, self.conf = labels.contiguous(), conf.contiguous()
             self.last_step = step
             return self.labels.clone()

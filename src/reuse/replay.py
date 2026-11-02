@@ -1,0 +1,245 @@
+"""Exact replay of Method 3 from per-frame caches, and its bounds.
+
+A frame's own passes do not depend on the clip's history: the full pass at each
+scale, every cell glimpsed, the 3b context pass, the homography and the motion
+map. :func:`build_clip_cache` computes them once per frame (on the GPU) and
+stores them per clip; :func:`replay_clip` then replays any configuration's
+memory, warps, fallbacks and fusion over the clip with the same functions as
+:class:`reuse.method.MotionReuseMethod`, so it gives the same predictions pixel
+for pixel, and scores the labelled frames.
+
+Cache arrays (T frames; labels at full resolution, confidence and motion at 1/f):
+``full_{s}`` / ``full_conf_{s}``, ``cells_{g}`` / ``cells_conf_{g}`` (every cell of
+the g-px grid glimpsed, inner squares), ``ctx_{s}`` / ``ctx_conf_{s}``, ``H``
+(T, 3, 3, ``H[0] = I``), ``inliers``, ``motion`` (aligned) and ``motion_raw``
+(H = I, the no-homography ablation), ``labels`` and ``labeled_t``, ``meta``.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+from eval.harness import PRECISIONS, frame_to_tensor
+from foveation.ops import GlimpseGrid
+
+from .method import FRAME, MotionReuseConfig, advance, full_pass, glimpse_pass, paste_cells
+from .motion import MOTION_FACTOR, estimate_homography, motion_map, moving_cells, to_gray_small, warp
+
+__all__ = ["build_clip_cache", "ClipCache", "ClipResult", "replay_clip", "reuse_bound", "cache_file"]
+
+NUM_CLASSES, IGNORE = 19, 255
+TEACHER_SCALE = 1.0  # the zone oracle's reference: the scale-1 full-frame prediction
+
+
+def _key(prefix: str, value: float) -> str:
+    return f"{prefix}_{value:g}"
+
+
+def cache_file(root: Path, clip_id: str) -> Path:
+    return Path(root) / f"{clip_id}.npz"
+
+
+def build_clip_cache(dataset, index: int, backbone: torch.nn.Module, out: Path, full_scales: Sequence[float],
+                     glimpse_sizes: Sequence[int], ctx_scales: Sequence[float], device, precision: str = "fp32",
+                     homography: str = "orb", margin: int = 32, allow_any_frame_size: bool = False,
+                     extra_meta: Optional[Dict[str, Any]] = None) -> Path:
+    """Write ``<out>/<clip_id>.npz`` (via a ``.tmp.npz`` renamed when complete); returns its path."""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    clip_id = dataset.clip_id(index)
+    path = cache_file(out, clip_id)
+    dtype = PRECISIONS[precision]
+    full_scales = sorted(set(full_scales) | {TEACHER_SCALE}, reverse=True)
+    T = dataset.num_frames(index)
+    labeled_t = np.flatnonzero(dataset.labeled_mask(index)).astype(np.int32)
+    arrays: Dict[str, List[np.ndarray]] = {}
+    hs: List[np.ndarray] = []
+    inliers: List[int] = []
+    labels: List[np.ndarray] = []
+    prev_gray = None
+    backbone = backbone.eval()
+    with torch.no_grad():
+        for t in range(T):
+            frame = frame_to_tensor(dataset.load_frame(index, t), device)
+            h, w = frame.shape[-2:]
+            if not allow_any_frame_size and (h, w) != FRAME:
+                raise ValueError(f"frame is {h}x{w}; the T4 latency tables are for {FRAME[0]}x{FRAME[1]}")
+            small = (h // MOTION_FACTOR, w // MOTION_FACTOR)
+            for s in full_scales:
+                lab, conf, _ = full_pass(backbone, frame, s, small, dtype)
+                arrays.setdefault(_key("full", s), []).append(lab.to(torch.uint8).cpu().numpy())
+                arrays.setdefault(_key("full_conf", s), []).append(conf.cpu().numpy())
+            for s in ctx_scales:
+                lab, conf, _ = full_pass(backbone, frame, s, small, dtype)
+                arrays.setdefault(_key("ctx", s), []).append(lab.to(torch.uint8).cpu().numpy())
+                arrays.setdefault(_key("ctx_conf", s), []).append(conf.cpu().numpy())
+            for g in glimpse_sizes:
+                grid = GlimpseGrid((h, w), g, margin)
+                idx = torch.arange(grid.num_cells, device=frame.device)
+                g_lab, g_conf, _ = glimpse_pass(backbone, frame, grid, idx, dtype)
+                lab = paste_cells(torch.zeros(h, w, dtype=torch.uint8, device=frame.device), g_lab, grid.inner,
+                                  grid.cols, idx)
+                conf = paste_cells(torch.zeros(small, dtype=torch.uint8, device=frame.device), g_conf,
+                                   grid.inner // MOTION_FACTOR, grid.cols, idx)
+                arrays.setdefault(f"cells_{g}", []).append(lab.cpu().numpy())
+                arrays.setdefault(f"cells_conf_{g}", []).append(conf.cpu().numpy())
+            gray = to_gray_small(frame)
+            if prev_gray is None:
+                H, n = torch.eye(3, dtype=torch.float64), 0
+                zero = np.zeros(small, np.uint8)
+                arrays.setdefault("motion", []).append(zero)
+                arrays.setdefault("motion_raw", []).append(zero)
+            else:
+                H, n = estimate_homography(prev_gray, gray, method=homography)
+                arrays.setdefault("motion", []).append(motion_map(prev_gray, gray, H).cpu().numpy())
+                arrays.setdefault("motion_raw", []).append(
+                    motion_map(prev_gray, gray, torch.eye(3, dtype=torch.float64)).cpu().numpy())
+            hs.append(H.numpy())
+            inliers.append(int(n))
+            prev_gray = gray
+            if t in labeled_t:
+                labels.append(np.asarray(dataset.load_label(index, t), dtype=np.uint8))
+    meta = {"clip_id": clip_id, "full_scales": full_scales, "glimpse_sizes": list(glimpse_sizes),
+            "ctx_scales": list(ctx_scales), "margin": margin, "frame_size": [int(h), int(w)], "precision": precision,
+            "homography": homography, **(extra_meta or {})}
+    data = {k: np.stack(v) for k, v in arrays.items()}
+    data.update(H=np.stack(hs), inliers=np.array(inliers, np.int32), labels=np.stack(labels),
+                labeled_t=labeled_t, meta=json.dumps(meta))
+    tmp = path.with_name(path.name[:-len(".npz")] + ".tmp.npz")
+    np.savez_compressed(tmp, **data)
+    os.replace(tmp, path)
+    return path
+
+
+class ClipCache:
+    """One clip's cache; arrays are read on first use and kept."""
+
+    def __init__(self, path: Path):
+        self.path = Path(path)
+        self._npz = np.load(self.path)
+        self._arrays: Dict[str, np.ndarray] = {}
+        self.meta: Dict[str, Any] = json.loads(str(self._npz["meta"]))
+        self.labeled_t: np.ndarray = self._npz["labeled_t"]
+        self.num_frames = int(self._npz["H"].shape[0])
+
+    @classmethod
+    def load(cls, path: Path) -> "ClipCache":
+        return cls(path)
+
+    def __getitem__(self, key: str) -> np.ndarray:
+        if key not in self._arrays:
+            self._arrays[key] = self._npz[key]
+        return self._arrays[key]
+
+    def grid(self, size: int) -> GlimpseGrid:
+        return GlimpseGrid(tuple(self.meta["frame_size"]), size, self.meta["margin"])
+
+
+@dataclass
+class ClipResult:
+    conf: np.ndarray  # (labelled frames, 19, 19) int64
+    moved_cells: np.ndarray  # (T,) int32, frame 0 and fallbacks count every cell
+    fallback: np.ndarray  # (T,) bool
+    num_cells: int
+
+
+def _confusion(label: np.ndarray, pred: np.ndarray) -> np.ndarray:
+    ok = label != IGNORE
+    return np.bincount(label[ok].astype(np.int64) * NUM_CLASSES + pred[ok].astype(np.int64),
+                       minlength=NUM_CLASSES * NUM_CLASSES).reshape(NUM_CLASSES, NUM_CLASSES)
+
+
+def _blocks(image: torch.Tensor, cell: int, cols: int, idx: torch.Tensor) -> torch.Tensor:
+    """(k, cell, cell) blocks of the cells ``idx`` of an (h, w) image (zero beyond the frame)."""
+    h, w = image.shape
+    rows = -(-h // cell)
+    canvas = F.pad(image, (0, cols * cell - w, 0, rows * cell - h))
+    top, left = (idx // cols) * cell, (idx % cols) * cell
+    ar = torch.arange(cell, device=image.device)
+    return canvas[(top[:, None] + ar)[:, :, None], (left[:, None] + ar)[:, None, :]]
+
+
+def replay_clip(cache: ClipCache, cfg: MotionReuseConfig, device, motion_key: str = "motion",
+                selector: str = "motion", oracle_k: Optional[Sequence[int]] = None,
+                return_predictions: bool = False):
+    """Replay ``cfg`` over the clip. ``selector="oracle"`` recomputes, at frame t, the
+    ``oracle_k[t]`` cells whose glimpse gains the most pixels of agreement with the scale-1
+    full pass over the (warped, fused) memory. Returns a :class:`ClipResult` (and the
+    per-frame predictions with ``return_predictions``)."""
+    if cfg.margin != cache.meta["margin"]:
+        raise ValueError(f"config margin {cfg.margin} != cache margin {cache.meta['margin']}")
+    dev = torch.device(device)
+    grid = cache.grid(cfg.glimpse_size)
+    n, s = grid.inner, grid.inner // MOTION_FACTOR
+    t_of = lambda key, t: torch.from_numpy(cache[key][t]).to(dev)  # noqa: E731
+    full, full_conf = _key("full", cfg.full_scale), _key("full_conf", cfg.full_scale)
+    labels, conf = t_of(full, 0).long(), t_of(full_conf, 0)
+    preds = [labels.clone()]
+    moved, fallback = [grid.num_cells], [False]
+    for t in range(1, cache.num_frames):
+        H = torch.from_numpy(cache["H"][t])
+        if selector == "motion":
+            moving = moving_cells(t_of(motion_key, t), grid, cfg.theta, cfg.rho)
+            k = int(moving.sum())
+        elif selector == "oracle":
+            k = int(oracle_k[t])
+        else:
+            raise ValueError(f"unknown selector {selector!r}")
+        if k / grid.num_cells > cfg.tau:
+            labels, conf = t_of(full, t).long(), t_of(full_conf, t)
+            moved.append(grid.num_cells)
+            fallback.append(True)
+        else:
+            ctx = None
+            if cfg.ctx_scale is not None:
+                ctx = (t_of(_key("ctx", cfg.ctx_scale), t).long(), t_of(_key("ctx_conf", cfg.ctx_scale), t))
+            cells, cells_conf = t_of(f"cells_{cfg.glimpse_size}", t).long(), t_of(f"cells_conf_{cfg.glimpse_size}", t)
+            base, base_conf = advance(labels, conf, H, grid, torch.zeros(grid.num_cells, dtype=torch.bool), ctx,
+                                      lambda idx: (None, None))
+            if selector == "oracle":
+                teacher = t_of(_key("full", TEACHER_SCALE), t).long()
+                all_idx = torch.arange(grid.num_cells, device=dev)
+                gain = ((_blocks(cells, n, grid.cols, all_idx) == _blocks(teacher, n, grid.cols, all_idx)).flatten(1).sum(1)
+                        - (_blocks(base, n, grid.cols, all_idx) == _blocks(teacher, n, grid.cols, all_idx)).flatten(1).sum(1))
+                order = torch.sort(-gain, stable=True).indices[:k]
+                moving = torch.zeros(grid.num_cells, dtype=torch.bool, device=dev)
+                moving[order] = True
+            if bool(moving.any()):
+                idx = torch.nonzero(moving).flatten().to(dev)
+                base = paste_cells(base, _blocks(cells, n, grid.cols, idx), n, grid.cols, idx)
+                base_conf = paste_cells(base_conf, _blocks(cells_conf, s, grid.cols, idx), s, grid.cols, idx)
+            labels, conf = base, base_conf
+            moved.append(k)
+            fallback.append(False)
+        preds.append(labels.clone())
+    conf_m = np.stack([_confusion(cache["labels"][j], preds[t].cpu().numpy()) for j, t in enumerate(cache.labeled_t)])
+    result = ClipResult(conf=conf_m.astype(np.int64), moved_cells=np.array(moved, np.int32),
+                        fallback=np.array(fallback, bool), num_cells=grid.num_cells)
+    return (result, preds) if return_predictions else result
+
+
+def reuse_bound(cache: ClipCache, full_scale: float, device) -> np.ndarray:
+    """(T-1, 19, 19): at each lag L = 1 .. T-1, the confusion summed over the labelled frames t
+    (with t - L >= 0) of the full pass at t - L, warped once by the chained homographies to t."""
+    dev = torch.device(device)
+    T = cache.num_frames
+    out = np.zeros((T - 1, NUM_CLASSES, NUM_CLASSES), np.int64)
+    full = cache[_key("full", full_scale)]
+    Hs = torch.from_numpy(cache["H"])
+    for j, t in enumerate(cache.labeled_t):
+        label = cache["labels"][j]
+        chain = torch.eye(3, dtype=torch.float64)
+        for lag in range(1, int(t) + 1):
+            chain = chain @ Hs[int(t) - lag + 1]  # maps frame t - lag onto t
+            src = torch.from_numpy(full[int(t) - lag]).to(dev)
+            pred = warp(src[None, None].float(), chain, "nearest")[0][0, 0].round().to(torch.uint8).cpu().numpy()
+            out[lag - 1] += _confusion(label, pred)
+    return out
