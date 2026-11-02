@@ -22,6 +22,18 @@ rounds, median / p95, SM clock / temperature / power / throttle reasons):
                floor predicted from the three parts above
                (context backbone + glimpse batch + overhead) for comparison.
 
+Method 3 parts (``--parts batchk,reuse,reuse_e2e``; graph level for ``batchk``,
+eager for the other two):
+
+* ``batchk``    the ``batch`` table for every k up to the cell count of the
+               256 / 384 / 512 px grids (66 / 28 / 15), written as ``batch``;
+* ``reuse``     each op of a Method 3 frame: gray downsample, homography (ORB on
+               the host CPU, IC-LK on the GPU), motion map + moving cells, the
+               label and confidence warps, the 3b fusion, the post-processing of
+               a full or context pass, and of k glimpses (zero-compute backbone);
+* ``reuse_e2e`` a few whole Method 3 frames with real backbones, to check that
+               the parts add up.
+
 Every part runs at two runtime levels, the same for all methods within a
 level: ``eager`` (cuDNN autotuning on) and ``graph`` (the whole call captured
 in a CUDA graph, which removes per-kernel launch overhead). GFLOPs are counted
@@ -51,9 +63,11 @@ import torch  # noqa: E402
 
 from eval.cost import count_flops  # noqa: E402
 from eval.gpu_timing import GpuTelemetry, cuda_graph, gpu_environment, interleaved_benchmark  # noqa: E402
-from foveation.ops import downsample  # noqa: E402
+from foveation.ops import GlimpseGrid, downsample  # noqa: E402
 from foveation.pipeline import FoveatedSegmenter, FoveationConfig, StubBackbone  # noqa: E402
 from models.registry import build_backbone  # noqa: E402
+from reuse.method import full_pass, glimpse_pass, paste_cells  # noqa: E402
+from reuse.motion import MOTION_FACTOR, estimate_homography, motion_map, moving_cells, to_gray_small, warp  # noqa: E402
 
 FRAME = (1024, 2048)
 MODELS = ("pidnet_s", "bisenetv2")
@@ -72,12 +86,18 @@ FULL = dict(
     overhead_ks=[1, 2, 4, 8],
     selections=["topk", "greedy"],
     e2e=[(0.25, 384, 4), (0.25, 512, 4), (0.375, 256, 8), (0.5, 512, 2)],
+    batchk_sizes=[256, 384, 512],
+    reuse_scales=[0.25, 0.375, 0.5, 0.75, 1.0],  # full passes (0.5-1) and 3b context passes (0.25-0.5)
+    homographies=["orb", "iclk"],
+    reuse_e2e=[("pidnet_s", 384, 2, None), ("pidnet_s", 384, 8, None), ("bisenetv2", 384, 4, None),
+               ("pidnet_s", 256, 12, 0.25)],  # (model, glimpse size, k, 3b context scale)
     rounds=5, iters=40, warmup=20,
 )
 QUICK = dict(
     full_scales=[0.25, 1.0], squares=[256, 512], batch_sizes=[384], ks=[1, 4], max_batch_pixels=8 * 768 * 768,
     ctx_scales=[0.25], glimpses=[384], overhead_ks=[4], selections=["topk", "greedy"],
-    e2e=[(0.25, 384, 4)], rounds=2, iters=10, warmup=5,
+    e2e=[(0.25, 384, 4)], batchk_sizes=[384], reuse_scales=[0.25, 1.0], homographies=["orb", "iclk"],
+    reuse_e2e=[("pidnet_s", 384, 2, None)], rounds=2, iters=10, warmup=5,
 )
 
 
@@ -88,7 +108,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument("--quick", action="store_true", help="Few configurations, few iterations (smoke test).")
     p.add_argument("--levels", default="eager,graph", help="Comma list of runtime levels: eager, graph.")
     p.add_argument("--parts", default="area,batch,overhead,e2e",
-                   help="Comma list of parts: area, batch, overhead, e2e, final (needs --finalists).")
+                   help="Comma list of parts: area, batch, overhead, e2e, final (needs --finalists); "
+                        "method 3: batchk, reuse, reuse_e2e.")
     p.add_argument("--finalists", default=str(REPO_ROOT / "results" / "method2" / "finalists.json"),
                    help="Method 2 finalists to time with the full-frame curve (part 'final').")
     return p.parse_args(argv)
@@ -202,6 +223,146 @@ def e2e_cases(models: Dict[str, torch.nn.Module], s: Dict[str, Any]) -> List[Dic
             cases.append({"name": f"e2e/{ctx}+{gl}/{cs}/{q}/k{k}", "context_model": ctx, "glimpse_model": gl,
                           "context_scale": cs, "size": q, "k": k, "pixel_fraction": d["pixel_fraction"],
                           "grid": d["grid"], "gflops": gflops(seg, x), "fn": seg, "x": x})
+    return cases
+
+
+def _texture(h: int, w: int, seed: int, device: str = "cuda") -> torch.Tensor:
+    """Smooth random texture in [0, 1] (gives the homography realistic features)."""
+    g = torch.Generator(device="cpu").manual_seed(seed)
+    small = torch.rand(1, 1, h // 16 + 2, w // 16 + 2, generator=g)
+    up = torch.nn.functional.interpolate(small, size=(h + 32, w + 32), mode="bicubic", align_corners=False)
+    return up[..., 16:16 + h, 16:16 + w].clamp(0, 1).to(device)
+
+
+def num_cells(size: int) -> int:
+    return GlimpseGrid(FRAME, size, MARGIN).num_cells
+
+
+def batchk_specs(s: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Method 3's glimpse batches: every k up to the grid's cell count (named like ``batch``)."""
+    return [{"name": f"batch/{name}/{q}/k{k}", "model": name, "size": q, "k": k, "pixels": k * q * q}
+            for name in MODELS for q in s["batchk_sizes"] for k in range(1, num_cells(q) + 1)]
+
+
+def batchk_cases(models: Dict[str, torch.nn.Module], s: Dict[str, Any]) -> List[Dict[str, Any]]:
+    cases = []
+    for sp in batchk_specs(s):
+        x = frame_of((sp["k"], 3, sp["size"], sp["size"]))
+        cases.append({**sp, "gflops": gflops(models[sp["model"]], x), "fn": models[sp["model"]], "x": x})
+    return cases
+
+
+def reuse_specs(s: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The ops of a Method 3 frame, without tensors (see :func:`reuse_cases`)."""
+    specs = [{"name": "reuse/gray", "part": "reuse", "op": "gray"}]
+    specs += [{"name": f"reuse/homography/{m}", "part": "reuse", "op": "homography", "homography": m}
+              for m in s["homographies"]]
+    specs += [{"name": f"reuse/motion/{q}", "part": "reuse", "op": "motion", "size": q} for q in s["batchk_sizes"]]
+    specs += [{"name": "reuse/warp", "part": "reuse", "op": "warp"},
+              {"name": "reuse/fusion", "part": "reuse", "op": "fusion"}]
+    for stride in sorted(set(STRIDE.values()), reverse=True):
+        specs += [{"name": f"reuse/post/stride{stride}/{sc:g}", "part": "reuse", "op": "post", "stride": stride,
+                   "scale": sc} for sc in s["reuse_scales"]]
+        specs += [{"name": f"reuse/glimpse_post/stride{stride}/{q}/k{k}", "part": "reuse", "op": "glimpse_post",
+                   "stride": stride, "size": q, "k": k} for q in s["batchk_sizes"] for k in range(1, num_cells(q) + 1)]
+    return specs
+
+
+def _pair(seed: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Two gray frames at the motion resolution, the second the first shifted by (3, 5) px."""
+    h, w = FRAME[0] // MOTION_FACTOR, FRAME[1] // MOTION_FACTOR
+    big = _texture(h + 16, w + 16, seed)[0, 0]
+    return big[8:8 + h, 8:8 + w].contiguous(), big[5:5 + h, 3:3 + w].contiguous()
+
+
+def _glimpse_post(stub, frame, grid, idx, labels, conf):
+    g_lab, g_conf, _ = glimpse_pass(stub, frame, grid, idx, torch.float16)
+    return (paste_cells(labels, g_lab, grid.inner, grid.cols, idx),
+            paste_cells(conf, g_conf, grid.inner // MOTION_FACTOR, grid.cols, idx))
+
+
+def reuse_cases(s: Dict[str, Any]) -> List[Dict[str, Any]]:
+    h, w = FRAME
+    small = (h // MOTION_FACTOR, w // MOTION_FACTOR)
+    frame = _texture(h, w, 1).expand(1, 3, h, w).contiguous()
+    prev, cur = _pair()
+    H = torch.tensor([[1, 0, 20], [0, 1, 12], [0, 0, 1]], dtype=torch.float64)
+    g = torch.Generator(device="cpu").manual_seed(0)
+    labels = torch.randint(0, 19, (h, w), generator=g).cuda()
+    conf = torch.randint(0, 256, small, generator=g, dtype=torch.uint8).cuda()
+    stubs = {st: StubBackbone(19, output_stride=st, align_corners=st == 8).cuda() for st in set(STRIDE.values())}
+
+    def warps(_):
+        return (warp(labels[None, None].float(), H, "nearest")[0][0, 0].round().long(),
+                warp(conf[None, None].float(), H, "nearest", frame_size=FRAME)[0][0, 0].round().to(torch.uint8))
+
+    def fusion(_):
+        take = conf >= conf.flip(1)
+        full = take.repeat_interleave(MOTION_FACTOR, 0).repeat_interleave(MOTION_FACTOR, 1)
+        return torch.where(full, labels, labels.flip(1)), torch.where(take, conf, conf.flip(1))
+
+    cases = []
+    for sp in reuse_specs(s):
+        op = sp["op"]
+        if op == "gray":
+            fn = to_gray_small
+        elif op == "homography":
+            fn = (lambda m: lambda _: estimate_homography(prev, cur, method=m))(sp["homography"])
+        elif op == "motion":
+            fn = (lambda grid: lambda _: moving_cells(motion_map(prev, cur, H), grid, 30, 0.05))(
+                GlimpseGrid(FRAME, sp["size"], MARGIN))
+        elif op == "warp":
+            fn = warps
+        elif op == "fusion":
+            fn = fusion
+        elif op == "post":
+            fn = (lambda stub, sc: lambda x: full_pass(stub, x, sc, small, torch.float16)[:2])(stubs[sp["stride"]],
+                                                                                          sp["scale"])
+        else:  # glimpse_post
+            grid = GlimpseGrid(FRAME, sp["size"], MARGIN)
+            idx = torch.arange(sp["k"], device="cuda")
+            fn = (lambda stub, grid, idx: lambda x: _glimpse_post(stub, x, grid, idx, labels, conf))(
+                stubs[sp["stride"]], grid, idx)
+        with torch.no_grad():
+            fn(frame)  # allocate stub buffers outside the timed region
+        cases.append({**sp, "gflops": 0.0, "fn": fn, "x": frame})
+    return cases
+
+
+def reuse_e2e_cases(models: Dict[str, torch.nn.Module], s: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Whole non-fallback Method 3 frames with real backbones and a fixed set of k moving cells."""
+    h, w = FRAME
+    small = (h // MOTION_FACTOR, w // MOTION_FACTOR)
+    g = torch.Generator(device="cpu").manual_seed(0)
+    labels = torch.randint(0, 19, (h, w), generator=g).cuda()
+    conf = torch.randint(0, 256, small, generator=g, dtype=torch.uint8).cuda()
+    prev_gray = to_gray_small(_texture(h, w, 2).expand(1, 3, h, w).contiguous())
+    cases = []
+    for model, q, k, ctx in s["reuse_e2e"]:
+        net = models[model]
+        grid = GlimpseGrid(FRAME, q, MARGIN)
+        idx = torch.arange(k, device="cuda")
+
+        def step(frame, net=net, grid=grid, idx=idx, ctx=ctx):
+            gray = to_gray_small(frame)
+            H, _ = estimate_homography(prev_gray, gray, method="iclk")
+            moving_cells(motion_map(prev_gray, gray, H), grid, 30, 0.05)
+            lab = warp(labels[None, None].float(), H, "nearest")[0][0, 0].round().long()
+            cf = warp(conf[None, None].float(), H, "nearest", frame_size=FRAME)[0][0, 0].round().to(torch.uint8)
+            if ctx is not None:
+                c_lab, c_conf, _ = full_pass(net, frame, ctx, small, torch.float16)
+                take = c_conf >= cf
+                full = take.repeat_interleave(MOTION_FACTOR, 0).repeat_interleave(MOTION_FACTOR, 1)
+                lab, cf = torch.where(full, c_lab, lab), torch.where(take, c_conf, cf)
+            g_lab, g_conf, _ = glimpse_pass(net, frame, grid, idx, torch.float16)
+            return (paste_cells(lab, g_lab, grid.inner, grid.cols, idx),
+                    paste_cells(cf, g_conf, grid.inner // MOTION_FACTOR, grid.cols, idx))
+
+        frame = _texture(h, w, 3).expand(1, 3, h, w).contiguous()
+        name = f"reuse_e2e/{model}/{q}/k{k}" + ("" if ctx is None else f"/c{ctx:g}")
+        cases.append({"name": name, "model": model, "size": q, "k": k, "ctx_scale": ctx, "homography": "iclk",
+                      "fn": step, "x": frame,
+                      "gflops": gflops(lambda x, net=net, grid=grid, idx=idx: glimpse_pass(net, x, grid, idx, torch.float16), frame)})
     return cases
 
 
@@ -334,12 +495,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     with GpuTelemetry() as tel:
         builders = {"area": lambda: area_cases(models, s), "batch": lambda: batch_cases(models, s),
                     "overhead": lambda: overhead_cases(s), "e2e": lambda: e2e_cases(models, s),
-                    "final": lambda: final_cases(models, Path(args.finalists))}
+                    "final": lambda: final_cases(models, Path(args.finalists)),
+                    "batchk": lambda: batchk_cases(models, s), "reuse": lambda: reuse_cases(s),
+                    "reuse_e2e": lambda: reuse_e2e_cases(models, s)}
         for part in parts:
             cases = builders[part]()
-            for level in levels:
+            # batchk extends the batch table; the reuse ops cannot be captured in a CUDA graph
+            key, part_levels = {"batchk": ("batch", ["graph"]), "reuse": ("reuse", ["eager"]),
+                                "reuse_e2e": ("reuse_e2e", ["eager"])}.get(part, (part, levels))
+            for level in part_levels:
                 print(f"[latency_floor] {part} / {level}: {len(cases)} configurations", flush=True)
-                records.setdefault(part, []).extend(time_part(cases, level, s, tel))
+                records.setdefault(key, []).extend(time_part(cases, level, s, tel))
             del cases
         session_tel = tel.window(float("-inf"), float("inf"))
     predict_e2e(records)

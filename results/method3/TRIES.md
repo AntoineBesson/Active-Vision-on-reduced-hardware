@@ -28,3 +28,21 @@ sanity check that the homography fix does what the design assumes.
   Task 5 decides. IC-LK took 157 ms on the laptop CPU and will run on the GPU.
 - Open: the ego car's hood (bottom rows, static in the image) is moved by the
   warp and may show as motion; to check on the train statistics (Task 7).
+
+## Cost of the motion cue, first measurement (2026-11-02, Task 5, laptop RTX 2060)
+
+A `--quick` smoke run of the new latency parts on the laptop GPU (not the
+judge; the T4 sessions `m3-s*` are) found the per-frame overhead far too high:
+IC-LK 240 ms, the label + confidence warps 18 ms, ORB 32 ms (host CPU), against
+19 ms for PIDNet-S's whole full frame on the T4. Causes and fixes:
+
+| op | before | after | fix |
+| --- | --- | --- | --- |
+| warps (labels 1024×2048 + confidence 256×512) | 18.4 ms | 3.4 ms | sampling grid in float32, not float64 (consumer GPUs and the T4 run float64 at ~1/32 speed), H applied elementwise |
+| IC-LK homography | 240 ms | 7.7 ms | no GPU waits in the loop (`solve_ex`, a 3×3 adjugate inverse, the mask as a weight), 2 pyramid levels (8 + 4 iterations), the whole fit replayed from a CUDA graph |
+| motion map + moving cells | – | 1.4 ms | float32 warp |
+
+Accuracy is unchanged on the tests (a known 12 × 20 px shift is still recovered
+within 1 px; replay = method pixel for pixel). Even so, homography + motion +
+warps cost about 13 ms per frame on the laptop GPU, so the room left for
+glimpses under PIDNet-S's 10.7–19 ms full frames is small. The T4 numbers decide.

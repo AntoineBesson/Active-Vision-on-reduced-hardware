@@ -24,7 +24,12 @@ with a different `SESSION` each time.
 
 **Method 2 finalists:** set `PARTS = "final"` (and `SESSION = "final-s1"`, ...). It times the
 finalists of `results/method2/finalists.json` interleaved with both models' full frame at
-five scales, end to end.
+five scales, end to end. **Set both `SESSION` and `PARTS`**: with the default `PARTS` the run
+re-times the latency floor instead.
+
+**Method 3 tables:** set `BRANCH = "motion-reuse"`, `PARTS = "batchk,reuse,reuse_e2e"` and
+`SESSION = "m3-s1"` (then `m3-s2`, `m3-s3`). It extends the glimpse batches to every k and
+times each op of a Method 3 frame (homography on the host CPU and on the GPU included).
 """),
     code("""
 SESSION = "t4-s1"   # change for each separate session: t4-s2, t4-s3, ... (final-s1, ... for the finalists)

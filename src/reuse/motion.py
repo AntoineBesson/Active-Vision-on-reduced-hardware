@@ -15,7 +15,7 @@ onto the current frame, pixel centres at integer coordinates. Motion runs at
 from __future__ import annotations
 
 import math
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -82,46 +82,99 @@ def _orb(prev: torch.Tensor, cur: torch.Tensor) -> Tuple[Optional[np.ndarray], i
     return H, inliers
 
 
-def _iclk(prev: torch.Tensor, cur: torch.Tensor, iters: Tuple[int, ...] = (30, 15, 10)) -> Tuple[Optional[torch.Tensor], int]:
+def _apply(Hm: torch.Tensor, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Points (x, y) mapped by a 3x3 homography, elementwise (cheaper than a 3xN matmul)."""
+    h = Hm.float().reshape(9)
+    d = h[6] * x + h[7] * y + h[8]
+    return (h[0] * x + h[1] * y + h[2]) / d, (h[3] * x + h[4] * y + h[5]) / d
+
+
+def _inv3(m: torch.Tensor) -> torch.Tensor:
+    """3x3 inverse by the adjugate: elementwise ops only (``torch.linalg.inv`` waits for the GPU)."""
+    a, b, c, d, e, f, g, h, i = m.reshape(9)
+    adj = torch.stack([e * i - f * h, c * h - b * i, b * f - c * e,
+                       f * g - d * i, a * i - c * g, c * d - a * f,
+                       d * h - e * g, b * g - a * h, a * e - b * d]).reshape(3, 3)
+    return adj / (a * adj[0, 0] + b * adj[1, 0] + c * adj[2, 0])
+
+
+def _iclk_core(prev: torch.Tensor, cur: torch.Tensor,
+               iters: Tuple[int, ...] = (8, 4)) -> Tuple[torch.Tensor, torch.Tensor]:
     """Inverse-compositional Lucas-Kanade for an 8-parameter homography, coarse to fine.
 
     Works in grid_sample's normalised coordinates, which are the same at every
     pyramid level; returns H in those coordinates (prev -> cur) and the number of
-    valid pixels at the finest level."""
+    valid pixels at the finest level, both as tensors. Per-pixel work is float32 and
+    nothing waits for the GPU (the out-of-frame mask is a weight, the 8x8 solve stays
+    on the device), so the whole call can be captured in a CUDA graph."""
     dev = prev.device
     h0, w0 = prev.shape
-    levels = [(h0 // 4, w0 // 4), (h0 // 2, w0 // 2), (h0, w0)]
+    levels = [(h0 // 4, w0 // 4), (h0 // 2, w0 // 2)]  # 64x128 and 128x256 of a 256x512 motion frame
     Hn = torch.eye(3, dtype=torch.float64, device=dev)
-    valid_count = 0
+    eye = torch.eye(3, dtype=torch.float64, device=dev)
+    valid = None
     for (h, w), n in zip(levels, iters):
-        T = F.interpolate(prev[None, None].double(), size=(h, w), mode="area")[0, 0]
-        I = F.interpolate(cur[None, None].double(), size=(h, w), mode="area")[0, 0]
-        ys = (torch.arange(h, dtype=torch.float64, device=dev) * 2 + 1) / h - 1
-        xs = (torch.arange(w, dtype=torch.float64, device=dev) * 2 + 1) / w - 1
+        T = F.interpolate(prev[None, None].float(), size=(h, w), mode="area")[0, 0]
+        I = F.interpolate(cur[None, None].float(), size=(h, w), mode="area")[None, None, 0, 0]
+        ys = (torch.arange(h, dtype=torch.float32, device=dev) * 2 + 1) / h - 1
+        xs = (torch.arange(w, dtype=torch.float32, device=dev) * 2 + 1) / w - 1
         y, x = torch.meshgrid(ys, xs, indexing="ij")
         gy, gx = torch.gradient(T, spacing=(2 / h, 2 / w))
-        one, zero = torch.ones_like(x), torch.zeros_like(x)
+        one = torch.ones_like(x)
         # dW/dp at the identity, p = (h11-1, h12, h13, h21, h22-1, h23, h31, h32)
         sd = torch.stack([gx * x, gx * y, gx * one, gy * x, gy * y, gy * one,
-                          -(gx * x + gy * y) * x, -(gx * x + gy * y) * y], -1)  # (h, w, 8)
-        pts = torch.stack([x, y, one], -1).reshape(-1, 3).T  # (3, h*w)
+                          -(gx * x + gy * y) * x, -(gx * x + gy * y) * y], -1).reshape(-1, 8)  # (h*w, 8)
         for _ in range(n):
-            q = Hn @ pts  # where the template's pixels land in cur
-            qx, qy = q[0] / q[2], q[1] / q[2]
-            grid = torch.stack([qx, qy], -1).reshape(1, h, w, 2).float()
-            Iw = F.grid_sample(I[None, None].float(), grid, mode="bilinear", align_corners=False)[0, 0].double()
-            valid = ((qx.abs() <= 1) & (qy.abs() <= 1)).reshape(h, w)
-            if int(valid.sum()) < 64:
-                return None, 0
-            e = (Iw - T)[valid]
-            J = sd[valid]
-            dp = torch.linalg.lstsq(J.T @ J, J.T @ e).solution
-            dH = torch.eye(3, dtype=torch.float64, device=dev) + torch.tensor(
-                [[dp[0], dp[1], dp[2]], [dp[3], dp[4], dp[5]], [dp[6], dp[7], 0.0]], dtype=torch.float64, device=dev)
-            Hn = Hn @ torch.linalg.inv(dH)
+            qx, qy = _apply(Hn, x, y)  # where the template's pixels land in cur
+            Iw = F.grid_sample(I, torch.stack([qx, qy], -1).reshape(1, h, w, 2), mode="bilinear",
+                               align_corners=False).reshape(-1)
+            qx, qy = qx.reshape(-1), qy.reshape(-1)
+            valid = ((qx.abs() <= 1) & (qy.abs() <= 1)).float()
+            e = (Iw - T.reshape(-1)) * valid
+            Jw = sd * valid[:, None]
+            A = (Jw.T @ sd).double() + 1e-9 * torch.eye(8, dtype=torch.float64, device=dev)
+            dp = torch.linalg.solve_ex(A, (Jw.T @ e).double())[0]  # solve_ex: no error check, no wait
+            dH = eye + torch.cat([dp, dp.new_zeros(1)]).reshape(3, 3)
+            Hn = Hn @ _inv3(dH)
             Hn = Hn / Hn[2, 2]
-            valid_count = int(valid.sum())
-    return Hn, valid_count
+    return Hn, valid.sum()
+
+
+_GRAPHS: Dict[Any, Any] = {}
+
+
+def _iclk_graphed(prev: torch.Tensor, cur: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """:func:`_iclk_core` replayed from a CUDA graph captured once per frame shape (the
+    ~200 small ops per call cost far more to launch than to run)."""
+    key = (tuple(prev.shape), prev.device)
+    if key not in _GRAPHS:
+        sp, sc = prev.clone(), cur.clone()
+        side = torch.cuda.Stream()
+        side.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(side):
+            for _ in range(2):
+                _iclk_core(sp, sc)
+        torch.cuda.current_stream().wait_stream(side)
+        graph = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(graph):
+            out = _iclk_core(sp, sc)
+        _GRAPHS[key] = (graph, sp, sc, out)
+    graph, sp, sc, out = _GRAPHS[key]
+    sp.copy_(prev)
+    sc.copy_(cur)
+    graph.replay()
+    return out[0].clone(), out[1].clone()
+
+
+def _iclk(prev: torch.Tensor, cur: torch.Tensor, graphed: Optional[bool] = None) -> Tuple[Optional[torch.Tensor], int]:
+    """:func:`_iclk_core` (from a CUDA graph on a GPU); None and 0 for a failed fit."""
+    if graphed is None:
+        graphed = prev.is_cuda
+    Hn, valid = (_iclk_graphed if graphed else _iclk_core)(prev.float().contiguous(), cur.float().contiguous())
+    count = int(valid)  # the one wait for the GPU
+    if count < 64 or not bool(torch.isfinite(Hn).all()):
+        return None, 0
+    return Hn, count
 
 
 def estimate_homography(prev: torch.Tensor, cur: torch.Tensor, method: str = "orb",
@@ -129,7 +182,7 @@ def estimate_homography(prev: torch.Tensor, cur: torch.Tensor, method: str = "or
     """H (3x3 float64, full-resolution pixels, prev -> cur) from two (h, w) gray frames at 1/factor.
 
     ``orb``: OpenCV ORB features + RANSAC (seeded), refit on the full-resolution inliers (CPU). ``iclk``: inverse-compositional
-    Lucas-Kanade on a 3-level pyramid (torch, runs on the frames' device). The second
+    Lucas-Kanade on a 2-level pyramid (torch, on the frames' device; a CUDA graph on a GPU). The second
     value is the support (RANSAC inliers, or valid pixels for ``iclk``). A failed or
     degenerate fit gives the identity and 0."""
     h, w = prev.shape
@@ -164,14 +217,12 @@ def warp(x: torch.Tensor, H: torch.Tensor, mode: str,
     n, c, h, w = x.shape
     fh, fw = frame_size or (h, w)
     Hn = _to_norm(fh, fw) @ H.double().cpu() @ torch.linalg.inv(_to_norm(fh, fw))  # same at every resolution
-    inv = torch.linalg.inv(Hn).to(x.device)
-    ys = (torch.arange(h, dtype=torch.float64, device=x.device) * 2 + 1) / h - 1
-    xs = (torch.arange(w, dtype=torch.float64, device=x.device) * 2 + 1) / w - 1
-    yy, xx = torch.meshgrid(ys, xs, indexing="ij")
-    q = inv @ torch.stack([xx, yy, torch.ones_like(xx)], -1).reshape(-1, 3).T
-    qx, qy = q[0] / q[2], q[1] / q[2]
-    valid = ((qx.abs() <= 1) & (qy.abs() <= 1)).reshape(h, w)
-    grid = torch.stack([qx, qy], -1).reshape(1, h, w, 2).to(x.dtype if x.is_floating_point() else torch.float32)
+    inv = torch.linalg.inv(Hn).float().to(x.device)  # the 3x3 in float64, per-pixel work in float32
+    ys = (torch.arange(h, dtype=torch.float32, device=x.device) * 2 + 1) / h - 1
+    xs = (torch.arange(w, dtype=torch.float32, device=x.device) * 2 + 1) / w - 1
+    qx, qy = _apply(inv, xs[None, :], ys[:, None])  # (h, w) source coordinates
+    valid = (qx.abs() <= 1) & (qy.abs() <= 1)
+    grid = torch.stack([qx, qy], -1)[None].to(x.dtype if x.is_floating_point() else torch.float32)
     out = F.grid_sample(x if x.is_floating_point() else x.float(), grid.expand(n, h, w, 2), mode=mode,
                         padding_mode="border", align_corners=False)
     return out.to(x.dtype), valid

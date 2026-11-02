@@ -99,3 +99,16 @@ def test_warp_identity_is_exact():
     x = torch.randint(0, 19, (1, 1, 32, 64)).float()
     out, valid = warp(x, torch.eye(3, dtype=torch.float64), "nearest")
     assert torch.equal(out, x) and valid.all() and valid.shape == (32, 64)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+def test_iclk_from_a_cuda_graph_equals_the_eager_fit():
+    from reuse import motion
+
+    prev, cur = _frames()
+    gp, gc = to_gray_small(prev).cuda(), to_gray_small(cur).cuda()
+    eager = motion._iclk(gp, gc, graphed=False)
+    graphed = motion._iclk(gp, gc, graphed=True)
+    again = motion._iclk(gc, gp, graphed=True)  # the captured graph takes new inputs
+    assert torch.allclose(eager[0], graphed[0], atol=1e-6) and eager[1] == graphed[1]
+    assert again[0][0, 2] < 0  # the reverse motion

@@ -16,16 +16,24 @@ measured with entropy scoring, mean pooling and the logit stride of one model
 for both passes; a pair that involves a stride-1 model (BiSeNetV2) uses the
 stride-1 overhead. Only measured points are known: anything else raises,
 including a glimpse margin other than the measured one (``settings.margin``).
+
+Method 3 (:meth:`LatencyTables.predict_reuse_frame`) adds the ``reuse`` part:
+gray downsample, homography, motion map, warps, the 3b fusion, the post-processing
+of a full or context pass, and of k glimpses. It is timed eagerly (the CPU
+homography and host-side warp matrices cannot be captured in a CUDA graph), so
+its eager records are kept; every other part keeps its graph-level records.
 """
 
 from __future__ import annotations
 
 import json
 import statistics
+
+import numpy as np
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
-__all__ = ["LatencyTables", "STRIDE"]
+__all__ = ["LatencyTables", "STRIDE", "frame_latency_summary"]
 
 STRIDE = {"pidnet_s": 8, "bisenetv2": 1}
 
@@ -69,7 +77,7 @@ class LatencyTables:
         for recs in sessions:
             for part, items in recs.items():
                 for r in items:
-                    if r.get("level", "graph") == "graph":
+                    if r.get("level", "graph") == "graph" or part == "reuse":
                         by_name.setdefault(part, {}).setdefault(r["name"], []).append(r)
         merged: Dict[str, List[Dict[str, Any]]] = {}
         for part, names in by_name.items():
@@ -111,3 +119,48 @@ class LatencyTables:
             "parts": {name: {"median_ms": p["median_ms"], "p95_ms": p["p95_ms"]} for name, p in parts.items()},
             "overhead_stride": stride,
         }
+
+    def _part_ms(self, part: str, **match: Any) -> Dict[str, float]:
+        r = self._find(part, **match)
+        return {"median_ms": r["median_ms"], "p95_ms": r["p95_ms"]}
+
+    def predict_reuse_frame(self, model: str, cfg: Any, moved_cells: int, fallback: bool,
+                            first: bool) -> Dict[str, Any]:
+        """Predicted latency of one Method 3 frame (``cfg``: a ``reuse.method.MotionReuseConfig``).
+
+        Frame 0: the full pass. Later frames: gray + homography + motion, then either the
+        full pass (fallback) or the warps, the glimpses of the ``moved_cells`` cells and, in
+        3b, the context pass and the fusion. A full or context pass = backbone (area) +
+        its post-processing (upsample, argmax, confidence)."""
+        stride = self.strides[model]
+
+        def frame_pass(scale: float) -> Dict[str, Dict[str, float]]:
+            return {"backbone": self._part_ms("area", model=model, kind="frame", scale=scale),
+                    "post": self._part_ms("reuse", op="post", stride=stride, scale=scale)}
+
+        parts: Dict[str, Dict[str, float]] = {}
+        if first:
+            parts.update({f"full_{k}": v for k, v in frame_pass(cfg.full_scale).items()})
+        else:
+            parts["gray"] = self._part_ms("reuse", op="gray")
+            parts["homography"] = self._part_ms("reuse", op="homography", homography=cfg.homography)
+            parts["motion"] = self._part_ms("reuse", op="motion", size=cfg.glimpse_size)
+            if fallback:
+                parts.update({f"full_{k}": v for k, v in frame_pass(cfg.full_scale).items()})
+            else:
+                parts["warp"] = self._part_ms("reuse", op="warp")
+                if moved_cells:
+                    parts["glimpses"] = self._part_ms("batch", model=model, size=cfg.glimpse_size, k=moved_cells)
+                    parts["glimpse_post"] = self._part_ms("reuse", op="glimpse_post", stride=stride,
+                                                          size=cfg.glimpse_size, k=moved_cells)
+                if cfg.ctx_scale is not None:
+                    parts.update({f"context_{k}": v for k, v in frame_pass(cfg.ctx_scale).items()})
+                    parts["fusion"] = self._part_ms("reuse", op="fusion")
+        return {"median_ms": sum(p["median_ms"] for p in parts.values()),
+                "p95_ms": sum(p["p95_ms"] for p in parts.values()), "parts": parts}
+
+
+def frame_latency_summary(per_frame_ms: Iterable[float]) -> Dict[str, float]:
+    """The two judges of Method 3 over a set of frames: mean and p95 (numpy's linear percentile)."""
+    ms = np.asarray(list(per_frame_ms), dtype=np.float64)
+    return {"mean_ms": float(ms.mean()), "p95_ms": float(np.percentile(ms, 95)), "frames": int(ms.size)}

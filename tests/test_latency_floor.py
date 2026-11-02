@@ -53,3 +53,23 @@ def test_e2e_points_are_covered_by_the_parts(s):
         assert q in s["batch_sizes"] and k in s["ks"] and k * q * q <= s["max_batch_pixels"]  # glimpse batch
         assert cs in s["ctx_scales"] and q in s["glimpses"] and k in s["overhead_ks"]  # pipeline overhead
         assert (FRAME[0] * cs) % 32 == 0 and (FRAME[1] * cs) % 32 == 0 and q % 32 == 0  # no padding in either model
+
+
+def test_batchk_covers_every_cell_count():
+    from scripts.latency_floor import batchk_specs
+
+    specs = batchk_specs(FULL)
+    for size, cells in ((256, 66), (384, 28), (512, 15)):
+        ks = sorted(sp["k"] for sp in specs if sp["size"] == size and sp["model"] == "pidnet_s")
+        assert ks == list(range(1, cells + 1)), size
+    assert len({sp["name"] for sp in specs}) == len(specs)
+
+
+def test_reuse_parts_are_listed():
+    from scripts.latency_floor import reuse_specs
+
+    names = {sp["name"] for sp in reuse_specs(FULL)}
+    assert {"reuse/gray", "reuse/homography/orb", "reuse/homography/iclk", "reuse/motion/384", "reuse/warp",
+            "reuse/fusion", "reuse/post/stride8/1", "reuse/post/stride1/0.25",
+            "reuse/glimpse_post/stride1/256/k66", "reuse/glimpse_post/stride8/512/k15"} <= names
+    assert all(sp["part"] == "reuse" for sp in reuse_specs(QUICK))

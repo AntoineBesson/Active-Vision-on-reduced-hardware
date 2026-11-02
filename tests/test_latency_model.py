@@ -71,3 +71,60 @@ def test_another_margin_names_the_missing_run():
     assert TABLES.predict("pidnet_s", 0.25, "pidnet_s", 384, 2, "topk", margin=32)["median_ms"] > 0
     with pytest.raises(KeyError, match="latency_floor"):
         TABLES.predict("pidnet_s", 0.25, "pidnet_s", 384, 2, "topk", margin=16)
+
+
+def _reuse_tables():
+    def rec(name, ms, part="reuse", level="eager", **kw):
+        return {"name": name, "level": level, "gflops": 1.0, "cuda_event": {"median_ms": ms, "p95_ms": ms * 2}, **kw}
+
+    reuse = [rec("g", 0.1, op="gray"), rec("h", 2.0, op="homography", homography="iclk"),
+             rec("m", 0.3, op="motion", size=384), rec("w", 0.4, op="warp"), rec("f", 0.2, op="fusion"),
+             rec("p8", 0.5, op="post", stride=8, scale=1.0), rec("p8c", 0.25, op="post", stride=8, scale=0.25)]
+    reuse += [rec(f"gp{k}", 0.05 * k, op="glimpse_post", stride=8, size=384, k=k) for k in (1, 2, 3)]
+    return LatencyTables.from_records({
+        "area": [rec("a1", 19.0, part="area", level="graph", model="pidnet_s", kind="frame", scale=1.0),
+                 rec("a25", 2.7, part="area", level="graph", model="pidnet_s", kind="frame", scale=0.25)],
+        "batch": [rec(f"b{k}", 1.5 * k, part="batch", level="graph", model="pidnet_s", size=384, k=k) for k in (1, 2, 3)],
+        "reuse": reuse,
+    })
+
+
+def test_reuse_frame_sums_its_parts():
+    from reuse.method import MotionReuseConfig
+
+    t = _reuse_tables()
+    cfg = MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.05, tau=1.0, homography="iclk")
+    first = t.predict_reuse_frame("pidnet_s", cfg, moved_cells=28, fallback=False, first=True)
+    assert first["median_ms"] == pytest.approx(19.0 + 0.5)
+    reuse3 = t.predict_reuse_frame("pidnet_s", cfg, moved_cells=3, fallback=False, first=False)
+    assert reuse3["median_ms"] == pytest.approx(0.1 + 2.0 + 0.3 + 0.4 + 4.5 + 0.15)
+    back = t.predict_reuse_frame("pidnet_s", cfg, moved_cells=28, fallback=True, first=False)
+    assert back["median_ms"] == pytest.approx(0.1 + 2.0 + 0.3 + 19.0 + 0.5)
+    none = t.predict_reuse_frame("pidnet_s", cfg, moved_cells=0, fallback=False, first=False)
+    assert none["median_ms"] == pytest.approx(0.1 + 2.0 + 0.3 + 0.4)
+    b = MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.05, tau=1.0, homography="iclk",
+                          ctx_scale=0.25)
+    assert t.predict_reuse_frame("pidnet_s", b, 2, False, False)["median_ms"] == pytest.approx(
+        0.1 + 2.0 + 0.3 + 0.4 + 3.0 + 0.1 + 2.7 + 0.25 + 0.2)
+
+
+def test_unmeasured_reuse_point_names_the_missing_run():
+    from reuse.method import MotionReuseConfig
+
+    t = _reuse_tables()
+    cfg = MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.05, tau=1.0, homography="iclk")
+    with pytest.raises(KeyError, match="latency_floor"):
+        t.predict_reuse_frame("pidnet_s", cfg, moved_cells=4, fallback=False, first=False)  # k = 4 not measured
+    with pytest.raises(KeyError, match="latency_floor"):
+        t.predict_reuse_frame("pidnet_s", MotionReuseConfig(full_scale=0.6, glimpse_size=384, theta=20, rho=0.05,
+                                                            tau=1.0, homography="iclk"), 28, False, True)
+
+
+def test_summary_mean_and_p95():
+    import numpy as np
+
+    from foveation.latency_model import frame_latency_summary
+
+    ms = [1.0] * 95 + [10.0] * 5
+    out = frame_latency_summary(ms)
+    assert out["mean_ms"] == pytest.approx(1.45) and out["p95_ms"] == pytest.approx(float(np.percentile(ms, 95)))
