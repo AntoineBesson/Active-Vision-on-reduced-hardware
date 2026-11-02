@@ -33,6 +33,15 @@ inputs than sessions 1–2, which is consistent with a cooler GPU (80 vs 82 °C)
 Speedups vary by ±3% between sessions. No conclusion below depends on a
 difference that size.
 
+**A second set of three sessions (2026-11-02)**, `latency_floor_repeat-s{1,2,3}.json`,
+reran the same parts on a later commit; the tables still load only the first
+three. Against them, the median ratio of new to old medians is 0.988 for the
+backbone vs area (range 0.981–0.997), 1.010 for the batches (0.986–1.048)
+and 1.062 for the pipeline overhead (0.979–1.117); the full frame at scale 1
+takes 19.12 vs 19.35 ms (PIDNet-S) and 30.92 vs 31.16 ms (BiSeNetV2). The
+slower overhead would make foveation slightly slower still, so Method 2's
+conclusion holds.
+
 ## Findings
 
 **1. Eager mode is launch-bound; CUDA graphs are required.** Eagerly,
