@@ -32,10 +32,11 @@ Code: `src/reuse/`, `scripts/method3.py`. Design:
 
 ## Protocol
 
-- **Data.** VPS train, 400 clips, 2400 labelled frames. Both backbones were
-  trained on these frames, so absolute mIoU is optimistic (see
+- **Data.** VPS train, 400 clips, 2400 labelled frames. All VPS clips come from
+  Cityscapes val sequences, so neither backbone trained on these frames (see
   [Method 2](../method2/README.md)). The comparison with the full-frame curve
-  uses the same frames.
+  uses the same frames. The configs reported here are the best of the grid on
+  these clips, so their readings lean in Method 3's favour.
 - **Grid.** s_full 1, 0.75, 0.5; glimpse 256, 384, 512; θ 25, 38, 51; ρ 0.02,
   0.05, 0.1; τ 0.2, 0.4, 0.6, 1; 3b context 0.25, 0.375, 0.5. That gives 324
   configurations of 3a and 972 of 3b, for each model.

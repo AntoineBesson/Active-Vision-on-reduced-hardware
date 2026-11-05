@@ -39,12 +39,14 @@ and pixel differences of at most 1e-4.
   2400 labelled frames. Reporting uses VPS **val**: 50 clips, 300 labelled
   frames, evaluated **once**, on finalists frozen beforehand
   (`finalists.json`, committed before `val.json`).
-  - VPS train frames come from Cityscapes train, which both backbones were
-    trained on. Train mIoU is therefore optimistic: PIDNet-S full frame
-    scores 76.1 on train against 71.5 on val. Val is the held-out split.
-  - The BiSeNetV2 checkpoint (CoinCheung) was trained on Cityscapes
-    `train.txt` only, so it has never seen VPS val. PIDNet-S uses the official
-    `_val` checkpoint, the one trained on train for evaluation on val.
+  - Every VPS clip, train and val, comes from a Cityscapes val sequence
+    (Frankfurt, Lindau, Münster), so neither backbone trained on these frames.
+    The BiSeNetV2 checkpoint (CoinCheung) was trained on Cityscapes `train.txt`
+    only, and PIDNet-S uses the official `_val` checkpoint, trained on
+    Cityscapes train.
+  - PIDNet-S full frame scores 76.1 on VPS train against 71.5 on VPS val. That
+    gap isn't overfitting; the two splits hold different clips. Val is held out
+    from tuning.
 - **Metric.** 19-class mIoU, with per-class IoUs kept in `val.json`.
   Intervals are 95% clip bootstraps (n = 1000, seed 0). ΔmIoU and latency
   saved are paired with the full frame on the same resampled clips, so their

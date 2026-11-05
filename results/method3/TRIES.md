@@ -217,3 +217,10 @@ Val not touched.
 The plan's stop condition (Task 7 step 4) is met, and the user chose to close Method 3 rather than
 run val anyway. So Task 8's finalists, val sweep, intervals, fp16 check and `reuse_final` run were
 not done. Outcome in [README.md](README.md); the score files are kept next to it, gzipped.
+
+## 2026-11-05 — correction: VPS train is not training data for the backbones
+
+Method 2's and Method 3's READMEs said both backbones trained on VPS train, so train mIoU was
+optimistic. That was wrong: all labelled VPS train and val frames are from Frankfurt, Lindau and
+Münster (Cityscapes val cities), and both checkpoints trained on Cityscapes train only. Both READMEs
+are corrected. No number changes.

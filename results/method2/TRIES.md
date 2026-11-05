@@ -186,3 +186,9 @@ lower scale on a T4. The two reasons:
   glimpse pays a fixed overhead.
 
 Write-up: [README.md](README.md).
+
+## 2026-11-05 — correction: VPS train is not training data for the backbones
+
+The README said both backbones trained on VPS train, so train mIoU was optimistic. That was wrong:
+all VPS clips are Cityscapes val sequences, and both checkpoints trained on Cityscapes train only.
+The README is corrected. No number changes.
