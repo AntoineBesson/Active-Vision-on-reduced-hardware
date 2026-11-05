@@ -38,10 +38,11 @@ much more gracefully at low resolution: the context view of a foveated
 method will run at those low scales, so this matters for the choice below.
 
 **Method 2 (foveation without memory) is done, and the result is negative.**
-No configuration beats the full frame on a T4. All 55 finalists picked on
-VPS train fall below the full-frame mIoU-vs-latency curve on val. The best is
-BiSeNetV2 (0.5 context + 4 fused 384 px glimpses) at -0.5 mIoU [-1.7, +0.3]
-at equal latency, about 5.5 ms slower at equal mIoU. Glimpses lack context,
+No configuration beats the full frame on a T4, with both sides timed end to end.
+Of the 55 finalists picked on VPS train, 46 fall below the full-frame
+mIoU-vs-latency curve on val and 9 are dominated. The best is BiSeNetV2 (0.5
+context + 4 fused 384 px glimpses) at -0.5 mIoU at equal latency, about 7.7 ms
+slower at equal mIoU. Glimpses lack context,
 and a full frame at a slightly higher scale is cheap on a T4. See
 [results/method2](results/method2/README.md) and the ledger of tries
 [results/method2/TRIES.md](results/method2/TRIES.md).
@@ -57,11 +58,8 @@ the ledger [results/method3/TRIES.md](results/method3/TRIES.md).
 
 ### Next steps
 
-1. **Method 2: done (negative), see above.** Still open: confirm the
-   finalists' latency on the T4 (`PARTS = "final"` in the latency notebook,
-   3 sessions). The fused glimpses' latencies are lower bounds while the
-   full-frame reference leaves out its own resize and argmax (about 1-2 ms);
-   a +2 ms shift of the reference turns no finalist positive.
+1. **Method 2: done (negative), see above.** The finalists' latency is confirmed
+   by 3 end-to-end T4 sessions.
 2. **Method 3: done (negative on train), see above.** Next memory idea, not
    started: a persistent canvas with `SceneMemory` (logits/confidence with age)
    and a canvas-aware policy.

@@ -1,13 +1,14 @@
 # Method 2: foveation without memory — results
 
-**Outcome: negative.** On a T4, no configuration of Method 2 beats the full
-frame. On VPS val, 49 of the 55 finalists chosen on VPS train land below
-the full-frame mIoU-vs-latency curve; the other 6 are slower than the full
-frame at scale 1 and less accurate, so they are dominated. The best one,
-BiSeNetV2 with a 0.5 context, 4 fused 384 px glimpses and the fixed prior,
-is **-0.5 mIoU [-1.7, +0.3]** at equal latency. That is statistically tied on
-accuracy, but it costs about **5.5 ms more** than a full frame of the same
-mIoU, and its latency is a lower bound.
+**Outcome: negative, confirmed by end-to-end T4 timing.** On a T4, no
+configuration of Method 2 beats the full frame. With both sides measured end to
+end, 46 of the 55 finalists chosen on VPS train land below the full-frame
+mIoU-vs-latency curve on VPS val; the other 9 are slower than the full frame at
+scale 1 and less accurate, so they are dominated. The best one, BiSeNetV2 with a
+0.5 context, 4 fused 384 px glimpses and the fixed prior, is **-0.54 mIoU** at
+equal latency and about **7.7 ms slower** than a full frame of the same mIoU.
+Its accuracy interval from the predicted latencies, [-1.7, +0.3], makes it a
+statistical tie on accuracy. See [Measured on the T4](#measured-on-the-t4).
 The tries that led here, failures included, are in [TRIES.md](TRIES.md).
 
 ## What Method 2 does
@@ -65,8 +66,9 @@ and pixel differences of at most 1e-4.
     ≥): the tables don't time the extra softmaxes or the resize.
   - The full-frame reference is the backbone alone (no resize, upsample or
     argmax). This slightly favours the full frame. The Colab `final` part
-    of the latency notebook times both sides end to end, but it hasn't been
-    run yet.
+    of the latency notebook times both sides end to end; see
+    [Measured on the T4](#measured-on-the-t4). The tables below keep the
+    predicted latencies.
   - Mixed pairs are read against the full-frame curve of their glimpse
     model.
 - **Search space (train).**
@@ -164,19 +166,47 @@ Positive ΔmIoU: 0/15 (ΔmIoU undefined for 2: slower than the full frame at sca
 re-cached with the backbones in fp16 and gave |ΔmIoU| ≤ 0.016 points against
 fp32 (threshold 0.1). So the fp32 caches stand for the fp16 deployment.
 
+## Measured on the T4
+
+Three Colab T4 sessions (`latency_floor_final-s{1,2,3}.json`, about 11 min each,
+median clock 1200-1275 MHz) timed all 55 finalists interleaved with both models'
+full frame, end to end from a full-resolution frame. Numbers are the median of
+the three session medians, read against the val mIoU of `val.json`. Intervals
+were not recomputed with these latencies.
+
+Full frame, captured graphs, median ms (backbone-only table value in brackets):
+
+| Scale | 1 | 0.75 | 0.5 | 0.375 | 0.25 |
+| --- | --- | --- | --- | --- | --- |
+| PIDNet-S | 21.47 (19.35) | 13.02 (10.74) | 7.04 (5.22) | 5.25 (3.59) | 4.00 (2.73) |
+| BiSeNetV2 | 33.30 (31.16) | 20.27 (17.78) | 10.05 (8.06) | 6.61 (4.72) | 4.27 (2.69) |
+
+Resize, upsampling and argmax add about 1.3-2.5 ms.
+
+Best finalist per pair, captured graphs (ΔmIoU against the measured curve):
+
+| Pair | Finalist | Val mIoU | Predicted median | Measured median / p95 (ms) | ΔmIoU, median / p95 judge | Latency saved at equal mIoU |
+| --- | --- | --- | --- | --- | --- | --- |
+| bisenetv2+bisenetv2 | 0.5, 384, mean, k4, prior | 69.6 | 22.0 | 26.6 / 27.0 | -0.54 / -0.53 | -7.7 ms |
+| bisenetv2+pidnet_s | 0.5, 384, mean, k1, prior | 68.7 | 15.7 | 17.4 / 17.9 | -2.09 / -2.14 | -5.9 ms |
+| pidnet_s+pidnet_s | 0.5, 256, mean, k1, margin/mean/topk/w | 65.0 | 9.5 | 10.5 / 10.8 | -2.86 / -2.93 | -3.3 ms |
+
+- **Verdict.** 0 of the 46 readable finalists are above the curve under the median
+  judge, and 0 of 46 under p95. The other 9 are dominated. In eager mode, 0 of 16
+  readable are above it; every PIDNet-S-glimpse finalist is slower than that
+  model's scale 1 there.
+- **Prediction.** Measured over predicted median is 1.15 (range 1.01-2.12), so the
+  lower bounds were real. It is 1.10 for finalists timed with their own rule and
+  1.28 for prior ones.
+- **Prior finalists are upper bounds.** The 24 prior finalists are timed with entropy
+  top-k scoring, which a fixed order doesn't need. Even at their predicted latency,
+  against the measured curve, none is above it (best -0.37).
+
 ## What is left
 
-- **T4 confirmation of the finalists' latency.** Set `PARTS = "final"` in
-  `notebooks/latency_floor_colab.ipynb`, 3 sessions. This replaces the
-  lower bounds and the backbone-only full frame with end-to-end timings.
-  The two corrections pull in opposite directions: measured fused glimpses
-  can only be slower than their lower bounds, but the end-to-end full frame
-  also pays its resize, upsample and argmax (about 1-2 ms), which the
-  backbone-only curve leaves out. Shifting every full-frame curve by +2 ms
-  turns no finalist positive (best BiSeNetV2: -0.46 -> -0.38; no ΔmIoU
-  moves by more than 2.8 points), so the conclusion does not depend on it.
-- Directions that would change the picture, none of them tried yet (see
-  [TRIES.md](TRIES.md)):
-  - glimpse models trained on crops;
-  - a context scale above 0.5;
-  - reuse across frames (Methods 3 and 4).
+Directions that would change the picture, none of them tried yet (see
+[TRIES.md](TRIES.md)):
+
+- glimpse models trained on crops;
+- a context scale above 0.5;
+- reuse across frames (Methods 3 and 4).

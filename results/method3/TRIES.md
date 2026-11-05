@@ -224,3 +224,11 @@ Method 2's and Method 3's READMEs said both backbones trained on VPS train, so t
 optimistic. That was wrong: all labelled VPS train and val frames are from Frankfurt, Lindau and
 Münster (Cityscapes val cities), and both checkpoints trained on Cityscapes train only. Both READMEs
 are corrected. No number changes.
+
+## 2026-11-05 — exploratory: thing classes on train
+
+The same scores read on classes instead of mIoU, every config, table latencies. 0 configs above the
+full-frame curve either way. Mean judge, best: 8 thing classes -9.96 pts (PIDNet-S) and -4.02 pts
+(BiSeNetV2); person, rider, motorcycle, bicycle -11.54 and -5.50 pts. mIoU was -7.26 and -2.57. These
+classes lose more than plain mIoU. IoU per class is not an instance or motion metric: small and moving
+objects are not isolated here. Val not touched.

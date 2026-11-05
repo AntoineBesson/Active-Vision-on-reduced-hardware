@@ -192,3 +192,16 @@ Write-up: [README.md](README.md).
 The README said both backbones trained on VPS train, so train mIoU was optimistic. That was wrong:
 all VPS clips are Cityscapes val sequences, and both checkpoints trained on Cityscapes train only.
 The README is corrected. No number changes.
+
+## 2026-11-05 — T4 sessions final-s1..3: the negative result holds end to end
+
+All 55 finalists and both full frames, 3 Colab sessions. Against the measured curve on val, with
+captured graphs: 0 of 46 readable above it under median or p95, 9 dominated (6 before). Best: BiSeNetV2
+0.5/384/mean/k4/prior, -0.54 mIoU, 26.6 ms measured against 22.0 predicted, 7.7 ms slower at equal
+mIoU. Measured over predicted median 1.15 (1.01-2.12). Prior finalists are timed with scoring they
+don't need; even at their predicted latency none is above the curve (best -0.37). Intervals not
+recomputed.
+
+Exploratory, on a val already reported and with finalists chosen for mIoU: mean IoU over the 8 thing
+classes gives 0 of 46 above the curve, best -1.09; over person, rider, motorcycle and bicycle, 0 of 46,
+best -2.01. The reading is worse than plain mIoU (-0.54). Not a new protocol.
