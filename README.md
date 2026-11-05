@@ -17,7 +17,7 @@ Nothing outside one dataset adapter is Cityscapes-specific: preprocessing,
 policies and evaluation are written against a dataset-agnostic interface so
 they can be retrained or reused on other video segmentation datasets.
 
-## Where we are (2026-11-01)
+## Where we are (2026-11-05)
 
 **Method 1 (full frame) is done and validated on real data.** The data
 layer, backbones, evaluation harness and baseline CLI run end to end on
@@ -46,6 +46,15 @@ and a full frame at a slightly higher scale is cheap on a T4. See
 [results/method2](results/method2/README.md) and the ledger of tries
 [results/method2/TRIES.md](results/method2/TRIES.md).
 
+**Method 3 (motion-gated reuse of the previous frame) is negative on VPS train,
+and stopped before val.** None of the 1296 configurations per model lands above
+the full-frame curve on a T4, under the mean or the p95 per-frame judge; the zone
+oracle, tested on the rules without fallback, stays below it too. The best reading
+is BiSeNetV2 at -2.6 mIoU at equal mean latency. Deciding what to recompute costs
+about 6.8 ms, a frame-old prediction already loses about 5 points, and motion
+is a poor proxy for error. See [results/method3](results/method3/README.md) and
+the ledger [results/method3/TRIES.md](results/method3/TRIES.md).
+
 ### Next steps
 
 1. **Method 2: done (negative), see above.** Still open: confirm the
@@ -53,9 +62,9 @@ and a full frame at a slightly higher scale is cheap on a T4. See
    3 sessions). The fused glimpses' latencies are lower bounds while the
    full-frame reference leaves out its own resize and argmax (about 1-2 ms);
    a +2 ms shift of the reference turns no finalist positive.
-2. **Method 3: persistent canvas.** Implement `SceneMemory` (canvas of
-   logits/confidence with age) and a canvas-aware policy; this is where the
-   unlabelled in-between frames of each 30-frame clip are used.
+2. **Method 3: done (negative on train), see above.** Next memory idea, not
+   started: a persistent canvas with `SceneMemory` (logits/confidence with age)
+   and a canvas-aware policy.
 3. **Latency on a T4** (Colab): the latency floor is measured (3 sessions,
    CUDA graphs, FP16, batch 1), see
    [results/latency_floor](results/latency_floor/README.md). Full frame:
@@ -100,9 +109,10 @@ python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yam
 | Evaluation harness: mIoU, FLOPs, GPU latency, peak memory, run JSON | ✅ incl. GPU path (RTX 2060) |
 | Full-frame baseline CLI, 5 input scales | ✅ fixture and real data |
 | Real-data diagnostics script | ✅ run on real data, no problem |
-| Method 2: foveation without memory | ⬜ next |
-| Method 3: foveation + persistent canvas | ⬜ |
-| Method 4: RL-trained policy | ⬜ optional |
+| Method 2: foveation without memory | ✅ negative, [results](results/method2/README.md) |
+| Method 3: motion-gated reuse | ✅ negative on train, val not run, [results](results/method3/README.md) |
+| Persistent canvas memory | ⬜ not started |
+| RL-trained policy | ⬜ optional |
 | Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout

@@ -138,3 +138,82 @@ Method 2's cache fail on the cluster only because its data holds no `val/` folde
 run on the laptop either, where they skip without the environment variables). The latency script's `reuse` and
 `reuse_e2e` parts run in `--quick` mode. They now time the method's own functions; no Method 3
 latency had been measured before this change. The 400 clips were not re-run.
+
+## 2026-11-05 — the same clip on two GPUs (RTX 2060 against P100)
+
+Chunks 0–2 ran on the laptop and chunk 3 on the P100, so no clip had run on both. Clip 0376 was
+re-run from scratch on the laptop (cache, sweep, bounds; 4 min 17 s for both models, GPU at 85 °C
+right after) and compared with the P100's chunk 3 lines, all 1296 configs.
+
+| | PIDNet-S | BiSeNetV2 |
+| --- | --- | --- |
+| moved cells and fallbacks identical | 1296 / 1296 | 1296 / 1296 |
+| lines identical to the byte | 16 / 1296 | 0 / 1296 |
+| pixels differing, median / max | 1.4e-6 / 5.3e-6 | 1.3e-6 / 6.6e-6 |
+| clip mIoU difference, max | 0.0007 pts | 0.0007 pts |
+
+Same size as the float noise already seen across batch sizes on one GPU. The motion decisions are
+the same, so the latency predictions are too. One clip only.
+
+## 2026-11-05 — T4 sessions m3-s1..3
+
+Three separate Colab T4 sessions at commit `9c27522` (30–32 min each; all 458 configurations; the
+files were pushed to `foveation-no-memory` by mistake and copied here). Clock median 960–1080 MHz
+under the 70 W software cap, against 1140–1215 MHz in t4-s1..3. The points shared with t4-s1..3
+agree closely except for large BiSeNetV2 batches in m3-s2 and m3-s3 (up to +15% at 384 k16); the
+tables merge all sessions.
+
+Cost of a frame's steps on the T4, median: gray 0.50 ms, IC-LK 4.88 ms (p95 9.22), motion map
+1.26–1.60 ms, warps 2.62–2.67 ms, fusion 0.42 ms. ORB 33.8 ms on the Colab CPU, so IC-LK stays.
+Before any glimpse, a reused frame already costs about 9.5 ms, and deciding alone (gray, homography,
+motion) about 6.8 ms: more than PIDNet-S's whole 0.5-scale frame (5.22 ms).
+
+**End-to-end check of the sum of parts** (plan limit 5%): two of four fail as planned.
+
+| case | measured median | sum with graph passes (what `score` uses) | sum with eager passes |
+| --- | --- | --- | --- |
+| PIDNet-S 384 k2 | 22.23 ms | 14.79 ms (−33.5%) | 22.48 ms (+1.1%) |
+| PIDNet-S 384 k8 | 24.55 ms | 24.31 ms (−1.0%) | about the same (eager and graph agree at k8) |
+| BiSeNetV2 384 k4 | 20.22 ms | 20.19 ms (−0.2%) | about the same |
+| PIDNet-S 256 k12, context 0.25 | 38.56 ms | 26.03 ms (−32.5%) | 37.64 ms (−2.4%; eager k12 interpolated between k8 and k16) |
+
+The end-to-end frames run the backbone eagerly, and eager PIDNet-S has a floor of about 11.7 ms
+whatever the input size. So the sum of parts is confirmed at eager level; the graph-level sum is
+not confirmed end to end. `score` uses graph passes, the same level as the full-frame curve. This
+favours Method 3: it assumes one captured graph per k, which are many graphs (each with its private
+memory pool) that a real deployment would have to hold.
+
+## 2026-11-05 — score on train_all (400 clips): Method 3 is below the curve everywhere
+
+`score` on both models, 1296 configs, T4 tables t4-s1..3 + m3-s1..3. Points are mIoU against the
+full-frame curve at the same latency; a config slower than the full frame at scale 1 has no reading.
+
+| | PIDNet-S | BiSeNetV2 |
+| --- | --- | --- |
+| full frame, scale 1 | 0.7608, 19.35 ms | 0.7335, 31.16 ms |
+| full frame, scale 0.75 | 0.7480, 10.74 ms | 0.7339, 17.78 ms |
+| full frame, scale 0.5 | 0.6794, 5.22 ms | 0.7055, 8.06 ms |
+| configs above the curve, either judge | 0 / 1296 | 0 / 1296 |
+| best 3a, mean judge | −7.26 pts (0.6870, 18.5 ms) | −4.61 pts (0.6876, 24.9 ms) |
+| best 3b, mean judge | −9.54 pts (0.6627, 17.5 ms) | −2.57 pts (0.7079, 28.9 ms) |
+| best 3a, p95 judge | no reading: fastest p95 20.6 ms, slower than the full frame | −6.90 pts (0.6646, 28.5 ms) |
+| best 3b, p95 judge | no reading: fastest p95 27.0 ms, slower than the full frame | −15.78 pts (0.5757, 31.5 ms) |
+| best motion rule without fallback, mean judge | −25.35 pts | −18.86 pts |
+| zone oracle at the rule's k, mean judge | −11.88 pts | −5.56 pts |
+| oracle − motion rule at the same k, median | 11.88 pts | 10.74 pts |
+| raw difference − aligned, median | +3.62 pts, for 12% more of the frame recomputed | +4.02 pts, for 12% more |
+
+Reuse bound at scale 1, mIoU by lag 1 / 2 / 5 / 10 / 29: PIDNet-S 0.708 / 0.660 / 0.571 / 0.484 /
+0.328; BiSeNetV2 0.683 / 0.640 / 0.555 / 0.473 / 0.323. One frame old already costs about 5 pts.
+
+The best configs fall back to a full pass on about 65% of frames, and their full pass costs more
+than the plain full frame because the decision was paid first. Even the oracle, which knows the
+errors, stays below the curve under both judges. A preview with all reuse steps counted as free
+also had 0 configs above the curve, except one zone-oracle reading on PIDNet-S (+0.67 pts at 2.9 ms).
+Val not touched.
+
+## 2026-11-05 — closed as negative, val not run
+
+The plan's stop condition (Task 7 step 4) is met, and the user chose to close Method 3 rather than
+run val anyway. So Task 8's finalists, val sweep, intervals, fp16 check and `reuse_final` run were
+not done. Outcome in [README.md](README.md); the score files are kept next to it, gzipped.
