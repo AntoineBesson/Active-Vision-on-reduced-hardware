@@ -75,7 +75,7 @@ shutil.copy(f"{DRIVE}/PIDNet_S_Cityscapes_val.pt", "/content/PIDNet_S_Cityscapes
 !pip install -q -e ".[reuse]"
 """),
     code("""
-import glob, shlex, subprocess, sys
+import glob, re, shlex, subprocess, sys
 env = dict(os.environ, CITYSCAPES_VPS_ROOT=VPS, PIDNET_S_WEIGHTS="/content/PIDNet_S_Cityscapes_val.pt",
            M3_EQUIV_SPLIT=SPLIT)
 OUT, ROOT, LOCAL = f"{DRIVE}/method3/{SPLIT}", "/content/m3cache", "/content/m3out"
@@ -131,7 +131,7 @@ else:
             test = subprocess.run([sys.executable, "-m", "pytest", "-q", "-rs", "tests/test_reuse_replay.py", "-k",
                                    "real_val_clips"], env=env, capture_output=True, text=True)
             print(test.stdout[-3000:])
-            if " 1 passed" not in test.stdout or "skipped" in test.stdout:
+            if not re.search(r"(^| )1 passed", test.stdout, re.M) or "skipped" in test.stdout:
                 raise RuntimeError("the replay does not match the streaming method on real clips (or the test was skipped)")
             open(f"{OUT}/.equivalence_ok", "w").close()
         run(f"cache --split {SPLIT} --models {MODEL} --root {ROOT}")

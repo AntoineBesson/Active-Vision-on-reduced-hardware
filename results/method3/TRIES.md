@@ -77,3 +77,37 @@ kept, and θ ∈ {25, 38, 51}. Files: `motion_stats_train_all{,_orb,_iclk}.json`
   replays after merging the τ values with the same fallback frames. A sub-histogram trick
   for the batched confusion gave nothing (2.69 → 2.77 s) and was dropped.
 - One real clip cache (3 full scales, 3 glimpse sizes, 3 context scales): 23 s, 24 MB.
+
+## 2026-11-02 — chunk 0 × PIDNet-S on the laptop GPU (cache, sweep, bounds)
+
+100 train clips (one cache already built by the smoke run). Cache 45 min (~18 s/clip,
+2.5 GB); sweep 52 min (31 s/clip: 984 distinct replays per clip, not 480 — real clips have
+more distinct fallback patterns across τ than the fixture); bounds 2 h 02 min (72 s/clip,
+now the slowest stage). Outputs: `experiments/method3/train_all/{sweep,bounds}_train_all_pidnet_s_chunk0.jsonl.gz`
+(129,600 sweep lines, 100 bounds lines). No errors.
+
+## 2026-11-02 — chunk 0 × BiSeNetV2 on the laptop GPU (cache, sweep, bounds)
+
+Same timings as PIDNet-S: cache 45 min (27 s/clip, 2.6 GB), sweep 52 min (984 replays per
+clip), bounds 2 h 03 min. 129,600 sweep lines, 100 bounds lines. No errors.
+
+## 2026-11-03 — chunk 1 × PIDNet-S and BiSeNetV2 on the laptop GPU
+
+PIDNet-S: stopped overnight for GPU cool-down at cache 59/100, resumed (cache skipped the
+59 built clips: 13 min for the other 41), sweep 51 min, bounds 2 h. BiSeNetV2: cache 53 min,
+sweep 52 min, bounds 2 h. 840 distinct replays per clip on this chunk. 129,600 sweep lines
+and 100 bounds lines per model. No errors.
+
+## 2026-11-03 — chunk 2 × PIDNet-S and BiSeNetV2 on the laptop GPU
+
+PIDNet-S: cache 36 min, sweep 43 min, bounds 2 h. BiSeNetV2: cache 60 min, sweep 44 min,
+bounds 2 h. 129,600 sweep lines and 100 bounds lines per model (smaller files than chunks
+0–1). No errors. GPU at 84 °C right after the run.
+
+## 2026-11-05 — moving chunk 3 to the school cluster (Tesla P100)
+
+- Compute nodes have no internet: the venv was installed from the gateway, weights uploaded.
+- First replay check job (1088898) passed the test (worst differing share 4.77e-07 of a
+  frame on the P100) but my job script's `grep " 1 passed"` failed, because `pytest -q`
+  starts that line with no space; the dependent jobs never ran. The Method 3 notebook had
+  the same check and would have refused every Colab run: fixed, with a test.

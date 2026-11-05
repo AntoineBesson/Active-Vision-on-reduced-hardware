@@ -225,3 +225,13 @@ def test_notebook_calls_existing_commands(tmp_path):
     for call in calls:
         args = shlex.split(re.sub(r"\{[^}]+\}", "0", call))
         method3.parse_args(args)  # exits on an unknown command or flag
+
+
+def test_notebook_accepts_pytest_quiet_summary(tmp_path):
+    nb = tmp_path / "m3.ipynb"
+    subprocess.run([sys.executable, str(REPO / "scripts" / "make_method3_notebook.py"), str(nb)], check=True)
+    src = "".join("".join(c["source"]) for c in json.loads(nb.read_text())["cells"] if c["cell_type"] == "code")
+    pattern = re.search(r're\.search\(r"([^"]+)", test\.stdout, re\.M\)', src)
+    assert pattern, "the notebook must search the summary line with a regex"
+    assert re.search(pattern.group(1), ".\n1 passed, 10 deselected in 71.57s (0:01:11)\n", re.M)  # the line of `pytest -q`
+    assert not re.search(pattern.group(1), "11 passed in 1s\n", re.M)
