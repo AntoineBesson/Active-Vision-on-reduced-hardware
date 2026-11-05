@@ -47,6 +47,12 @@ def _to_norm(h: int, w: int) -> torch.Tensor:
     return torch.tensor([[2 / w, 0, 1 / w - 1], [0, 2 / h, 1 / h - 1], [0, 0, 1]], dtype=torch.float64)
 
 
+def _norm_axes(h: int, w: int, device) -> Tuple[torch.Tensor, torch.Tensor]:
+    """grid_sample's normalised coordinates of the pixel centres: (h,) rows and (w,) columns."""
+    return ((torch.arange(h, dtype=torch.float32, device=device) * 2 + 1) / h - 1,
+            (torch.arange(w, dtype=torch.float32, device=device) * 2 + 1) / w - 1)
+
+
 def _sane(H: torch.Tensor) -> bool:
     det = float(torch.det(H[:2, :2]))
     return bool(torch.isfinite(H).all()) and 1e-3 <= abs(det) <= 1e3
@@ -116,9 +122,7 @@ def _iclk_core(prev: torch.Tensor, cur: torch.Tensor,
     for (h, w), n in zip(levels, iters):
         T = F.interpolate(prev[None, None].float(), size=(h, w), mode="area")[0, 0]
         I = F.interpolate(cur[None, None].float(), size=(h, w), mode="area")[None, None, 0, 0]
-        ys = (torch.arange(h, dtype=torch.float32, device=dev) * 2 + 1) / h - 1
-        xs = (torch.arange(w, dtype=torch.float32, device=dev) * 2 + 1) / w - 1
-        y, x = torch.meshgrid(ys, xs, indexing="ij")
+        y, x = torch.meshgrid(*_norm_axes(h, w, dev), indexing="ij")
         gy, gx = torch.gradient(T, spacing=(2 / h, 2 / w))
         one = torch.ones_like(x)
         # dW/dp at the identity, p = (h11-1, h12, h13, h21, h22-1, h23, h31, h32)
@@ -218,8 +222,7 @@ def warp(x: torch.Tensor, H: torch.Tensor, mode: str,
     fh, fw = frame_size or (h, w)
     Hn = _to_norm(fh, fw) @ H.double().cpu() @ torch.linalg.inv(_to_norm(fh, fw))  # same at every resolution
     inv = torch.linalg.inv(Hn).float().to(x.device)  # the 3x3 in float64, per-pixel work in float32
-    ys = (torch.arange(h, dtype=torch.float32, device=x.device) * 2 + 1) / h - 1
-    xs = (torch.arange(w, dtype=torch.float32, device=x.device) * 2 + 1) / w - 1
+    ys, xs = _norm_axes(h, w, x.device)
     qx, qy = _apply(inv, xs[None, :], ys[:, None])  # (h, w) source coordinates
     valid = (qx.abs() <= 1) & (qy.abs() <= 1)
     grid = torch.stack([qx, qy], -1)[None].to(x.dtype if x.is_floating_point() else torch.float32)

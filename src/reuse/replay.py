@@ -19,19 +19,20 @@ from __future__ import annotations
 
 import json
 import os
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from eval.harness import PRECISIONS, frame_to_tensor
 from foveation.ops import GlimpseGrid
 
-from .method import FRAME, MotionReuseConfig, advance, full_pass, glimpse_pass, paste_cells
-from .motion import MOTION_FACTOR, estimate_homography, motion_map, moving_cells, to_gray_small, warp
+from .method import (FRAME, MotionReuseConfig, cell_index, full_pass, fuse, glimpse_pass, grid_canvas, paste_cells,
+                     warp_memory)
+from .motion import IDENTITY, MOTION_FACTOR, estimate_homography, motion_map, moving_cells, to_gray_small, warp
 
 __all__ = ["build_clip_cache", "ClipCache", "ClipResult", "replay_clip", "replay_many", "reuse_bound", "cache_file"]
 
@@ -47,6 +48,11 @@ def cache_file(root: Path, clip_id: str) -> Path:
     return Path(root) / f"{clip_id}.npz"
 
 
+def tmp_cache_file(path: Path) -> Path:
+    """Where a cache is written before the rename (ends in ``.npz``: numpy would add it otherwise)."""
+    return path.with_suffix(".tmp.npz")
+
+
 def build_clip_cache(dataset, index: int, backbone: torch.nn.Module, out: Path, full_scales: Sequence[float],
                      glimpse_sizes: Sequence[int], ctx_scales: Sequence[float], device, precision: str = "fp32",
                      homography: str = "orb", margin: int = 32, allow_any_frame_size: bool = False,
@@ -60,7 +66,7 @@ def build_clip_cache(dataset, index: int, backbone: torch.nn.Module, out: Path, 
     full_scales = sorted(set(full_scales) | {TEACHER_SCALE}, reverse=True)
     T = dataset.num_frames(index)
     labeled_t = np.flatnonzero(dataset.labeled_mask(index)).astype(np.int32)
-    arrays: Dict[str, List[np.ndarray]] = {}
+    arrays: Dict[str, List[np.ndarray]] = defaultdict(list)
     hs: List[np.ndarray] = []
     inliers: List[int] = []
     labels: List[np.ndarray] = []
@@ -75,12 +81,12 @@ def build_clip_cache(dataset, index: int, backbone: torch.nn.Module, out: Path, 
             small = (h // MOTION_FACTOR, w // MOTION_FACTOR)
             for s in full_scales:
                 lab, conf, _ = full_pass(backbone, frame, s, small, dtype)
-                arrays.setdefault(_key("full", s), []).append(lab.to(torch.uint8).cpu().numpy())
-                arrays.setdefault(_key("full_conf", s), []).append(conf.cpu().numpy())
+                arrays[_key("full", s)].append(lab.to(torch.uint8).cpu().numpy())
+                arrays[_key("full_conf", s)].append(conf.cpu().numpy())
             for s in ctx_scales:
                 lab, conf, _ = full_pass(backbone, frame, s, small, dtype)
-                arrays.setdefault(_key("ctx", s), []).append(lab.to(torch.uint8).cpu().numpy())
-                arrays.setdefault(_key("ctx_conf", s), []).append(conf.cpu().numpy())
+                arrays[_key("ctx", s)].append(lab.to(torch.uint8).cpu().numpy())
+                arrays[_key("ctx_conf", s)].append(conf.cpu().numpy())
             for g in glimpse_sizes:
                 grid = GlimpseGrid((h, w), g, margin)
                 idx = torch.arange(grid.num_cells, device=frame.device)
@@ -89,19 +95,18 @@ def build_clip_cache(dataset, index: int, backbone: torch.nn.Module, out: Path, 
                                   grid.cols, idx)
                 conf = paste_cells(torch.zeros(small, dtype=torch.uint8, device=frame.device), g_conf,
                                    grid.inner // MOTION_FACTOR, grid.cols, idx)
-                arrays.setdefault(f"cells_{g}", []).append(lab.cpu().numpy())
-                arrays.setdefault(f"cells_conf_{g}", []).append(conf.cpu().numpy())
+                arrays[f"cells_{g}"].append(lab.cpu().numpy())
+                arrays[f"cells_conf_{g}"].append(conf.cpu().numpy())
             gray = to_gray_small(frame)
             if prev_gray is None:
-                H, n = torch.eye(3, dtype=torch.float64), 0
+                H, n = IDENTITY, 0
                 zero = np.zeros(small, np.uint8)
-                arrays.setdefault("motion", []).append(zero)
-                arrays.setdefault("motion_raw", []).append(zero)
+                arrays["motion"].append(zero)
+                arrays["motion_raw"].append(zero)
             else:
                 H, n = estimate_homography(prev_gray, gray, method=homography)
-                arrays.setdefault("motion", []).append(motion_map(prev_gray, gray, H).cpu().numpy())
-                arrays.setdefault("motion_raw", []).append(
-                    motion_map(prev_gray, gray, torch.eye(3, dtype=torch.float64)).cpu().numpy())
+                arrays["motion"].append(motion_map(prev_gray, gray, H).cpu().numpy())
+                arrays["motion_raw"].append(motion_map(prev_gray, gray, IDENTITY).cpu().numpy())
             hs.append(H.numpy())
             inliers.append(int(n))
             prev_gray = gray
@@ -113,7 +118,7 @@ def build_clip_cache(dataset, index: int, backbone: torch.nn.Module, out: Path, 
     data = {k: np.stack(v) for k, v in arrays.items()}
     data.update(H=np.stack(hs), inliers=np.array(inliers, np.int32), labels=np.stack(labels),
                 labeled_t=labeled_t, meta=json.dumps(meta))
-    tmp = path.with_name(path.name[:-len(".npz")] + ".tmp.npz")
+    tmp = tmp_cache_file(path)
     np.savez_compressed(tmp, **data)
     os.replace(tmp, path)
     return path
@@ -130,10 +135,6 @@ class ClipCache:
         self.meta: Dict[str, Any] = json.loads(str(self._npz["meta"]))
         self.labeled_t: np.ndarray = self._npz["labeled_t"]
         self.num_frames = int(self._npz["H"].shape[0])
-
-    @classmethod
-    def load(cls, path: Path) -> "ClipCache":
-        return cls(path)
 
     def __getitem__(self, key: str) -> np.ndarray:
         if key not in self._arrays:
@@ -174,12 +175,7 @@ def _confusion_t(label: torch.Tensor, pred: torch.Tensor) -> torch.Tensor:
 
 def _blocks(image: torch.Tensor, cell: int, cols: int, idx: torch.Tensor) -> torch.Tensor:
     """(k, cell, cell) blocks of the cells ``idx`` of an (h, w) image (zero beyond the frame)."""
-    h, w = image.shape
-    rows = -(-h // cell)
-    canvas = F.pad(image, (0, cols * cell - w, 0, rows * cell - h))
-    top, left = (idx // cols) * cell, (idx % cols) * cell
-    ar = torch.arange(cell, device=image.device)
-    return canvas[(top[:, None] + ar)[:, :, None], (left[:, None] + ar)[:, None, :]]
+    return grid_canvas(image, cell, cols)[cell_index(cell, cols, idx)]
 
 
 def replay_clip(cache: ClipCache, cfg: MotionReuseConfig, device, motion_key: str = "motion",
@@ -225,8 +221,7 @@ def replay_clip(cache: ClipCache, cfg: MotionReuseConfig, device, motion_key: st
             if cfg.ctx_scale is not None:
                 ctx = (t_of(_key("ctx", cfg.ctx_scale), t).long(), t_of(_key("ctx_conf", cfg.ctx_scale), t))
             cells, cells_conf = t_of(f"cells_{cfg.glimpse_size}", t).long(), t_of(f"cells_conf_{cfg.glimpse_size}", t)
-            base, base_conf = advance(labels, conf, H, grid, torch.zeros(grid.num_cells, dtype=torch.bool), ctx,
-                                      lambda idx: (None, None))
+            base, base_conf = warp_memory(labels, conf, H, ctx)
             if selector == "oracle":
                 teacher = t_of(_key("full", TEACHER_SCALE), t).long()
                 all_idx = torch.arange(grid.num_cells, device=dev)
@@ -250,19 +245,6 @@ def replay_clip(cache: ClipCache, cfg: MotionReuseConfig, device, motion_key: st
     return (result, preds) if return_predictions else result
 
 
-def _paste_batch(image: torch.Tensor, blocks: torch.Tensor, cell: int, cols: int, idx: torch.Tensor) -> torch.Tensor:
-    """:func:`reuse.method.paste_cells` on each image of a (B, h, w) batch, the same blocks in all."""
-    b, h, w = image.shape
-    rows = -(-h // cell)
-    canvas = F.pad(image, (0, cols * cell - w, 0, rows * cell - h))
-    top, left = (idx // cols) * cell, (idx % cols) * cell
-    ar = torch.arange(cell, device=image.device)
-    r = (top[:, None] + ar)[:, :, None].expand(-1, cell, cell)
-    c = (left[:, None] + ar)[:, None, :].expand(-1, cell, cell)
-    canvas[:, r, c] = blocks.to(canvas.dtype)[None]
-    return canvas[:, :h, :w].contiguous()
-
-
 def replay_many(cache: ClipCache, cfgs: Sequence[MotionReuseConfig], device, return_predictions: bool = False):
     """:func:`replay_clip` (motion selector) for several configs in lockstep, one batch per frame.
 
@@ -281,21 +263,17 @@ def replay_many(cache: ClipCache, cfgs: Sequence[MotionReuseConfig], device, ret
     n, s = grid.inner, grid.inner // MOTION_FACTOR
     B = len(cfgs)
     t_of = lambda key, t: cache.tensor(key, dev)[t]  # noqa: E731
-    by_scale: Dict[float, torch.Tensor] = {}
-    for b, c in enumerate(cfgs):
-        by_scale.setdefault(c.full_scale, []).append(b)
     by_ctx: Dict[float, List[int]] = {}
     for b, c in enumerate(cfgs):
         if c.ctx_scale is not None:
             by_ctx.setdefault(c.ctx_scale, []).append(b)
-    by_scale = {k: torch.tensor(v, device=dev) for k, v in by_scale.items()}
     by_ctx_t = {k: torch.tensor(v, device=dev) for k, v in by_ctx.items()}
     labels = torch.empty((B, *cache.meta["frame_size"]), dtype=torch.uint8, device=dev)
     conf = torch.empty((B, labels.shape[1] // MOTION_FACTOR, labels.shape[2] // MOTION_FACTOR), dtype=torch.uint8,
                        device=dev)
 
     def reset(t: int, which: List[int]) -> None:
-        for scale in by_scale:
+        for scale in {c.full_scale for c in cfgs}:
             sel = [b for b in which if cfgs[b].full_scale == scale]
             if sel:
                 ii = torch.tensor(sel, device=dev)
@@ -332,17 +310,14 @@ def replay_many(cache: ClipCache, cfgs: Sequence[MotionReuseConfig], device, ret
             labels = warp(labels[:, None].float(), H, "nearest")[0][:, 0].round().to(torch.uint8)
             conf = warp(conf[:, None].float(), H, "nearest", frame_size=hw)[0][:, 0].round().to(torch.uint8)
             for scale, ii in by_ctx_t.items():
-                c_labels, c_conf = t_of(_key("ctx", scale), t), t_of(_key("ctx_conf", scale), t)
-                take = c_conf[None] >= conf[ii]
-                take_full = take.repeat_interleave(MOTION_FACTOR, 1).repeat_interleave(MOTION_FACTOR, 2)
-                labels[ii] = torch.where(take_full, c_labels[None], labels[ii])
-                conf[ii] = torch.where(take, c_conf[None], conf[ii])
+                labels[ii], conf[ii] = fuse(labels[ii], conf[ii], t_of(_key("ctx", scale), t),
+                                            t_of(_key("ctx_conf", scale), t))
             if k:
                 idx = torch.nonzero(moving).flatten().to(dev)
-                labels = _paste_batch(labels, _blocks(t_of(f"cells_{g0.glimpse_size}", t), n, grid.cols, idx), n,
-                                      grid.cols, idx)
-                conf = _paste_batch(conf, _blocks(t_of(f"cells_conf_{g0.glimpse_size}", t), s, grid.cols, idx), s,
-                                    grid.cols, idx)
+                labels = paste_cells(labels, _blocks(t_of(f"cells_{g0.glimpse_size}", t), n, grid.cols, idx), n,
+                                     grid.cols, idx)
+                conf = paste_cells(conf, _blocks(t_of(f"cells_conf_{g0.glimpse_size}", t), s, grid.cols, idx), s,
+                                   grid.cols, idx)
         reset(t, [b for b in range(B) if falls[b]])
         for b in range(B):
             moved[b].append(grid.num_cells if falls[b] else k)

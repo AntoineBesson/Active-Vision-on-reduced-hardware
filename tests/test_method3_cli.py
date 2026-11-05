@@ -114,7 +114,7 @@ def test_sweep_covers_the_grid_and_equals_a_direct_replay(work):
         cfg = MotionReuseConfig(**r["config"])
         assert cfg.name() == r["name"]
         if r["clip_id"] not in caches:
-            caches[r["clip_id"]] = ClipCache.load(work / "cache" / "val" / "dummy" / f"{r['clip_id']}.npz")
+            caches[r["clip_id"]] = ClipCache(work / "cache" / "val" / "dummy" / f"{r['clip_id']}.npz")
         ref = replay_clip(caches[r["clip_id"]], cfg, "cpu")  # tau groups replayed once must match
         assert np.array_equal(np.asarray(r["conf"]), ref.conf), r["name"]
         assert r["moved_cells"] == ref.moved_cells.tolist() and r["fallback"] == ref.fallback.tolist()

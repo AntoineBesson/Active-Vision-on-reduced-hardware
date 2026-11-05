@@ -54,7 +54,7 @@ class _Static:
 @pytest.fixture(scope="module")
 def caches(tmp_path_factory, vps, oracle_backbone):
     root = tmp_path_factory.mktemp("m3cache")
-    return [ClipCache.load(build_clip_cache(vps, i, oracle_backbone, root, **CACHE_KW)) for i in range(2)]
+    return [ClipCache(build_clip_cache(vps, i, oracle_backbone, root, **CACHE_KW)) for i in range(2)]
 
 
 def _method_preds(vps, i, backbone, cfg):
@@ -124,7 +124,7 @@ def test_oracle_beats_the_motion_rule_at_equal_k_on_the_first_step(caches):
 
 
 def test_reuse_bound_of_a_static_clip_equals_the_full_pass(tmp_path, vps, oracle_backbone):
-    cache = ClipCache.load(build_clip_cache(_Static(vps), 0, oracle_backbone, tmp_path, **CACHE_KW))
+    cache = ClipCache(build_clip_cache(_Static(vps), 0, oracle_backbone, tmp_path, **CACHE_KW))
     bound = reuse_bound(cache, 1.0, "cpu")
     assert bound.shape == (cache.num_frames - 1, 19, 19)
     full0 = cache["full_1"][0].astype(np.int64)
@@ -163,7 +163,7 @@ def test_replay_matches_the_method_on_real_val_clips(tmp_path):
             MotionReuseConfig(full_scale=1.0, glimpse_size=384, theta=20, rho=0.02, tau=0.2, homography="iclk")]
     worst = 0.0
     for i in range(2):
-        cache = ClipCache.load(build_clip_cache(ds, i, model, tmp_path, full_scales=(1.0, 0.75), glimpse_sizes=(384,),
+        cache = ClipCache(build_clip_cache(ds, i, model, tmp_path, full_scales=(1.0, 0.75), glimpse_sizes=(384,),
                                                 ctx_scales=(0.25,), device="cuda", homography="iclk"))
         for cfg in cfgs:
             res, preds = replay_clip(cache, cfg, "cuda", return_predictions=True)

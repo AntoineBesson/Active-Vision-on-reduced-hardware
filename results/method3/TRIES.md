@@ -111,3 +111,30 @@ bounds 2 h. 129,600 sweep lines and 100 bounds lines per model (smaller files th
   frame on the P100) but my job script's `grep " 1 passed"` failed, because `pytest -q`
   starts that line with no space; the dependent jobs never ran. The Method 3 notebook had
   the same check and would have refused every Colab run: fixed, with a test.
+
+## 2026-11-05 — chunk 3 × PIDNet-S and BiSeNetV2 on the cluster P100
+
+Jobs 1088932 (PIDNet-S, node16) and 1088933 (BiSeNetV2, node17) ran side by side in fp32 at
+commit `adf4376`; later commits change only the notebook check, its test and this file.
+Whole job: 1 h 59 min and 1 h 53 min, against about 3 h 40 min per model on the laptop. Cache
+plus sweep took about 49 min, bounds 64–70 min. Both printed `JOB_OK`, with no error lines in
+the logs. The four files came back with matching MD5s. 129,600 sweep lines and 100 bounds
+lines per model, as on chunks 0–2. Across the four chunks: 400 distinct clips per model, none
+twice, same fields in every file. These are accuracy runs only: no P100 time goes in a latency
+figure.
+
+Merge: 518,400 sweep lines and 400 bounds lines per model, no duplicates, no clip missing
+against the dataset (18 min). `score` stops as expected: "no T4 measurement for reuse", until
+the m3-s1..3 latency sessions come back. The Method 2 full-frame reference holds the same 400
+clips.
+
+## 2026-11-05 — code clean-up, checked against the saved results
+
+Behaviour-preserving clean-up of the Method 3 code after the sweep. To check it, clip 0376 was
+re-run from scratch on the cleaned code (cache, sweep, bounds; P100, job 1089442) and compared
+with the lines saved by the chunk 3 run at `adf4376`: 1296 of 1296 sweep lines and the bounds
+line identical, for both models. The real-data replay test passes. Three real-data tests of
+Method 2's cache fail on the cluster only because its data holds no `val/` folder (they did not
+run on the laptop either, where they skip without the environment variables). The latency script's `reuse` and
+`reuse_e2e` parts run in `--quick` mode. They now time the method's own functions; no Method 3
+latency had been measured before this change. The 400 clips were not re-run.

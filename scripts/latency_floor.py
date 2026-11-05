@@ -66,8 +66,8 @@ from eval.gpu_timing import GpuTelemetry, cuda_graph, gpu_environment, interleav
 from foveation.ops import GlimpseGrid, downsample  # noqa: E402
 from foveation.pipeline import FoveatedSegmenter, FoveationConfig, StubBackbone  # noqa: E402
 from models.registry import build_backbone  # noqa: E402
-from reuse.method import full_pass, glimpse_pass, paste_cells  # noqa: E402
-from reuse.motion import MOTION_FACTOR, estimate_homography, motion_map, moving_cells, to_gray_small, warp  # noqa: E402
+from reuse.method import advance, full_pass, fuse, glimpse_pass, paste_cells, warp_memory  # noqa: E402
+from reuse.motion import MOTION_FACTOR, estimate_homography, motion_map, moving_cells, to_gray_small  # noqa: E402
 
 FRAME = (1024, 2048)
 MODELS = ("pidnet_s", "bisenetv2")
@@ -293,13 +293,10 @@ def reuse_cases(s: Dict[str, Any]) -> List[Dict[str, Any]]:
     stubs = {st: StubBackbone(19, output_stride=st, align_corners=st == 8).cuda() for st in set(STRIDE.values())}
 
     def warps(_):
-        return (warp(labels[None, None].float(), H, "nearest")[0][0, 0].round().long(),
-                warp(conf[None, None].float(), H, "nearest", frame_size=FRAME)[0][0, 0].round().to(torch.uint8))
+        return warp_memory(labels, conf, H)
 
     def fusion(_):
-        take = conf >= conf.flip(1)
-        full = take.repeat_interleave(MOTION_FACTOR, 0).repeat_interleave(MOTION_FACTOR, 1)
-        return torch.where(full, labels, labels.flip(1)), torch.where(take, conf, conf.flip(1))
+        return fuse(labels, conf, labels.flip(1), conf.flip(1))
 
     cases = []
     for sp in reuse_specs(s):
@@ -342,21 +339,16 @@ def reuse_e2e_cases(models: Dict[str, torch.nn.Module], s: Dict[str, Any]) -> Li
         net = models[model]
         grid = GlimpseGrid(FRAME, q, MARGIN)
         idx = torch.arange(k, device="cuda")
+        chosen = torch.zeros(grid.num_cells, dtype=torch.bool, device="cuda")
+        chosen[:k] = True
 
-        def step(frame, net=net, grid=grid, idx=idx, ctx=ctx):
+        def step(frame, net=net, grid=grid, chosen=chosen, ctx=ctx):
             gray = to_gray_small(frame)
             H, _ = estimate_homography(prev_gray, gray, method="iclk")
-            moving_cells(motion_map(prev_gray, gray, H), grid, 30, 0.05)
-            lab = warp(labels[None, None].float(), H, "nearest")[0][0, 0].round().long()
-            cf = warp(conf[None, None].float(), H, "nearest", frame_size=FRAME)[0][0, 0].round().to(torch.uint8)
-            if ctx is not None:
-                c_lab, c_conf, _ = full_pass(net, frame, ctx, small, torch.float16)
-                take = c_conf >= cf
-                full = take.repeat_interleave(MOTION_FACTOR, 0).repeat_interleave(MOTION_FACTOR, 1)
-                lab, cf = torch.where(full, c_lab, lab), torch.where(take, c_conf, cf)
-            g_lab, g_conf, _ = glimpse_pass(net, frame, grid, idx, torch.float16)
-            return (paste_cells(lab, g_lab, grid.inner, grid.cols, idx),
-                    paste_cells(cf, g_conf, grid.inner // MOTION_FACTOR, grid.cols, idx))
+            moving_cells(motion_map(prev_gray, gray, H), grid, 30, 0.05)  # timed; the k cells stay fixed
+            context = None if ctx is None else full_pass(net, frame, ctx, small, torch.float16)[:2]
+            return advance(labels, conf, H, grid, chosen, context,
+                           lambda i: glimpse_pass(net, frame, grid, i, torch.float16)[:2])
 
         frame = _texture(h, w, 3).expand(1, 3, h, w).contiguous()
         name = f"reuse_e2e/{model}/{q}/k{k}" + ("" if ctx is None else f"/c{ctx:g}")

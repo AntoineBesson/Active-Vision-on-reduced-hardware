@@ -33,7 +33,8 @@ from models.utils import upsample_logits
 
 from .motion import MOTION_FACTOR, estimate_homography, motion_map, moving_cells, to_gray_small, warp
 
-__all__ = ["MotionReuseConfig", "MotionReuseMethod", "FRAME", "full_pass", "glimpse_pass", "paste_cells", "advance"]
+__all__ = ["MotionReuseConfig", "MotionReuseMethod", "FRAME", "full_pass", "glimpse_pass", "paste_cells", "fuse",
+           "warp_memory", "advance"]
 
 FRAME = (1024, 2048)  # the frame size the T4 latency tables were measured at
 
@@ -85,34 +86,55 @@ def glimpse_pass(model: torch.nn.Module, frame: torch.Tensor, grid: GlimpseGrid,
     return inner.argmax(1), conf, crops
 
 
-def paste_cells(image: torch.Tensor, blocks: torch.Tensor, cell: int, cols: int, idx: torch.Tensor) -> torch.Tensor:
-    """Write (k, cell, cell) blocks into the cells ``idx`` of an (h, w) image (grid of ``cols``
-    columns, cells of ``cell`` px from the top-left); returns a new (h, w) tensor."""
-    h, w = image.shape
-    rows = -(-h // cell)
-    canvas = F.pad(image, (0, cols * cell - w, 0, rows * cell - h))
+def grid_canvas(image: torch.Tensor, cell: int, cols: int) -> torch.Tensor:
+    """(..., h, w) image zero-padded on the right and bottom to whole cells of a ``cols``-column grid."""
+    h, w = image.shape[-2:]
+    return F.pad(image, (0, cols * cell - w, 0, -(-h // cell) * cell - h))
+
+
+def cell_index(cell: int, cols: int, idx: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Row and column indices, each (k, cell, cell), of the pixels of the cells ``idx``."""
     top, left = (idx // cols) * cell, (idx % cols) * cell
-    ar = torch.arange(cell, device=image.device)
-    r = (top[:, None] + ar)[:, :, None].expand(-1, cell, cell)
-    c = (left[:, None] + ar)[:, None, :].expand(-1, cell, cell)
-    canvas.index_put_((r, c), blocks.to(canvas.dtype))
-    return canvas[:h, :w].contiguous()
+    ar = torch.arange(cell, device=idx.device)
+    return ((top[:, None] + ar)[:, :, None].expand(-1, cell, cell),
+            (left[:, None] + ar)[:, None, :].expand(-1, cell, cell))
+
+
+def paste_cells(image: torch.Tensor, blocks: torch.Tensor, cell: int, cols: int, idx: torch.Tensor) -> torch.Tensor:
+    """Write (k, cell, cell) blocks into the cells ``idx`` of an (..., h, w) image (grid of ``cols``
+    columns, cells of ``cell`` px from the top-left), the same blocks in every image of a batch;
+    returns a new tensor of the image's shape."""
+    h, w = image.shape[-2:]
+    canvas = grid_canvas(image, cell, cols)
+    r, c = cell_index(cell, cols, idx)
+    canvas[..., r, c] = blocks.to(canvas.dtype)
+    return canvas[..., :h, :w].contiguous()
+
+
+def fuse(labels: torch.Tensor, conf: torch.Tensor, c_labels: torch.Tensor,
+         c_conf: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """3b: each pixel keeps the more confident of the memory and the context (the context on ties).
+    Compared at the motion resolution, so uniform over each block of f x f pixels."""
+    take = c_conf >= conf
+    take_full = take.repeat_interleave(MOTION_FACTOR, -2).repeat_interleave(MOTION_FACTOR, -1)
+    return torch.where(take_full, c_labels, labels), torch.where(take, c_conf, conf)
+
+
+def warp_memory(labels: torch.Tensor, conf: torch.Tensor, H: torch.Tensor,
+                ctx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    """The memory warped by H and, in 3b (``ctx`` = (labels, conf)), fused with the context."""
+    h, w = labels.shape
+    labels = warp(labels[None, None].float(), H, "nearest")[0][0, 0].round().long()
+    conf = warp(conf[None, None].float(), H, "nearest", frame_size=(h, w))[0][0, 0].round().to(torch.uint8)
+    return (labels, conf) if ctx is None else fuse(labels, conf, *ctx)
 
 
 def advance(labels: torch.Tensor, conf: torch.Tensor, H: torch.Tensor, grid: GlimpseGrid, moving: torch.Tensor,
             ctx: Optional[Tuple[torch.Tensor, torch.Tensor]],
             glimpses: Callable[[torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]) -> Tuple[torch.Tensor, torch.Tensor]:
-    """One non-fallback step: warp the memory by H, fuse with the context in 3b (``ctx`` =
-    (labels, conf)), and put ``glimpses(idx)`` = (inner labels, inner conf) in the moving cells."""
-    h, w = labels.shape
-    labels = warp(labels[None, None].float(), H, "nearest")[0][0, 0].round().long()
-    conf = warp(conf[None, None].float(), H, "nearest", frame_size=(h, w))[0][0, 0].round().to(torch.uint8)
-    if ctx is not None:
-        c_labels, c_conf = ctx
-        take = c_conf >= conf  # at the motion resolution; uniform over each block of f x f pixels
-        take_full = take.repeat_interleave(MOTION_FACTOR, 0).repeat_interleave(MOTION_FACTOR, 1)
-        labels = torch.where(take_full, c_labels, labels)
-        conf = torch.where(take, c_conf, conf)
+    """One non-fallback step: :func:`warp_memory`, then ``glimpses(idx)`` = (inner labels, inner
+    conf) in the moving cells."""
+    labels, conf = warp_memory(labels, conf, H, ctx)
     if bool(moving.any()):
         idx = torch.nonzero(moving).flatten().to(labels.device)
         g_labels, g_conf = glimpses(idx)
@@ -211,10 +233,9 @@ class MotionReuseMethod:
             ctx = None
             if self.cfg.ctx_scale is not None:
                 ctx = self._pass(self.ctx_backbone, self.cfg.ctx_scale, frame, small, ledger, "context")
-            labels, conf = advance(self.labels, self.conf, H, grid, moving, ctx,
-                                   lambda idx: self._glimpses(frame, grid, idx, ledger))
+            self.labels, self.conf = advance(self.labels, self.conf, H, grid, moving, ctx,
+                                             lambda idx: self._glimpses(frame, grid, idx, ledger))
             ledger.add("warp")
-            self.labels, self.conf = labels.contiguous(), conf.contiguous()
             self.last_step = step
             return self.labels.clone()
 

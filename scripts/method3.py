@@ -25,7 +25,6 @@ Outputs are gzip-compressed JSON lines (``.jsonl.gz``), one line per (config, cl
 from __future__ import annotations
 
 import argparse
-import glob
 import gzip
 import itertools
 import json
@@ -40,7 +39,7 @@ if __package__ in (None, ""):  # `python scripts/method3.py`
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.common import REPO_ROOT, ensure_src_on_path, resolve_device  # noqa: E402
-from scripts.method2 import _floats, _strs, latency_tables, load_dataset, model_config  # noqa: E402
+from scripts.method2 import _floats, _ints, _strs, latency_tables, load_dataset, model_config  # noqa: E402
 
 ensure_src_on_path()
 
@@ -136,19 +135,19 @@ def config_groups(args: argparse.Namespace) -> List[Tuple[Any, List[float]]]:
     groups = [(MotionReuseConfig(full_scale=f, glimpse_size=g, theta=t, rho=r, tau=1.0, ctx_scale=c,
                                  margin=args.margin, homography=args.homography), _floats(args.taus))
               for c, f, g, t, r in itertools.product(variants, _floats(args.full_scales),
-                                                     [int(v) for v in _strs(args.glimpse_sizes)], _thetas(args),
+                                                     _ints(args.glimpse_sizes), _thetas(args),
                                                      _floats(args.rhos))]
     i, n = (int(v) for v in args.part.split("/"))
     return groups[i::n]
 
 
-def _moving_counts(cache, grid, theta: int, rho: float, device, key: str = "motion") -> List[int]:
+def _moving_counts(cache, grid, theta: int, rho: float, device) -> List[int]:
     """Moving cells per frame (frame 0: 0). They depend on the frames only, never on the memory."""
     import torch
 
     from reuse.motion import moving_cells
 
-    return [0] + [int(moving_cells(torch.from_numpy(cache[key][t]).to(device), grid, theta, rho).sum())
+    return [0] + [int(moving_cells(torch.from_numpy(cache["motion"][t]).to(device), grid, theta, rho).sum())
                   for t in range(1, cache.num_frames)]
 
 
@@ -163,7 +162,7 @@ def _caches(args: argparse.Namespace, model: str, clips: Sequence[int], dataset)
         path = cache_file(_cache_dir(args, model), dataset.clip_id(i))
         if not path.is_file():
             raise SystemExit(f"missing cache {path}: run `python -m scripts.method3 cache --split {args.split}`")
-        yield dataset.clip_id(i), ClipCache.load(path)
+        yield dataset.clip_id(i), ClipCache(path)
 
 
 def _inliers(cache) -> Dict[str, Any]:
@@ -210,7 +209,7 @@ def cmd_stats(args: argparse.Namespace) -> int:
     pct = {str(q): int(np.searchsorted(cdf, q / 100 - 1e-12)) for q in PERCENTILES}
     thetas = sorted(set(pct.values()))
     cells: Dict[str, Any] = {}
-    for g in (int(v) for v in _strs(args.glimpse_sizes)):
+    for g in _ints(args.glimpse_sizes):
         grid = GlimpseGrid(frame_size, g, args.margin)
         cells[str(g)] = {}
         for theta in thetas:
@@ -240,7 +239,7 @@ def cmd_stats(args: argparse.Namespace) -> int:
 def cmd_cache(args: argparse.Namespace) -> int:
     from eval.results import git_info
     from models.registry import build_backbone
-    from reuse.replay import build_clip_cache, cache_file
+    from reuse.replay import build_clip_cache, cache_file, tmp_cache_file
 
     device = resolve_device(args.device)
     dataset, clips = _dataset_and_clips(args)
@@ -251,7 +250,7 @@ def cmd_cache(args: argparse.Namespace) -> int:
         todo = []
         for i in clips:
             path = cache_file(out, dataset.clip_id(i))
-            tmp = path.with_name(path.name[:-len(".npz")] + ".tmp.npz")
+            tmp = tmp_cache_file(path)
             if tmp.exists():
                 tmp.unlink()  # a cut-off write: never trusted
             if path.exists():
@@ -266,7 +265,7 @@ def cmd_cache(args: argparse.Namespace) -> int:
                 "dataset_fingerprint": dataset.fingerprint()}
         for n, i in enumerate(todo):
             build_clip_cache(dataset, i, backbone, out, _floats(args.full_scales),
-                             [int(v) for v in _strs(args.glimpse_sizes)], _floats(args.ctx_scales), device,
+                             _ints(args.glimpse_sizes), _floats(args.ctx_scales), device,
                              precision=args.precision, homography=args.homography, margin=args.margin,
                              allow_any_frame_size=args.fixture, extra_meta=meta)
             built += 1
@@ -288,8 +287,8 @@ def cmd_bounds(args: argparse.Namespace) -> int:
     dataset, clips = _dataset_and_clips(args)
     rules = [MotionReuseConfig(full_scale=f, glimpse_size=g, theta=t, rho=r, tau=1.0, margin=args.margin,
                                homography=args.homography)
-             for f, g, t, r in itertools.product(_floats(args.full_scales), [int(v) for v in _strs(args.glimpse_sizes)],
-                                                 _thetas(args), _floats(args.rhos))]
+             for f, g, t, r in itertools.product(_floats(args.full_scales), _ints(args.glimpse_sizes), _thetas(args),
+                                                 _floats(args.rhos))]
     for model in _strs(args.models):
         def rows():
             for clip_id, cache in _caches(args, model, clips, dataset):
@@ -341,25 +340,29 @@ def cmd_sweep(args: argparse.Namespace) -> int:
                     replace(base, tau=tau) for tau in taus)
             for n, (clip_id, cache) in enumerate(_caches(args, model, clips, dataset)):
                 replays = 0
+                inliers = _inliers(cache)
                 for (g, theta, rho), cfgs in by_key.items():
                     grid = cache.grid(g)
                     counts = _moving_counts(cache, grid, theta, rho, device)
+
+                    def replay_key(cfg):  # same fallback frames -> same replay (they differ only in tau)
+                        return cfg.full_scale, cfg.ctx_scale, _fallbacks(counts, grid.num_cells, cfg.tau)
+
                     unique: Dict[Tuple[Any, ...], Any] = {}
-                    for cfg in cfgs:  # same fallback frames -> same replay (they differ only in tau)
-                        unique.setdefault((cfg.full_scale, cfg.ctx_scale, _fallbacks(counts, grid.num_cells, cfg.tau)), cfg)
-                    reps = list(unique.values())
+                    for cfg in cfgs:
+                        unique.setdefault(replay_key(cfg), cfg)
+                    keys, reps = list(unique), list(unique.values())
                     results: Dict[Tuple[Any, ...], Any] = {}
                     for start in range(0, len(reps), args.batch):
-                        for key, res in zip(list(unique)[start:start + args.batch],
-                                            replay_many(cache, reps[start:start + args.batch], device)):
-                            results[key] = res
+                        results.update(zip(keys[start:start + args.batch],
+                                           replay_many(cache, reps[start:start + args.batch], device)))
                     replays += len(reps)
                     for cfg in cfgs:
-                        res = results[(cfg.full_scale, cfg.ctx_scale, _fallbacks(counts, grid.num_cells, cfg.tau))]
+                        res = results[replay_key(cfg)]
                         yield {"split": args.split, "model": model, "clip_id": clip_id, "name": cfg.name(),
                                "config": asdict(cfg), "num_cells": res.num_cells, "conf": res.conf.tolist(),
                                "moved_cells": res.moved_cells.tolist(), "fallback": res.fallback.tolist(),
-                               "inliers": _inliers(cache)}
+                               "inliers": inliers}
                 print(f"[method3 sweep] {model} clip {n + 1}/{len(clips)}: {replays} replays "
                       f"({time.time() - t0:.0f} s)", flush=True)
 
@@ -381,23 +384,25 @@ def cmd_merge(args: argparse.Namespace) -> int:
     out_dir = _out_dir(args)
     for model in _strs(args.models):
         for kind in ("sweep", "bounds"):
-            files = sorted(p for p in out_dir.glob(f"{kind}_{args.split}_{model}_*.jsonl.gz"))
+            files = sorted(out_dir.glob(f"{kind}_{args.split}_{model}_*.jsonl.gz"))
             if not files:
                 continue
             seen: Dict[Tuple[str, str], str] = {}
             clips_of: Dict[str, set] = {}
-            rows = []
-            for f in files:
-                for r in read_lines(f):
-                    key = (r.get("name", ""), r["clip_id"])
-                    if key in seen:
-                        raise SystemExit(f"duplicate {kind} line {key} in {f.name} and {seen[key]}: "
-                                         "a chunk merged twice?")
-                    seen[key] = f.name
-                    clips_of.setdefault(key[0], set()).add(r["clip_id"])
-                    rows.append(r)
+
+            def rows():  # one line in memory at a time
+                for f in files:
+                    for r in read_lines(f):
+                        key = (r.get("name", ""), r["clip_id"])
+                        if key in seen:
+                            raise SystemExit(f"duplicate {kind} line {key} in {f.name} and {seen[key]}: "
+                                             "a chunk merged twice?")
+                        seen[key] = f.name
+                        clips_of.setdefault(key[0], set()).add(r["clip_id"])
+                        yield r
+
             path = out_dir / f"{kind}_{args.split}_{model}.jsonl.gz"
-            n = _write_lines(path, rows)
+            n = _write_lines(path, rows())
             present = set.union(*clips_of.values())
             missing = set()
             for clips in clips_of.values():
@@ -525,11 +530,10 @@ def cmd_score(args: argparse.Namespace) -> int:
         cost = FrameCost(tables, model)
         accs: Dict[str, _Acc] = {}
         cfgs: Dict[str, Any] = {}
-        clip_ids: List[str] = []
+        clip_ids = set()
         for r in read_lines(path):
             cfg = cfgs.setdefault(r["name"], MotionReuseConfig(**r["config"]))
-            if r["clip_id"] not in clip_ids:
-                clip_ids.append(r["clip_id"])
+            clip_ids.add(r["clip_id"])
             accs.setdefault(r["name"], _Acc()).add(r["conf"], cost.frames(cfg, r["moved_cells"], r["fallback"]),
                                                    r["moved_cells"], r["fallback"], r["num_cells"])
         ref = fullframe_ref(Path(args.fullframe), model, args.split, tables, sorted(clip_ids))
