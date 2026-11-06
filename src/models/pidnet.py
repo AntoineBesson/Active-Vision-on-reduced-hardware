@@ -399,11 +399,15 @@ class PIDNetBackbone(nn.Module):
         self.num_classes = int(num_classes)
         self.mean = tuple(float(v) for v in mean)
         self.std = tuple(float(v) for v in std)
+        # device-resident copies, so forward() does no host->device copy (and can be
+        # captured in a CUDA graph); non-persistent: checkpoints are unaffected
+        self.register_buffer("_mean", torch.tensor(self.mean).view(1, -1, 1, 1), persistent=False)
+        self.register_buffer("_std", torch.tensor(self.std).view(1, -1, 1, 1), persistent=False)
         self.net = PIDNet(num_classes=self.num_classes, augment=False, **PIDNET_VARIANTS[variant])
         self.weights_info: Dict[str, Any] = {"source": None}
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        x = pad_to_multiple(normalize(images, self.mean, self.std), self.size_divisor)
+        x = pad_to_multiple(normalize(images, self._mean, self._std), self.size_divisor)
         return self.net(x)
 
     def load_weights(

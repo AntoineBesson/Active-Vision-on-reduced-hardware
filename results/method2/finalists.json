@@ -1,0 +1,2188 @@
+{
+  "source": "experiments/method2/sweep_train_weighted.jsonl",
+  "rule": "per pair: Pareto front over (T4 median latency, mIoU) and the best mIoU within each full-frame scale's latency; oracle, random and tiling excluded",
+  "finalists": [
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.25,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.5,
+            0.25,
+            0.5,
+            0.5,
+            4.0,
+            1.0,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            1.0,
+            1.0,
+            4.0,
+            4.0,
+            2.0,
+            4.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 7.156255900859833,
+      "miou": 0.607539654303602,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.25,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.5,
+            0.25,
+            0.5,
+            0.5,
+            4.0,
+            1.0,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            1.0,
+            1.0,
+            4.0,
+            4.0,
+            2.0,
+            4.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 7.9742560386657715,
+      "miou": 0.6186631459228217,
+      "split": "train",
+      "reasons": [
+        "pareto",
+        "best_within_fullframe_s0.5"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.25,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "conf",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            1.0,
+            4.0,
+            0.5,
+            0.25,
+            4.0,
+            1.0,
+            4.0,
+            0.5,
+            4.0,
+            4.0,
+            4.0,
+            0.25,
+            0.5
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 8.319103956222534,
+      "miou": 0.6224674974687289,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.25,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.5,
+            0.25,
+            0.5,
+            0.5,
+            4.0,
+            1.0,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            1.0,
+            1.0,
+            4.0,
+            4.0,
+            2.0,
+            4.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 9.576464176177979,
+      "miou": 0.6319336907507145,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.25,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "replace",
+        "k": 1,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 9.85259199142456,
+      "miou": 0.6367957772890648,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            4.0,
+            2.0,
+            1.0,
+            0.25,
+            0.5,
+            4.0,
+            4.0,
+            2.0,
+            1.0,
+            4.0,
+            4.0,
+            4.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 9.93152004480362,
+      "miou": 0.6756558706269155,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            4.0,
+            2.0,
+            1.0,
+            0.25,
+            0.5,
+            4.0,
+            4.0,
+            2.0,
+            1.0,
+            4.0,
+            4.0,
+            4.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 10.756911993026733,
+      "miou": 0.6798870111852741,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "top10",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 12.392048120498657,
+      "miou": 0.6853812560252368,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.375,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "conf",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            1.0,
+            2.0,
+            4.0,
+            1.0,
+            0.5,
+            0.25,
+            1.0,
+            4.0,
+            4.0,
+            1.0,
+            4.0,
+            4.0,
+            4.0,
+            4.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 13.094079852104187,
+      "miou": 0.6862825647859381,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            2.0,
+            4.0,
+            1.0,
+            0.25,
+            0.25,
+            4.0,
+            2.0,
+            1.0,
+            0.25,
+            1.0,
+            4.0,
+            4.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 14.505984127521515,
+      "miou": 0.7089740448595429,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            2.0,
+            4.0,
+            1.0,
+            0.25,
+            0.25,
+            4.0,
+            2.0,
+            1.0,
+            0.25,
+            1.0,
+            4.0,
+            4.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 15.34603238105774,
+      "miou": 0.7107460695676016,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            2.0,
+            4.0,
+            1.0,
+            0.25,
+            0.25,
+            4.0,
+            2.0,
+            1.0,
+            0.25,
+            1.0,
+            4.0,
+            4.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 16.969568252563477,
+      "miou": 0.7133822638880094,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 17.780688047409058,
+      "miou": 0.714948003236297,
+      "split": "train",
+      "reasons": [
+        "pareto",
+        "best_within_fullframe_s0.75"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 8,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            2.0,
+            4.0,
+            1.0,
+            0.25,
+            0.25,
+            4.0,
+            2.0,
+            1.0,
+            0.25,
+            1.0,
+            4.0,
+            4.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 20.755776166915894,
+      "miou": 0.7156559836559377,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 21.759584426879883,
+      "miou": 0.7170334632909937,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 21.99390459060669,
+      "miou": 0.7234427382527545,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 8,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 30.64547300338745,
+      "miou": 0.7279877949244264,
+      "split": "train",
+      "reasons": [
+        "pareto",
+        "best_within_fullframe_s1"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+bisenetv2",
+        "context_model": "bisenetv2",
+        "glimpse_model": "bisenetv2",
+        "context_scale": 0.5,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 8,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 45.01463985443115,
+      "miou": 0.7309899086561208,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.25,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.5,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            0.5,
+            4.0,
+            1.0,
+            0.5,
+            0.5,
+            0.25,
+            2.0,
+            2.0,
+            1.0,
+            1.0,
+            4.0,
+            0.5,
+            1.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 7.585503816604614,
+      "miou": 0.6056962648653981,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.25,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.5,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            0.5,
+            4.0,
+            1.0,
+            0.5,
+            0.5,
+            0.25,
+            2.0,
+            2.0,
+            1.0,
+            1.0,
+            4.0,
+            0.5,
+            1.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 8.090896010398865,
+      "miou": 0.6148805110300762,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.25,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "margin",
+          "pool": "mean",
+          "class_weights": [
+            0.5,
+            0.25,
+            0.5,
+            0.5,
+            0.25,
+            2.0,
+            0.25,
+            2.0,
+            1.0,
+            0.25,
+            4.0,
+            1.0,
+            4.0,
+            0.5,
+            4.0,
+            4.0,
+            0.25,
+            1.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 8.1321120262146,
+      "miou": 0.6177115637906916,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.25,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 9.087119936943054,
+      "miou": 0.6273061939890251,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.25,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 9.361167907714844,
+      "miou": 0.6355447489032181,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.5,
+            1.0,
+            0.5,
+            2.0,
+            0.5,
+            1.0,
+            1.0,
+            0.25,
+            4.0,
+            4.0,
+            2.0,
+            1.0,
+            4.0,
+            1.0,
+            1.0,
+            4.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 10.3607679605484,
+      "miou": 0.674331285026572,
+      "split": "train",
+      "reasons": [
+        "pareto",
+        "best_within_fullframe_s0.75"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.5,
+            1.0,
+            0.5,
+            2.0,
+            0.5,
+            1.0,
+            1.0,
+            0.25,
+            4.0,
+            4.0,
+            2.0,
+            1.0,
+            4.0,
+            1.0,
+            1.0,
+            4.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 10.873551964759827,
+      "miou": 0.6780492066804724,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            1.0,
+            1.0,
+            1.0,
+            0.5,
+            1.0,
+            0.5,
+            2.0,
+            0.5,
+            1.0,
+            1.0,
+            0.25,
+            4.0,
+            4.0,
+            2.0,
+            1.0,
+            4.0,
+            1.0,
+            1.0,
+            4.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 12.052096009254456,
+      "miou": 0.6819670789036767,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "top10",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 12.219167947769165,
+      "miou": 0.6859461057400811,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 14.294991970062256,
+      "miou": 0.6880513138802526,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 8,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 14.517231941223145,
+      "miou": 0.6881065082978886,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 14.742048144340515,
+      "miou": 0.6988244504595041,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            2.0,
+            1.0,
+            1.0,
+            1.0,
+            2.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            0.25,
+            4.0,
+            2.0,
+            0.25,
+            0.25,
+            4.0,
+            1.0,
+            1.0,
+            4.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 14.935232043266296,
+      "miou": 0.7075670776758617,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            2.0,
+            1.0,
+            1.0,
+            1.0,
+            2.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            0.25,
+            4.0,
+            2.0,
+            0.25,
+            0.25,
+            4.0,
+            1.0,
+            1.0,
+            4.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 15.462672352790833,
+      "miou": 0.7087259598636254,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            2.0,
+            1.0,
+            1.0,
+            1.0,
+            2.0,
+            1.0,
+            1.0,
+            0.25,
+            1.0,
+            2.0,
+            0.25,
+            4.0,
+            2.0,
+            0.25,
+            0.25,
+            4.0,
+            1.0,
+            1.0,
+            4.0
+          ],
+          "selection": "greedy",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 15.534736275672913,
+      "miou": 0.7087965830453861,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 15.685088038444519,
+      "miou": 0.7111174458838957,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 16.905776143074036,
+      "miou": 0.7139287754444028,
+      "split": "train",
+      "reasons": [
+        "pareto",
+        "best_within_fullframe_s1"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 19.43177628517151,
+      "miou": 0.7167989752392272,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 8,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 25.15123224258423,
+      "miou": 0.7186315743981895,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "bisenetv2+pidnet_s",
+        "context_model": "bisenetv2",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 8,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 34.76740837097168,
+      "miou": 0.7206268781845458,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.25,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "margin",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            4.0,
+            1.0,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            2.0,
+            1.0,
+            4.0,
+            2.0,
+            4.0,
+            2.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 6.903295814990997,
+      "miou": 0.5452865753956431,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.25,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "margin",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            4.0,
+            1.0,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            2.0,
+            1.0,
+            4.0,
+            2.0,
+            4.0,
+            2.0,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 7.455759942531586,
+      "miou": 0.5569911761664142,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.25,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "replace",
+        "k": 1,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 7.458064079284668,
+      "miou": 0.5725338701915901,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            4.0,
+            2.0,
+            0.5,
+            1.0,
+            0.5,
+            2.0,
+            2.0,
+            1.0,
+            0.25,
+            0.25,
+            4.0,
+            2.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 7.926447868347168,
+      "miou": 0.6266345812901919,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            4.0,
+            2.0,
+            0.5,
+            1.0,
+            0.5,
+            2.0,
+            2.0,
+            1.0,
+            0.25,
+            0.25,
+            4.0,
+            2.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 8.476912021636963,
+      "miou": 0.6328916286779637,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "replace",
+        "k": 1,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 8.489776015281677,
+      "miou": 0.6354227075017519,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.375,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 0.5,
+        "fusion": "replace",
+        "k": 1,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 9.416063904762268,
+      "miou": 0.6472048347096764,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "margin",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            1.0,
+            0.5,
+            0.25,
+            2.0,
+            0.25,
+            4.0,
+            1.0,
+            1.0,
+            4.0,
+            0.25,
+            4.0,
+            0.5,
+            0.5,
+            0.25,
+            4.0,
+            4.0,
+            1.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 9.517760038375854,
+      "miou": 0.6830385249063432,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "margin",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            1.0,
+            0.5,
+            0.25,
+            2.0,
+            0.25,
+            4.0,
+            1.0,
+            1.0,
+            4.0,
+            0.25,
+            4.0,
+            0.5,
+            0.5,
+            0.25,
+            4.0,
+            4.0,
+            1.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 10.067392230033875,
+      "miou": 0.6859572635684096,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 1,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            0.5,
+            2.0,
+            4.0,
+            0.5,
+            4.0,
+            0.25,
+            4.0,
+            4.0,
+            1.0,
+            0.25,
+            4.0,
+            4.0,
+            0.25,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 10.074928164482117,
+      "miou": 0.6860258436179726,
+      "split": "train",
+      "reasons": [
+        "pareto",
+        "best_within_fullframe_s0.75"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 256,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "margin",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            1.0,
+            0.5,
+            0.25,
+            2.0,
+            0.25,
+            4.0,
+            1.0,
+            1.0,
+            4.0,
+            0.25,
+            4.0,
+            0.5,
+            0.5,
+            0.25,
+            4.0,
+            4.0,
+            1.0,
+            2.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 11.269184231758118,
+      "miou": 0.6883568142269101,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "uncertainty",
+          "score": "maxprob",
+          "pool": "mean",
+          "class_weights": [
+            0.25,
+            0.5,
+            0.5,
+            0.25,
+            1.0,
+            0.5,
+            2.0,
+            4.0,
+            0.5,
+            4.0,
+            0.25,
+            4.0,
+            4.0,
+            1.0,
+            0.25,
+            4.0,
+            4.0,
+            0.25,
+            1.0
+          ],
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 11.380064129829407,
+      "miou": 0.6903773635645971,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 2,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 13.345216035842896,
+      "miou": 0.6919521944618634,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 13.992016196250916,
+      "miou": 0.699710767037551,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 4,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 18.154096364974976,
+      "miou": 0.7015109915249124,
+      "split": "train",
+      "reasons": [
+        "pareto",
+        "best_within_fullframe_s1"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 384,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 8,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 19.898624181747437,
+      "miou": 0.7085448115574472,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    },
+    {
+      "method": {
+        "name": "foveated",
+        "pair": "pidnet_s+pidnet_s",
+        "context_model": "pidnet_s",
+        "glimpse_model": "pidnet_s",
+        "context_scale": 0.5,
+        "glimpse_size": 512,
+        "margin": 32,
+        "glimpse_scale": 1.0,
+        "fusion": "mean",
+        "k": 8,
+        "rule": {
+          "kind": "prior",
+          "score": "entropy",
+          "pool": "mean",
+          "class_weights": null,
+          "selection": "topk",
+          "suppress": 1,
+          "seed": 0
+        }
+      },
+      "latency_ms": 29.23857617378235,
+      "miou": 0.7093830566503858,
+      "split": "train",
+      "reasons": [
+        "pareto"
+      ]
+    }
+  ]
+}

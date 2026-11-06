@@ -1,0 +1,144 @@
+{
+ "check": "backbones in fp16 vs fp32, val, first finalist of each pair",
+ "threshold_points": 0.1,
+ "results": [
+  {
+   "method": {
+    "name": "foveated",
+    "pair": "bisenetv2+bisenetv2",
+    "context_model": "bisenetv2",
+    "glimpse_model": "bisenetv2",
+    "context_scale": 0.25,
+    "glimpse_size": 256,
+    "margin": 32,
+    "glimpse_scale": 1.0,
+    "fusion": "mean",
+    "k": 1,
+    "rule": {
+     "kind": "uncertainty",
+     "score": "maxprob",
+     "pool": "mean",
+     "class_weights": [
+      0.25,
+      0.5,
+      0.5,
+      0.25,
+      0.5,
+      0.5,
+      4.0,
+      1.0,
+      0.5,
+      0.5,
+      0.25,
+      1.0,
+      1.0,
+      1.0,
+      4.0,
+      4.0,
+      2.0,
+      4.0,
+      1.0
+     ],
+     "selection": "topk",
+     "suppress": 1,
+     "seed": 0
+    }
+   },
+   "val_miou_fp32": 0.6023607639113323,
+   "val_miou_fp16": 0.6023503225587817,
+   "delta_points": -0.0010441352550571992
+  },
+  {
+   "method": {
+    "name": "foveated",
+    "pair": "bisenetv2+pidnet_s",
+    "context_model": "bisenetv2",
+    "glimpse_model": "pidnet_s",
+    "context_scale": 0.25,
+    "glimpse_size": 256,
+    "margin": 32,
+    "glimpse_scale": 1.0,
+    "fusion": "mean",
+    "k": 1,
+    "rule": {
+     "kind": "uncertainty",
+     "score": "maxprob",
+     "pool": "mean",
+     "class_weights": [
+      0.5,
+      0.5,
+      0.5,
+      0.25,
+      1.0,
+      0.5,
+      4.0,
+      1.0,
+      0.5,
+      0.5,
+      0.25,
+      2.0,
+      2.0,
+      1.0,
+      1.0,
+      4.0,
+      0.5,
+      1.0,
+      2.0
+     ],
+     "selection": "topk",
+     "suppress": 1,
+     "seed": 0
+    }
+   },
+   "val_miou_fp32": 0.6008631537290574,
+   "val_miou_fp16": 0.6008264072639831,
+   "delta_points": -0.0036746465074344314
+  },
+  {
+   "method": {
+    "name": "foveated",
+    "pair": "pidnet_s+pidnet_s",
+    "context_model": "pidnet_s",
+    "glimpse_model": "pidnet_s",
+    "context_scale": 0.25,
+    "glimpse_size": 256,
+    "margin": 32,
+    "glimpse_scale": 1.0,
+    "fusion": "mean",
+    "k": 1,
+    "rule": {
+     "kind": "uncertainty",
+     "score": "margin",
+     "pool": "mean",
+     "class_weights": [
+      0.25,
+      0.5,
+      0.25,
+      0.25,
+      0.5,
+      0.5,
+      4.0,
+      1.0,
+      0.5,
+      0.5,
+      0.25,
+      1.0,
+      2.0,
+      1.0,
+      4.0,
+      2.0,
+      4.0,
+      2.0,
+      1.0
+     ],
+     "selection": "topk",
+     "suppress": 1,
+     "seed": 0
+    }
+   },
+   "val_miou_fp32": 0.5120826781673498,
+   "val_miou_fp16": 0.5122408659404616,
+   "delta_points": 0.015818777311182863
+  }
+ ]
+}

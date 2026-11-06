@@ -17,7 +17,7 @@ Nothing outside one dataset adapter is Cityscapes-specific: preprocessing,
 policies and evaluation are written against a dataset-agnostic interface so
 they can be retrained or reused on other video segmentation datasets.
 
-## Where we are (2026-10-30)
+## Where we are (2026-11-05)
 
 **Method 1 (full frame) is done and validated on real data.** The data
 layer, backbones, evaluation harness and baseline CLI run end to end on
@@ -37,21 +37,39 @@ PIDNet-S is better and cheaper at full resolution, but BiSeNetV2 degrades
 much more gracefully at low resolution: the context view of a foveated
 method will run at those low scales, so this matters for the choice below.
 
+**Method 2 (foveation without memory) is done, and the result is negative.**
+No configuration beats the full frame on a T4, with both sides timed end to end.
+Of the 55 finalists picked on VPS train, 46 fall below the full-frame
+mIoU-vs-latency curve on val and 9 are dominated. The best is BiSeNetV2 (0.5
+context + 4 fused 384 px glimpses) at -0.5 mIoU at equal latency, about 7.7 ms
+slower at equal mIoU. Glimpses lack context,
+and a full frame at a slightly higher scale is cheap on a T4. See
+[results/method2](results/method2/README.md) and the ledger of tries
+[results/method2/TRIES.md](results/method2/TRIES.md).
+
+**Method 3 (motion-gated reuse of the previous frame) is negative on VPS train,
+and stopped before val.** None of the 1296 configurations per model lands above
+the full-frame curve on a T4, under the mean or the p95 per-frame judge; the zone
+oracle, tested on the rules without fallback, stays below it too. The best reading
+is BiSeNetV2 at -2.6 mIoU at equal mean latency. Deciding what to recompute costs
+about 6.8 ms, a frame-old prediction already loses about 5 points, and motion
+is a poor proxy for error. See [results/method3](results/method3/README.md) and
+the ledger [results/method3/TRIES.md](results/method3/TRIES.md).
+
 ### Next steps
 
-1. **Method 2: foveation without memory.** Implement a `FrameMethod` that
-   runs the backbone on a low-resolution context view (e.g. scale 0.25),
-   then on K high-resolution crops chosen by an uncertainty-driven
-   `GazePolicy` (e.g. top-K entropy boxes), pastes the crop predictions back
-   into the full-frame map, and reports `context`, `glimpses`, `policy` and
-   `recomposition` to the cost ledger. Success = above the full-frame
-   mIoU-vs-pixel-fraction curve above. Decide first which backbone serves as
-   context (see the low-scale numbers).
-2. **Method 3: persistent canvas.** Implement `SceneMemory` (canvas of
-   logits/confidence with age) and a canvas-aware policy; this is where the
-   unlabelled in-between frames of each 30-frame clip are used.
-3. **Final latency on a T4** (Colab): the numbers here are from a laptop
-   RTX 2060 and are only indicative.
+1. **Method 2: done (negative), see above.** The finalists' latency is confirmed
+   by 3 end-to-end T4 sessions.
+2. **Method 3: done (negative on train), see above.** Next memory idea, not
+   started: a persistent canvas with `SceneMemory` (logits/confidence with age)
+   and a canvas-aware policy.
+3. **Latency on a T4** (Colab): the latency floor is measured (3 sessions,
+   CUDA graphs, FP16, batch 1), see
+   [results/latency_floor](results/latency_floor/README.md). Full frame:
+   PIDNet-S 19.4 ms, BiSeNetV2 31.2 ms; the best foveated configuration
+   tested is 1.6–1.7× (PIDNet-S) and 2.1–2.2× (BiSeNetV2) faster, before any
+   accuracy is measured. The laptop RTX 2060 numbers below are only
+   indicative.
 4. Optional: Method 4 (RL policy); a secondary evaluation on the 500 official
    val images (frame `_000019`) for less noisy rare-class IoUs.
 
@@ -89,9 +107,10 @@ python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yam
 | Evaluation harness: mIoU, FLOPs, GPU latency, peak memory, run JSON | ✅ incl. GPU path (RTX 2060) |
 | Full-frame baseline CLI, 5 input scales | ✅ fixture and real data |
 | Real-data diagnostics script | ✅ run on real data, no problem |
-| Method 2: foveation without memory | ⬜ next |
-| Method 3: foveation + persistent canvas | ⬜ |
-| Method 4: RL-trained policy | ⬜ optional |
+| Method 2: foveation without memory | ✅ negative, [results](results/method2/README.md) |
+| Method 3: motion-gated reuse | ✅ negative on train, val not run, [results](results/method3/README.md) |
+| Persistent canvas memory | ⬜ not started |
+| RL-trained policy | ⬜ optional |
 | Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout

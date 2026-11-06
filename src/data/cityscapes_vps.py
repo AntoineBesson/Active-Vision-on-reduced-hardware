@@ -179,7 +179,10 @@ class CityscapesVPSConfig:
     """
 
     root: Optional[str] = None
-    split: str = "val"  # one of {"train", "val", "test"}
+    split: str = "val"  # one of {"train", "val", "test"}, or a variant such as "train_all"
+    # Folder of the split under <root> (None: the split's own name). Lets a split
+    # variant ("train_all": train labels, every frame) read another split's files.
+    directory: Optional[str] = None
 
     # Sub-directory names, relative to <root>/<split>/. annotation_subdir=None
     # means "no annotations" (e.g. the test split).
@@ -257,7 +260,7 @@ class CityscapesVPSConfig:
 
     @property
     def split_dir(self) -> Path:
-        return self.resolve_root() / self.split
+        return self.resolve_root() / (self.directory or self.split)
 
     @property
     def image_dir(self) -> Path:

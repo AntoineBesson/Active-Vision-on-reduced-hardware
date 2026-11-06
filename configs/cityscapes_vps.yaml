@@ -73,6 +73,17 @@ split_overrides:
       label_divisor: 1000
     annotated_every: 1
     keyframe_offset: 0
+  train_all:
+    # Train labels with EVERY frame of each clip (Method 3 needs the in-between
+    # frames). train/img_all is not part of the official preparation: build it
+    # from the raw leftImg8bit_sequence/val download with
+    # scripts/make_train_img_all.py. Frames are named and grouped as in val.
+    directory: train
+    annotation_subdir: panoptic_inst
+    label_mapping:
+      encoding: gray
+      id_rule: divisor
+      label_divisor: 1000
   test:
     annotation_subdir: null   # test labels are withheld
 
