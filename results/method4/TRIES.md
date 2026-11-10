@@ -104,3 +104,31 @@ reference: best canvas configuration −4.59 points (PIDNet-S,
 `4o-B/c0.5/g512/a1/y0.02`, 18.2 ms) and −0.98 point (BiSeNetV2,
 `4o-B/c0.5/g384/a1/y0.02`, 28.5 ms). The same two configurations as on 100 and
 200 clips, within 0.3 point.
+
+## 2026-11-10 — chunk 2, and the reading on the 400 clips: the check FAILS
+
+Chunk 2 on the laptop, 3 h 05; the GPU peaked at 90 °C and the watchdog did not
+have to stop it. `merge`: 4 files, 400 clips, 277 200 lines per model. `score`
+on the complete set reads the pre-registered rule
+(`experiments/method4/train_all/verdict_train_all.json`): **fails for both
+models**. Best configuration of variant A or B at equal mean latency: PIDNet-S
+−4.56 points (`4o-B/c0.5/g384/a1/y0.05`, 12.4 ms), BiSeNetV2 −0.85 point
+(`4o-B/c0.5/g384/a1/y0.02`, 27.9 ms). Of the 693 configurations per model,
+none is above the curve under the mean or the p95 judge, against the primary or
+the measured end-to-end reference. The numbers are in the README.
+
+Two points seen only on the full grid, which correct the chunk 0 entry (it
+looked at context 0.5 only):
+
+- The canvas does help a weak context. At equal k against variant N, mean over
+  glimpse sizes and k: +1.4 (B, a_max 1) to +3.1 points (A, a_max 4) at
+  context 0.25 for PIDNet-S, +0.8 to +1.9 for BiSeNetV2. At context 0.5 the
+  gain is +0.0 (B) and +0.2 to +0.3 (A), and a_max = ∞ loses 0.6 to 1.1 point.
+  The configurations nearest the curve all use context 0.5, where there is
+  little left for the canvas to add.
+- BiSeNetV2's full-frame curve is flat at the top on these clips: 0.7339 at
+  scale 0.75 (17.8 ms) against 0.7335 at scale 1 (31.2 ms). A configuration at
+  28 ms is compared with a plateau it does not reach (best mIoU of any
+  configuration: 0.7266 at 43 ms).
+
+Total cost of the bound: about 12 h of laptop GPU for the four chunks.

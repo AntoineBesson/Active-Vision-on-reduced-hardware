@@ -1,7 +1,9 @@
-# Method 4, phase 1: feasibility bound of a persistent canvas — protocol and status
+# Method 4, phase 1: feasibility bound of a persistent canvas — negative
 
-**Status (2026-11-10): chunks 0 and 1 run (200 clips of 400); the rule is not read yet.** The grid, the
-latency parts and the pass rule were fixed in the
+**Result (2026-11-10): the feasibility check fails for both backbones, so
+Method 4 is not built.** With an oracle selector that costs nothing and a
+persistent canvas, no configuration reaches the full-frame curve on VPS train
+on a T4. The grid, the latency parts and the pass rule were fixed in the
 [spec](../../docs/superpowers/specs/2026-11-10-method4-canvas-bound-design.md)
 before any run. Tries are logged in [TRIES.md](TRIES.md).
 
@@ -87,12 +89,62 @@ pidnet_s` runs one model.
 
 ## Results
 
-Pending: the rule is read on the 400 clips only.
+400 clips of `train_all` (2400 labelled frames), 693 configurations per model.
+mIoU points against the full-frame curve at equal latency; best configuration
+of each variant.
 
-Chunks 0 and 1 (200 clips, partial): no configuration is above the full-frame
-curve. The best canvas configuration is 4.65 points below it for PIDNet-S and
-0.94 point below for BiSeNetV2 (variant B, mean judge). Details in
-[TRIES.md](TRIES.md).
+| Model | Judge, reference | N (no canvas) | B (no warp) | A (IC-LK) |
+|---|---|---|---|---|
+| PIDNet-S | mean, T4 tables | −4.39 (`c0.5/g384/y0.02`, 17.3 ms) | **−4.56** (`c0.5/g384/a1/y0.05`, 12.4 ms) | −6.06 (`c0.5/g512/a2/y0.05`, 18.0 ms) |
+| PIDNet-S | p95, T4 tables | −4.39 | −4.57 | not readable |
+| PIDNet-S | mean, measured end to end | −2.63 | −2.74 | −5.28 |
+| BiSeNetV2 | mean, T4 tables | −0.90 (`c0.5/g384/y0.02`, 27.0 ms) | **−0.85** (`c0.5/g384/a1/y0.02`, 27.9 ms) | −1.05 (`c0.5/g384/a1/k4`, 30.2 ms) |
+| BiSeNetV2 | p95, T4 tables | −1.24 | −1.19 | −1.54 |
+| BiSeNetV2 | mean, measured end to end | −0.79 | −0.85 | −1.06 |
+
+**Verdict (rule read on the bold cells): fails.** The rule asked for +1.0 point
+above the curve for at least one backbone; the best is −0.85. No configuration
+is above the curve under any judge or reference, so there is no latency budget
+for a real policy. ("Not readable": the configurations' p95 latency is past the
+end of the curve.)
+
+Full-frame curve on the same clips (mIoU, T4 median):
+
+| Scale | 1.0 | 0.75 | 0.5 | 0.375 | 0.25 |
+|---|---|---|---|---|---|
+| PIDNet-S | 0.761, 19.3 ms | 0.748, 10.7 ms | 0.679, 5.2 ms | 0.617, 3.6 ms | 0.529, 2.7 ms |
+| BiSeNetV2 | 0.734, 31.2 ms | 0.734, 17.8 ms | 0.706, 8.1 ms | 0.669, 4.7 ms | 0.592, 2.7 ms |
+
+### Why it fails
+
+- **The glimpses are the ceiling, not the selector or the memory.** The highest
+  mIoU of any configuration is 0.718 for PIDNet-S (33 ms) and 0.727 for
+  BiSeNetV2 (43 ms). The full frame at scale 0.75 gives 0.748 in 10.7 ms and
+  0.734 in 17.8 ms. The oracle does not reach the curve even with its latency
+  ignored: a frozen model on crops is worse than the same model on the whole
+  frame at a slightly lower scale.
+- **The canvas helps only where the context is weak.** At equal k against
+  variant N, it adds 1.4 to 3.1 points at context 0.25 for PIDNet-S (0.8 to 1.9
+  for BiSeNetV2), but 0.0 to 0.3 point at context 0.5, where every
+  configuration near the curve sits. At most 56 % of the output pixels come
+  from the canvas.
+- **Old canvas pixels hurt a good context.** At context 0.5, a canvas without
+  age limit (a_max = ∞) is 0.6 to 1.1 point below no canvas at all.
+- **Alignment does not pay for itself.** Variant A is about 0.2 point above B
+  at context 0.5 and costs about 8 ms more per frame (gray, IC-LK, warps).
+- **The canvas saves few glimpses.** At the same γ and context 0.5, the oracle
+  asks for 6 % fewer cells (B) to 20 % fewer (A) for PIDNet-S; for BiSeNetV2,
+  3 % more (B) to 12 % fewer (A).
+
+### Limits of this reading
+
+- The oracle is per-frame, greedy and relative to the teacher: a heuristic
+  ceiling, not a proof. The grid stops at 8 fixed glimpses and γ = 0.005, so a
+  selector allowed more cells is not covered; it would also cost more.
+- Train only, fp32 accuracy with fp16 T4 latency, as in Method 3's sweep. Val
+  was not read.
+- BiSeNetV2's curve is flat between scales 0.75 and 1 on these clips, so its
+  −0.85 is a distance to a plateau.
 
 ## Files
 
