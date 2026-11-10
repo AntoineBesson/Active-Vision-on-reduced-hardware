@@ -74,3 +74,21 @@ both variant B). What the 100 clips show, to be confirmed on the 400:
 - **The adaptive selector saves few glimpses.** With the canvas the oracle
   asks for 5 to 10 % fewer cells at the same γ (PIDNet-S), and sometimes more
   (BiSeNetV2, variant B).
+
+## 2026-11-10 — chunk 1: reading on 200 clips of 400, still partial
+
+Laptop RTX 2060, 2 h 52 (caches 69 min, `bound` 98 min for the two models).
+The cluster was not reachable (SSH timed out), so chunks 2 and 3 go to Colab
+with `notebooks/method4_bound_colab.ipynb` (written for this, not yet tested
+there when committed). `score` still reports "rule not read (partial: 200
+clips)". Curve of the same 200 clips; mean judge, primary reference:
+
+| model | N (no canvas) | B (no warp) | A (IC-LK) |
+|---|---|---|---|
+| PIDNet-S | −4.56 (`c0.5/g512/y0.02`, 19.1 ms) | −4.65 (`c0.5/g512/a1/y0.02`, 18.7 ms) | −5.81 (`c0.5/g512/a2/y0.05`, 18.5 ms) |
+| BiSeNetV2 | −1.00 (`c0.5/g384/y0.02`, 28.5 ms) | −0.94 (`c0.5/g384/a1/y0.02`, 29.3 ms) | −1.17 (`c0.5/g384/a1/k4`, 30.2 ms) |
+
+Same picture as chunk 0: no configuration above the curve for either model
+(best against the measured end-to-end curve: −3.39 and −0.93, variant B). The
+highest mIoU of any configuration is 0.714 (PIDNet-S, 33 ms) and 0.723
+(BiSeNetV2, 48 ms), under the full frame at scale 0.75 (0.743 and 0.728).
