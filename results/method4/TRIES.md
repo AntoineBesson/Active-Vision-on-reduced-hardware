@@ -92,3 +92,15 @@ Same picture as chunk 0: no configuration above the curve for either model
 (best against the measured end-to-end curve: −3.39 and −0.93, variant B). The
 highest mIoU of any configuration is 0.714 (PIDNet-S, 33 ms) and 0.723
 (BiSeNetV2, 48 ms), under the full frame at scale 0.75 (0.743 and 0.728).
+
+## 2026-11-10 — chunk 3: reading on 300 clips of 400, still partial
+
+Laptop RTX 2060, 3 h 05 (caches 70 min, `bound` 109 min for the two models; the
+GPU sat at 86 °C). Chunk 2 was meant for Colab, but its zip was no longer on
+Drive (`FileNotFoundError` in the notebook's data cell); the zip was rebuilt
+(7.12 GB) and chunk 2 was run on the laptop after chunk 3 instead, with a
+watchdog that stops the run at 90 °C. On chunks 0, 1 and 3, mean judge, primary
+reference: best canvas configuration −4.59 points (PIDNet-S,
+`4o-B/c0.5/g512/a1/y0.02`, 18.2 ms) and −0.98 point (BiSeNetV2,
+`4o-B/c0.5/g384/a1/y0.02`, 28.5 ms). The same two configurations as on 100 and
+200 clips, within 0.3 point.
