@@ -1,6 +1,6 @@
 # Method 4, phase 1: feasibility bound of a persistent canvas — protocol and status
 
-**Status (2026-11-10): code ready, runs pending. No result yet.** The grid, the
+**Status (2026-11-10): chunk 0 run (100 clips of 400); the rule is not read yet.** The grid, the
 latency parts and the pass rule were fixed in the
 [spec](../../docs/superpowers/specs/2026-11-10-method4-canvas-bound-design.md)
 before any run. Tries are logged in [TRIES.md](TRIES.md).
@@ -82,7 +82,12 @@ pidnet_s` runs one model.
 
 ## Results
 
-Pending.
+Pending: the rule is read on the 400 clips only.
+
+Chunk 0 (100 clips, partial): no configuration is above the full-frame curve.
+The best canvas configuration is 4.9 points below it for PIDNet-S and 1.0
+point below for BiSeNetV2 (variant B, mean judge). Details in
+[TRIES.md](TRIES.md).
 
 ## Files
 

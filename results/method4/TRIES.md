@@ -39,3 +39,38 @@ reported as "not read (partial: 1 clips)", as designed. One clip says nothing
 about the curve (its full-frame mIoU is 0.59 against 0.76 on the 400 clips):
 no number from it is kept. Estimate from it: about 40 min per model per chunk
 for `bound`, about 2 h 40 min per model for the 400 clips.
+
+## 2026-11-10 — chunk 0 (100 clips of 400): a partial reading, not the rule
+
+Laptop RTX 2060, fp32, both models, default grid (693 configurations). Time:
+caches 68 min for the two models (4.1 GB), `bound` 51 min (PIDNet-S) and 52 min
+(BiSeNetV2, 31 s per clip), `merge` and `score` 3 min: 2 h 55 in all, so about
+8 h 45 for chunks 1 to 3. `score` reports "rule not read (partial: 100 clips)".
+The full-frame curve below is the one of the same 100 clips.
+
+Best configuration of each variant, mean judge, primary reference (points of
+mIoU against the curve at equal mean latency):
+
+| model | N (no canvas) | B (no warp) | A (IC-LK) |
+|---|---|---|---|
+| PIDNet-S | −5.11 (`c0.5/g384/k4`, 15.6 ms) | −4.88 (`c0.5/g512/a1/y0.02`, 19.3 ms) | −6.30 (`c0.5/g512/a2/y0.05`, 18.9 ms) |
+| BiSeNetV2 | −0.85 (`c0.5/g512/y0.02`, 29.3 ms) | −1.00 (`c0.5/g384/a1/y0.02`, 29.9 ms) | −1.47 (`c0.5/g384/a1/k4`, 30.2 ms) |
+
+No configuration is above the curve, under either judge or either reference
+(best against the measured end-to-end curve: −3.97 PIDNet-S, −0.89 BiSeNetV2,
+both variant B). What the 100 clips show, to be confirmed on the 400:
+
+- **The ceiling is the glimpses, not the selector.** The highest mIoU of any
+  configuration is 0.715 (PIDNet-S, 28 ms) and 0.727 (BiSeNetV2, 48 ms); the
+  full frame at scale 0.75 gives 0.744 in 10.7 ms and 0.728 in 17.8 ms. The
+  oracle cannot reach the curve even when its latency is ignored.
+- **The canvas adds almost nothing at equal k.** With a_max = 1, variant B is
+  within ±0.2 point of N at the same context, glimpse size and k (best case
+  +0.55 at `g512/k1`, PIDNet-S), for 0.4 ms of fusion. Variant A gains up to
+  +0.7 point over N (`g512/k1`) but pays about 8 ms of gray, IC-LK and warps.
+- **Old canvas pixels hurt.** With a_max = ∞ every configuration loses about
+  1 point to a_max = 1, in A as in B: stale glimpses overrule a context that
+  is right. The canvas share stays under 0.45.
+- **The adaptive selector saves few glimpses.** With the canvas the oracle
+  asks for 5 to 10 % fewer cells at the same γ (PIDNet-S), and sometimes more
+  (BiSeNetV2, variant B).
