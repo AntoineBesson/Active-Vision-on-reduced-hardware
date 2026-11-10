@@ -61,7 +61,7 @@ No configuration is above the curve, under either judge or either reference
 both variant B). What the 100 clips show, to be confirmed on the 400:
 
 - **The ceiling is the glimpses, not the selector.** The highest mIoU of any
-  configuration is 0.715 (PIDNet-S, 28 ms) and 0.727 (BiSeNetV2, 48 ms); the
+  configuration is 0.717 (PIDNet-S, 33 ms) and 0.727 (BiSeNetV2, 48 ms); the
   full frame at scale 0.75 gives 0.744 in 10.7 ms and 0.728 in 17.8 ms. The
   oracle cannot reach the curve even when its latency is ignored.
 - **The canvas adds almost nothing at equal k.** With a_max = 1, variant B is
