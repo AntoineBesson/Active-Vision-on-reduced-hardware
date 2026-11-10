@@ -76,6 +76,11 @@ foreach ($c in 1, 2, 3) {
 & $py -m scripts.method4 score --split train_all      # writes verdict_train_all.json
 ```
 
+On Colab, `notebooks/method4_bound_colab.ipynb` runs one chunk (set `CHUNK`)
+from the chunk zips of the Method 3 notebook and saves the two bound files to
+`MyDrive/avrh/method4/train_all/`; copy them into `experiments/method4/train_all/`
+before `merge`.
+
 `bound` appends each finished clip and, started again, skips the clips already
 in the file. Outputs go to `experiments/method4/train_all/`. `--models
 pidnet_s` runs one model.
