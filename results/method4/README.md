@@ -150,5 +150,8 @@ Full-frame curve on the same clips (mIoU, T4 median):
 
 - Code: `src/canvas/replay.py`, `scripts/method4.py`,
   `LatencyTables.predict_canvas_frame` in `src/foveation/latency_model.py`.
+- Numbers: `verdict_train_all.json` (the rule as read by `score`) and
+  `score_train_all_<model>.json.gz` (every configuration, both judges, both
+  references), copied from `experiments/method4/train_all/`.
 - Design: [spec](../../docs/superpowers/specs/2026-11-10-method4-canvas-bound-design.md),
   [plan](../../docs/superpowers/plans/2026-11-10-method4-canvas-bound.md).
