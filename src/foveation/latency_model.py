@@ -22,6 +22,9 @@ gray downsample, homography, motion map, warps, the 3b fusion, the post-processi
 of a full or context pass, and of k glimpses. It is timed eagerly (the CPU
 homography and host-side warp matrices cannot be captured in a CUDA graph), so
 its eager records are kept; every other part keeps its graph-level records.
+
+Method 4's bound (:meth:`LatencyTables.predict_canvas_frame`) prices a canvas frame from
+the same entries, with the policy at 0.
 """
 
 from __future__ import annotations
@@ -160,6 +163,39 @@ class LatencyTables:
                 if cfg.ctx_scale is not None:
                     parts.update({f"context_{k}": v for k, v in frame_pass(cfg.ctx_scale).items()})
                     parts["fusion"] = self._part_ms("reuse", op="fusion")
+        return {"median_ms": sum(p["median_ms"] for p in parts.values()),
+                "p95_ms": sum(p["p95_ms"] for p in parts.values()), "gflops": gflops, "parts": parts}
+
+
+    def predict_canvas_frame(self, model: str, cfg: Any, k: int, first: bool,
+                             with_motion: bool = False) -> Dict[str, Any]:
+        """Predicted latency of one frame of Method 4's bound (``cfg``: a ``canvas.replay.CanvasConfig``).
+
+        Every frame: the context pass (backbone + post-processing) and, when ``k`` > 0, the k
+        glimpses and their post-processing. A canvas (variants ``iclk`` and ``none``) adds the
+        fusion on every frame but the first; variant ``iclk`` also adds the gray downsample
+        (every frame) and, after the first frame, the homography and the warps. The policy
+        costs nothing. ``with_motion`` adds the motion map (variant ``iclk``, after the first
+        frame): a policy input, not a part of the mechanism. ``gflops``: the backbone passes only."""
+        stride = self.strides[model]
+        ctx = self._find("area", model=model, kind="frame", scale=cfg.ctx_scale)
+        gflops = ctx["gflops"]
+        parts: Dict[str, Dict[str, float]] = {
+            "context_backbone": {"median_ms": ctx["median_ms"], "p95_ms": ctx["p95_ms"]},
+            "context_post": self._part_ms("reuse", op="post", stride=stride, scale=cfg.ctx_scale)}
+        if k:
+            parts["glimpses"] = self._part_ms("batch", model=model, size=cfg.glimpse_size, k=k)
+            gflops += self._find("batch", model=model, size=cfg.glimpse_size, k=k)["gflops"]
+            parts["glimpse_post"] = self._part_ms("reuse", op="glimpse_post", stride=stride, size=cfg.glimpse_size, k=k)
+        if cfg.variant == "iclk":
+            parts["gray"] = self._part_ms("reuse", op="gray")
+        if cfg.variant != "off" and not first:
+            parts["fusion"] = self._part_ms("reuse", op="fusion")
+            if cfg.variant == "iclk":
+                parts["homography"] = self._part_ms("reuse", op="homography", homography="iclk")
+                parts["warp"] = self._part_ms("reuse", op="warp")
+                if with_motion:
+                    parts["motion"] = self._part_ms("reuse", op="motion", size=cfg.glimpse_size)
         return {"median_ms": sum(p["median_ms"] for p in parts.values()),
                 "p95_ms": sum(p["p95_ms"] for p in parts.values()), "gflops": gflops, "parts": parts}
 

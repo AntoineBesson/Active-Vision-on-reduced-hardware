@@ -1,0 +1,36 @@
+{
+ "split": "train_all",
+ "passes": false,
+ "models": {
+  "pidnet_s": {
+   "rule": "best config of variant A or B >= +1 mIoU points above the full-frame curve at equal mean latency, on every clip of train_all",
+   "margin": 0.01,
+   "clips": 400,
+   "complete": true,
+   "best": {
+    "name": "4o-B/c0.5/g384/a1/y0.05",
+    "miou": 0.7048167157228307,
+    "latency_ms": 12.395096755579115,
+    "delta_miou_at_equal_latency": -0.04561325436811614,
+    "latency_saved_at_equal_miou": -5.131212620964597,
+    "readable": 273
+   },
+   "passes": false
+  },
+  "bisenetv2": {
+   "rule": "best config of variant A or B >= +1 mIoU points above the full-frame curve at equal mean latency, on every clip of train_all",
+   "margin": 0.01,
+   "clips": 400,
+   "complete": true,
+   "best": {
+    "name": "4o-B/c0.5/g384/a1/y0.02",
+    "miou": 0.7251336540459372,
+    "latency_ms": 27.9079895987312,
+    "delta_miou_at_equal_latency": -0.008452325843988251,
+    "latency_saved_at_equal_miou": NaN,
+    "readable": 425
+   },
+   "passes": false
+  }
+ }
+}
