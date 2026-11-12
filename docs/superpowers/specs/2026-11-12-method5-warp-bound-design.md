@@ -1,12 +1,14 @@
 # Method 5, phase 1: feasibility bound for a single pass on a warped frame
 
-Status: **draft for the user's review, 2026-11-12. Nothing is run or built
-yet.** The idea is the user's (2026-11-10: "one pass only but mixed quality
-based on memory", then "our first test might be the oracle one pass warping").
-The design below is Claude's proposal; points marked *(my call)* are the ones
-most worth checking. Once the user accepts it, the file is frozen: nothing in
-it may change after the first `bound` run, except in a dated "Amendments"
-section at the end.
+Status: **accepted by the user on 2026-11-12, before any run.** The idea is
+the user's (2026-11-10: "one pass only but mixed quality based on memory",
+then "our first test might be the oracle one pass warping"). The design is
+Claude's proposal; points marked *(my call)* were settled by Claude and
+accepted as written. Nothing in this file may change after the first `bound`
+run, except in a dated "Amendments" section at the end.
+
+Three details were made precise on 2026-11-12 while writing the plan, before
+any code or run; they are marked *(plan)* below.
 
 ## Intent
 
@@ -50,10 +52,15 @@ memory, with its real cost).
    axis-aligned lines stay straight and the inverse map is two 1-D
    monotone lookups.
 3. **Resample** the frame to H' × W' = c · (1024 × 2048) with this grid
-   (bilinear, `grid_sample`).
+   (bilinear, `grid_sample`). *(plan)* The image is sampled at twice the
+   output size and averaged 2 × 2, because the baseline's downscale is
+   antialiased and a plain `grid_sample` is not; without it the α = 0 pass
+   would not reproduce the baseline.
 4. **One pass** of the frozen model on the warped image: logits at H' × W'.
 5. **Unwarp** the logits to 1024 × 2048 with the inverse grid (bilinear),
-   then argmax.
+   then argmax. *(plan)* The logits are sampled at the model's output
+   stride, in one step, with the model's own corner convention, so that at
+   α = 0 this is exactly the baseline's upsampling.
 6. Score against the labels on the labelled frames.
 
 A saliency that is empty gives the uniform grid.
@@ -89,7 +96,9 @@ previous output; E it could not *(my call to include all three)*.
   frame t without alignment. Still an oracle (it uses a full pass), but it
   shows how much of the ceiling survives one frame of staleness, which is
   what "based on memory" will have to live with. For E, the uniform pass is
-  also that of frame t − 1.
+  also that of frame t − 1. *(plan)* A labelled frame at t = 0 has no
+  previous frame; **prev** then uses frame 0 itself (this does not occur on
+  `train_all`, whose labelled frames are 4, 9, …, 29).
 
 **This is a heuristic ceiling, not a proof.** The three saliencies and the
 separable form are a family, not every possible warp. A failed check says
