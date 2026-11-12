@@ -329,6 +329,26 @@ def _tag(args: argparse.Namespace) -> str:
     return "all"
 
 
+def wait_for_gpu(max_temp: Optional[int], pause_s: float = 20.0) -> None:
+    """Block while the GPU is hotter than ``max_temp`` C (laptop guard; no-op without nvidia-smi)."""
+    import subprocess
+    import time
+
+    if not max_temp:
+        return
+    while True:
+        try:
+            out = subprocess.run(["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
+                                 capture_output=True, text=True, timeout=10).stdout
+            temp = max(int(v) for v in out.split())
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return
+        if temp <= max_temp:
+            return
+        print(f"[objects score] GPU {temp} C > {max_temp} C, pausing {pause_s:g} s", flush=True)
+        time.sleep(pause_s)
+
+
 def cmd_score(args: argparse.Namespace) -> int:
     scores, fullframe = load_scores(score_paths(args.score))
     device = resolve_device(args.device)
@@ -345,6 +365,7 @@ def cmd_score(args: argparse.Namespace) -> int:
             todo = [n for n in names if (n, clip_id) not in done]
             if not todo:
                 continue
+            wait_for_gpu(args.max_temp)
             maps, objs = clip_ground_truth(dataset, i, cache.labeled_t)
             _append(path, ({"name": n, "clip_id": clip_id, "model": model,
                             "iou": clip_ious(cache, maps, objs, n, scores, device)} for n in todo))
@@ -496,6 +517,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     s.add_argument("--edge", type=int, default=0, help="Also take up to N upper-edge configs per family.")
     s.add_argument("--tag", default=None)
     s.add_argument("--device", default="auto")
+    s.add_argument("--max-temp", type=int, default=None, help="Pause before a clip while the GPU is above this (C).")
     s.set_defaults(func=cmd_score)
 
     r = sub.add_parser("report", help="recall tables and the reading against the full-frame curve")
