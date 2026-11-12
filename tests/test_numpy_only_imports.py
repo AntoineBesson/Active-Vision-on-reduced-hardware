@@ -30,6 +30,7 @@ NUMPY_ONLY_MODULES = [
     "eval.metrics",
     "eval.cost",
     "eval.results",
+    "eval.objects",
 ]
 
 _PROBE = r"""
