@@ -243,14 +243,32 @@ def _family(name: str) -> str:
     raise SystemExit(f"unknown config family of {name!r}")
 
 
-def choose_configs(args: argparse.Namespace, scores: Dict[str, Dict[str, Any]], fullframe: Dict[str, Any]) -> List[str]:
+def cached_scales(cache) -> set:
+    """Full-pass scales a cache can serve: ``full_{s}``, or ``ctx_{s}`` (the same full pass, see
+    :func:`reuse.replay.build_clip_cache`)."""
+    return {float(s) for s in cache.meta.get("full_scales", []) + cache.meta.get("ctx_scales", [])}
+
+
+def replayable(cfg: Dict[str, Any], scales: Optional[set]) -> bool:
+    """Whether every full pass the config needs is in the caches (``None``: assume so)."""
+    if scales is None:
+        return True
+    need = [cfg.get("full_scale"), cfg.get("ctx_scale")]
+    return all(float(s) in scales for s in need if s is not None)
+
+
+def choose_configs(args: argparse.Namespace, scores: Dict[str, Dict[str, Any]], fullframe: Dict[str, Any],
+                   scales_cached: Optional[set] = None) -> List[str]:
+    """Full-frame scales, explicit configs, and the upper edge of each family. With
+    ``scales_cached``, the edge is taken among the configs the caches can replay only."""
     scales = [float(v) for v in _strs(args.ff_scales)] if args.ff_scales else fullframe.get("scales", [])
     names = [f"ff/{s:g}" for s in scales]
     names += _strs(args.configs) if args.configs else []
     if args.edge:
         groups: Dict[str, List[Dict[str, Any]]] = {}
         for c in scores.values():
-            groups.setdefault(_family(c["name"]), []).append(c)
+            if replayable(c["config"], scales_cached):
+                groups.setdefault(_family(c["name"]), []).append(c)
         for fam in ("method3", "method4", "method2_screen"):
             names += upper_edge(groups.get(fam, []), args.edge)
     seen, out = set(), []
@@ -279,8 +297,12 @@ def predictions(cache, name: str, scores: Dict[str, Dict[str, Any]], device) -> 
     cfg = scores[name]["config"]
     if fam == "method3":
         from reuse.method import MotionReuseConfig
-        from reuse.replay import replay_clip
+        from reuse.replay import _key, replay_clip
 
+        for prefix in ("full", "full_conf"):  # a full pass at s < 1 may be cached as the context pass
+            key, alias = _key(prefix, cfg["full_scale"]), _key(prefix.replace("full", "ctx"), cfg["full_scale"])
+            if key not in cache._npz.files and alias in cache._npz.files:
+                cache._arrays[key] = cache[alias]
         _, preds = replay_clip(cache, MotionReuseConfig(**cfg), device, return_predictions=True)
     else:
         from canvas.replay import CanvasConfig, replay_canvas
@@ -309,10 +331,11 @@ def _tag(args: argparse.Namespace) -> str:
 
 def cmd_score(args: argparse.Namespace) -> int:
     scores, fullframe = load_scores(score_paths(args.score))
-    names = choose_configs(args, scores, fullframe)
     device = resolve_device(args.device)
     dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split)
     clips = select_clips([dataset.clip_id(i) for i in range(len(dataset))], args.clip_ids, args.chunk)
+    _, first = next(_caches(Path(args.root), args.split, _strs(args.models)[0], dataset, clips[:1]))
+    names = choose_configs(args, scores, fullframe, cached_scales(first))
     for model in _strs(args.models):
         path = EXP / args.split / f"iou_{model}_{_tag(args)}.jsonl.gz"
         done = {(r["name"], r["clip_id"]) for r in read_lines(path)} if path.is_file() else set()
