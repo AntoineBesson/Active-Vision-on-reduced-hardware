@@ -365,10 +365,10 @@ def cmd_score(args: argparse.Namespace) -> int:
             todo = [n for n in names if (n, clip_id) not in done]
             if not todo:
                 continue
-            wait_for_gpu(args.max_temp)
             maps, objs = clip_ground_truth(dataset, i, cache.labeled_t)
             _append(path, ({"name": n, "clip_id": clip_id, "model": model,
-                            "iou": clip_ious(cache, maps, objs, n, scores, device)} for n in todo))
+                            "iou": (wait_for_gpu(args.max_temp), clip_ious(cache, maps, objs, n, scores, device))[1]}
+                           for n in todo))
     return 0
 
 
@@ -517,7 +517,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     s.add_argument("--edge", type=int, default=0, help="Also take up to N upper-edge configs per family.")
     s.add_argument("--tag", default=None)
     s.add_argument("--device", default="auto")
-    s.add_argument("--max-temp", type=int, default=None, help="Pause before a clip while the GPU is above this (C).")
+    s.add_argument("--max-temp", type=int, default=None, help="Pause before each config while the GPU is above this (C).")
     s.set_defaults(func=cmd_score)
 
     r = sub.add_parser("report", help="recall tables and the reading against the full-frame curve")
