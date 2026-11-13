@@ -229,6 +229,19 @@ def test_score_on_a_partial_set_does_not_read_the_rule(work, tmp_path, capsys):
     assert "not read (partial: 2 clips)" in capsys.readouterr().out
 
 
+def test_score_without_the_dataset_reads_the_check_not_the_rule(work, tmp_path, capsys):
+    """The README's pipeline check: one file scored with --no-expect (no clip list): the check per
+    scale is read and printed, the rule is not."""
+    capsys.readouterr()
+    assert method5.main([*_score_args(work, tmp_path), "--no-expect", "--bound",
+                         str(work / "out" / "bound_val_dummy.jsonl.gz")]) == 0  # all 3 clips
+    score = json.loads((tmp_path / "score_val_dummy.json").read_text())
+    assert score["pipeline_check"]["0.5"]["ok"] and score["verdict"]["passes"] is None
+    assert not score["verdict"]["complete"] and score["verdict"]["clips"] == 3
+    assert list(score["configs"][0]["per_class_iou"]) == [str(c) for c in range(19)]
+    assert "c0.5 ok" in capsys.readouterr().out and not (tmp_path / "verdict_val.json").exists()
+
+
 def test_the_plans_supersampling_fails_the_pipeline_check_on_the_fixture(work, tmp_path, capsys):
     """With the 2 x 2 mean, the uniform warp is not the baseline's resize: on this sharp-edged
     fixture the gap is far above 0.1 point, and the verdict is not read."""
