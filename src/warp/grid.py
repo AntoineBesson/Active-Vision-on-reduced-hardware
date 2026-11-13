@@ -24,7 +24,11 @@ cannot fold, and the inverse is exact (two 1-D monotone lookups). A uniform dens
 
 :func:`warp_frame` resamples the frame with the forward map (``grid_sample``, bilinear) at
 ``supersample`` times the output size and averages ``supersample`` x ``supersample`` blocks,
-because the baseline's downscale is antialiased and a plain ``grid_sample`` is not.
+because the baseline's downscale is antialiased and a plain ``grid_sample`` is not (the spec's
+*(plan)* detail). With ``antialias=True`` it instead filters each axis with a triangle whose
+half-width is the source span of the output pixel, which is exactly the baseline's antialiased
+bilinear resize (``F.interpolate(..., antialias=True)``) for a uniform density, and keeps
+antialiasing the regions a warp compresses (a proposed amendment, not the accepted spec).
 :func:`unwarp_logits` samples the model's logits once, at the inverse map, with the model's
 own corner convention and logit stride, so that with a uniform density it is exactly
 :func:`models.utils.upsample_logits` (the baseline's upsampling).
@@ -143,16 +147,52 @@ def _sampling_grid(gy: torch.Tensor, gx: torch.Tensor, batch: int, dtype: torch.
     return torch.stack([xx, yy], dim=-1)[None].expand(batch, -1, -1, -1)
 
 
-def warp_frame(frame: torch.Tensor, grid: WarpGrid, out_size: Tuple[int, int], supersample: int = 2) -> torch.Tensor:
+def _axis_filter(density: torch.Tensor, n_src: int, n_out: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Antialiased resampling of one axis: (n_out, K) source indices and float64 weights.
+
+    Output pixel j is centred on the forward map's source position and spans ``span`` source
+    pixels (the forward map at its two edges; at least 1). Its weights are a triangle of
+    half-width ``span`` over the source pixels whose centres fall inside it, normalised: torch's
+    antialiased bilinear filter (``_compute_weights_aa``), with the scale made local."""
+    dev = density.device
+    xs, us = _knots(density)
+    edges = _interp(torch.arange(n_out + 1, dtype=torch.float64, device=dev) / n_out, us, xs) * n_src
+    centre = _interp(_centres(n_out, dev), us, xs) * n_src
+    span = (edges[1:] - edges[:-1]).clamp(min=1.0)
+    k = int(torch.ceil(2 * span.max()).item()) + 2
+    lo = torch.floor(centre - span + 0.5).clamp(min=0)
+    hi = torch.floor(centre + span + 0.5).clamp(max=n_src)
+    idx = lo[:, None] + torch.arange(k, dtype=torch.float64, device=dev)
+    w = (1 - ((idx + 0.5 - centre[:, None]) / span[:, None]).abs()).clamp(min=0)
+    w = torch.where(idx < hi[:, None], w, torch.zeros_like(w))
+    return idx.clamp(max=n_src - 1).long(), w / w.sum(1, keepdim=True)
+
+
+def _filter_axis(x: torch.Tensor, idx: torch.Tensor, w: torch.Tensor, axis: int) -> torch.Tensor:
+    shape = [1] * x.dim()
+    shape[axis] = -1
+    out = x.index_select(axis, idx[:, 0]) * w[:, 0].to(x.dtype).view(shape)
+    for t in range(1, idx.shape[1]):
+        out += x.index_select(axis, idx[:, t]) * w[:, t].to(x.dtype).view(shape)
+    return out
+
+
+def warp_frame(frame: torch.Tensor, grid: WarpGrid, out_size: Tuple[int, int], supersample: int = 2,
+               antialias: bool = False) -> torch.Tensor:
     """(B, 3, H, W) frame -> (B, 3, H', W') warped image, ``out_size`` = (H', W').
 
     Bilinear ``grid_sample`` at ``supersample`` x ``out_size`` (``align_corners=False``, border
-    padding), then the mean of each ``supersample`` x ``supersample`` block."""
+    padding), then the mean of each ``supersample`` x ``supersample`` block. ``antialias``: the
+    separable antialiased filter of :func:`_axis_filter` instead (``supersample`` is ignored)."""
     h, w = int(out_size[0]), int(out_size[1])
+    dev = frame.device
+    if antialias:
+        iy, wy = _axis_filter(grid.dy.to(dev), frame.shape[-2], h)
+        ix, wx = _axis_filter(grid.dx.to(dev), frame.shape[-1], w)
+        return _filter_axis(_filter_axis(frame, iy, wy, -2), ix, wx, -1)
     s = int(supersample)
     if s < 1:
         raise ValueError(f"supersample must be >= 1, got {supersample}")
-    dev = frame.device
     ys = _forward64(grid.dy.to(dev), s * h)
     xs = _forward64(grid.dx.to(dev), s * w)
     g = _sampling_grid(2 * ys - 1, 2 * xs - 1, frame.shape[0], frame.dtype)

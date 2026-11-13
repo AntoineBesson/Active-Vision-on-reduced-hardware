@@ -167,3 +167,37 @@ def test_warp_then_unwarp_keeps_a_salient_square_sharper():
         back = unwarp_logits(small, g, (128, 256), align_corners=False)
         errs.append(float((back - frame).abs()[..., 32:48, 72:96].sum()))
     assert errs[1] < 0.7 * errs[0]
+
+
+@pytest.mark.parametrize("scale", [0.25, 0.375, 0.5, 0.75, 1.0])
+def test_antialiased_warp_at_alpha_zero_is_the_baseline_resize(scale):
+    """The antialiased resampling reproduces torch's antialiased bilinear resize (the baseline's)
+    to float precision, at every scale of the grid (at 1, both are the identity)."""
+    frame = torch.rand(2, 3, 64, 128, generator=torch.Generator().manual_seed(1))
+    ref = downsample(frame, scale)
+    out = warp_frame(frame, make_grid(torch.zeros(4, 8), 0.0, scale), tuple(ref.shape[-2:]), antialias=True)
+    assert out.shape == ref.shape and (out - ref).abs().max() < 1e-4
+
+
+def test_antialiased_warp_keeps_the_mean_and_magnifies_the_salient_block():
+    sal = torch.zeros(4, 8)
+    sal[1, 2] = 1.0
+    g = make_grid(sal, 0.75, 0.25)
+    flat = torch.full((1, 3, 64, 128), 0.3)
+    assert torch.allclose(warp_frame(flat, g, (16, 32), antialias=True), torch.full((1, 3, 16, 32), 0.3), atol=1e-6)
+    frame = torch.zeros(1, 3, 64, 128)
+    frame[..., 16:32, 32:48] = 1.0
+    assert warp_frame(frame, g, (16, 32), antialias=True).mean() > 1.5 * frame.mean()
+
+
+def test_antialiased_filter_widens_where_the_warp_compresses():
+    """The filter spans the source pixels each output pixel covers: 1 / (scale x density)."""
+    from warp.grid import _axis_filter
+
+    d = axis_density(torch.tensor([1.0, 0.0, 0.0, 0.0]), 0.75, 0.25)  # cell 0 magnified, the rest compressed
+    idx, w = _axis_filter(d, 256, 64)
+    taps = (w > 0).sum(1)
+    assert torch.allclose(w.sum(1), torch.ones(64, dtype=w.dtype))
+    assert taps[:8].max() < taps[-8:].min()  # fewer taps where magnified, more where compressed
+    centre = ((idx.double() + 0.5) * w).sum(1)  # each output pixel's footprint moves forward
+    assert (centre[1:] > centre[:-1]).all()
