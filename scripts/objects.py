@@ -393,6 +393,8 @@ def collect_ious(files: Sequence[Path], cols) -> Dict[str, Any]:
                 raise SystemExit(f"{f}: ({key[0]}, {key[1]}) seen twice")
             seen.add(key)
             if r["clip_id"] not in starts:
+                if not r["iou"]:  # a clip without any thing object (6 of the 400 on train_all)
+                    continue
                 raise SystemExit(f"{f}: clip {r['clip_id']} is not in the object table")
             a, b = starts[r["clip_id"]]
             if len(r["iou"]) != b - a:
