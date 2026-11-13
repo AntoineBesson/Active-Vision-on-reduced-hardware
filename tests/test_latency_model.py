@@ -177,3 +177,25 @@ def test_unmeasured_canvas_point_names_the_missing_run():
         t.predict_canvas_frame("pidnet_s", CanvasConfig(ctx_scale=0.25, glimpse_size=384, variant="off", k=4), 4, False)
     with pytest.raises(KeyError, match="latency_floor"):
         t.predict_canvas_frame("pidnet_s", CanvasConfig(ctx_scale=0.5, glimpse_size=384, variant="off", k=1), 1, False)
+
+
+def test_warp_frame_sums_area_and_post():
+    t = _reuse_tables()
+    p = t.predict_warp_frame("pidnet_s", 0.25)
+    assert p["median_ms"] == pytest.approx(2.7 + 0.25) and p["p95_ms"] == pytest.approx(2 * (2.7 + 0.25))
+    assert set(p["parts"]) == {"backbone", "post"} and p["gflops"] == pytest.approx(1.0)
+    assert t.predict_warp_frame("pidnet_s", 1.0)["median_ms"] == pytest.approx(19.0 + 0.5)
+
+
+def test_unmeasured_warp_scale_names_the_missing_run():
+    with pytest.raises(KeyError, match="latency_floor"):
+        _reuse_tables().predict_warp_frame("pidnet_s", 0.6)
+
+
+def test_warp_frame_on_the_real_tables_has_every_scale_of_the_grid():
+    """The committed T4 sessions price a warped pass at the four scales of Method 5's grid."""
+    tables = LatencyTables.load(SESSIONS + sorted((REPO / "results" / "latency_floor").glob("latency_floor_m3-s*.json")))
+    for model in ("pidnet_s", "bisenetv2"):
+        ms = [tables.predict_warp_frame(model, s)["median_ms"] for s in (0.25, 0.375, 0.5, 0.75)]
+        assert ms == sorted(ms) and all(m > tables.fullframe(model, s)["median_ms"]
+                                        for m, s in zip(ms, (0.25, 0.375, 0.5, 0.75)))
