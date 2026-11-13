@@ -18,6 +18,7 @@
 - Small classes (train ids): pole 5, traffic light 6, traffic sign 7, person 11, rider 12, motorcycle 17, bicycle 18.
 - Latency of a configuration: `area` frame at scale c + `reuse` `post`. Resampling, unwarping and saliency cost 0.
 - Pass rule: best configuration with timing `now` ≥ +0.010 mIoU above the primary full-frame curve at equal mean latency, on all 400 clips, for at least one backbone. `PASS_MARGIN = 0.010`.
+- **Amended 2026-11-13, before any run** (spec, Amendments): the warped image uses the baseline's antialiased filter (`--resample antialias`), not the 2× supersampling; the pass rule reads the mIoU above the full frame at the same scale, the primary curve is reported only.
 - Pipeline check: each α = 0 row within 0.001 mIoU of the full-frame baseline at the same scale; otherwise no verdict.
 - Small commits; `pytest -q` green before every push. Method 2, 3 and 4 results are not touched.
 - The user runs or approves every GPU job. Every try goes in `results/method5/TRIES.md`.

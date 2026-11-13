@@ -78,7 +78,7 @@ def test_the_default_grid_is_the_specs():
     assert sorted(c.scale for c in cfgs if c.uniform) == [0.25, 0.375, 0.5, 0.75]
     assert sum(not c.uniform and c.timing == "now" for c in cfgs) == 72
     assert {c.sigma for c in cfgs if not c.uniform} == {1.0, 4.0} and {c.saliency for c in cfgs} == {"E", "B", "S", None}
-    assert args.split == "train_all" and args.cell == 16 and args.resample == "supersample"
+    assert args.split == "train_all" and args.cell == 16 and args.resample == "antialias"  # spec, amended 2026-11-13
 
 
 def test_bound_writes_one_line_per_config_and_clip(work):
@@ -205,17 +205,22 @@ def test_score_prices_and_reads_every_config(work):
     for c in score["configs"]:
         assert c["latency"]["mean_ms"] == pytest.approx(20 * 0.25 + 1 + 0.5)  # area at 0.5 + post
         assert c["latency"]["p95_ms"] == pytest.approx(1.5 * (20 * 0.25 + 1 + 0.5)) and c["latency"]["frames"] == 6
-        for judges in ("judges", "judges_e2e"):
+        for judges in ("judges", "judges_e2e", "judges_same_parts"):
             assert set(c[judges]) == {"mean", "p95"}
             assert c[judges]["mean"]["latency_ms"] == c["latency"]["mean_ms"]
-        budget, saved = c["budget_ms"], c["judges"]["mean"]["latency_saved_at_equal_miou"]
+        # the budget is read on the full frame priced with the post-processing, as the configuration is
+        budget, saved = c["budget_ms"], c["judges_same_parts"]["mean"]["latency_saved_at_equal_miou"]
         assert (math.isnan(budget) and math.isnan(saved)) or budget == saved
+        # on that curve, ΔmIoU at equal latency is exactly the rule's reading (mIoU above the full frame at c)
+        assert c["judges_same_parts"]["mean"]["delta_miou_at_equal_latency"] == pytest.approx(c["delta_vs_fullframe"])
         assert len(c["per_class_iou"]) == 19 and c["clips"] == 3
         if c["config"]["alpha"] == 0:
             assert c["delta_vs_uniform"] == 0
             assert c["delta_vs_fullframe"] == pytest.approx(0, abs=1e-12)  # antialias: the uniform pass is the baseline
     assert set(score["best"]) == {f"{k}/{tm}/{j}/{m}" for k in "EBS" for tm in ("now", "prev")
-                                  for j in ("judges", "judges_e2e") for m in ("mean", "p95")}
+                                  for j in ("judges", "judges_e2e", "judges_same_parts") for m in ("mean", "p95")}
+    same = score["fullframe_same_parts"]
+    assert same["miou"] == ff["miou"] and all(s > m for s, m in zip(same["median_ms"], ff["median_ms"]))
     assert score["best"]["B/now/judges/mean"] is None  # B was not in this grid
 
 
@@ -246,7 +251,7 @@ def test_the_plans_supersampling_fails_the_pipeline_check_on_the_fixture(work, t
     """With the 2 x 2 mean, the uniform warp is not the baseline's resize: on this sharp-edged
     fixture the gap is far above 0.1 point, and the verdict is not read."""
     out = ["--out-dir", str(tmp_path)]
-    assert method5.main(["bound", *_common(), *GRID, *out]) == 0
+    assert method5.main(["bound", *_common(), *GRID, "--resample", "supersample", *out]) == 0
     assert method5.main(["merge", *_common(), *out]) == 0
     capsys.readouterr()
     assert method5.main(_score_args(work, tmp_path)) == 0
@@ -259,41 +264,45 @@ def test_the_plans_supersampling_fails_the_pipeline_check_on_the_fixture(work, t
     assert "c0.5 NOT ok" in printed and "is NOT READ" in printed
 
 
-def _cfg(timing, delta, alpha=0.5, p95=float("nan")):
+def _cfg(timing, delta, alpha=0.5, curve=float("nan")):
+    """``delta``: mIoU above the full frame at the same scale (the rule); ``curve``: ΔmIoU at equal
+    mean latency on the primary curve (reported only)."""
     def judge(d):
         return {"latency_ms": 9.0, "delta_miou_at_equal_latency": d, "latency_saved_at_equal_miou": 1.0}
 
-    return {"name": f"{timing}/{alpha}/{delta}", "miou": 0.7,
+    return {"name": f"{timing}/{alpha}/{delta}/{curve}", "miou": 0.7, "latency": {"mean_ms": 9.0}, "budget_ms": 1.0,
             "config": {"scale": 0.5, "alpha": alpha, "saliency": None if alpha == 0 else "E", "timing": timing},
-            "judges": {"mean": judge(delta), "p95": judge(p95)}}
+            "delta_vs_fullframe": delta, "judges": {"mean": judge(curve), "p95": judge(float("nan"))}}
 
 
 OK = {"0.5": {"ok": True}}
 
 
-def test_verdict_needs_the_margin():
+def test_verdict_needs_the_margin_above_the_full_frame_at_the_same_scale():
     assert method5.verdict_of([_cfg("now", 0.009)], True, 400, OK)["passes"] is False
     v = method5.verdict_of([_cfg("now", 0.011), _cfg("now", -0.02), _cfg("now", float("nan"))], True, 400, OK)
-    assert v["passes"] is True and v["best"]["delta_miou_at_equal_latency"] == 0.011 and v["best"]["readable"] == 2
+    assert v["passes"] is True and v["best"]["delta_vs_fullframe"] == 0.011 and v["best"]["readable"] == 2
+    assert v["best"]["scale"] == 0.5 and v["best"]["latency_ms"] == 9.0 and "amended 2026-11-13" in v["rule"]
     assert method5.verdict_of([_cfg("prev", 0.05)], True, 400, OK)["passes"] is False  # prev is reported only
     assert method5.verdict_of([_cfg("now", 0.05, alpha=0.0)], True, 400, OK)["passes"] is False  # nor the uniform
-    assert method5.verdict_of([_cfg("now", -0.01, p95=0.5)], True, 400, OK)["passes"] is False  # nor the p95 judge
     assert method5.verdict_of([_cfg("now", 0.05)], False, 100, OK)["passes"] is None  # a chunk is not the check
 
 
-def test_the_same_size_reading_is_reported_but_is_not_the_rule():
-    """The configuration against the full frame at its own scale: information only."""
-    a = {**_cfg("now", -0.03), "delta_vs_fullframe": 0.015}
-    b = {**_cfg("now", -0.01), "delta_vs_fullframe": 0.004}
-    v = method5.verdict_of([a, b, {**_cfg("prev", -0.05), "delta_vs_fullframe": 0.002}], True, 400, OK)
-    assert v["passes"] is False  # the rule reads the primary curve
-    same = v["same_size"]
-    assert same["best"]["name"] == a["name"] and same["at_margin"] is True and same["best_prev"]["readable"] == 1
+def test_the_curves_are_reported_but_are_not_the_rule():
+    """Amended 2026-11-13: the primary curve (backbone only) is information, not the rule."""
+    assert method5.verdict_of([_cfg("now", -0.01, curve=0.5)], True, 400, OK)["passes"] is False
+    a, b = _cfg("now", 0.004, curve=0.02), _cfg("now", 0.015, curve=-0.03)
+    v = method5.verdict_of([a, b, _cfg("prev", 0.002, curve=0.01)], True, 400, OK)
+    assert v["passes"] is True and v["best"]["name"] == b["name"]
+    primary = v["curves"]["primary"]
+    assert primary["best"]["name"] == a["name"] and primary["best"]["delta_miou_at_equal_latency"] == 0.02
+    assert primary["best_prev"]["readable"] == 1
+    assert v["curves"]["e2e"]["best"] is None and v["curves"]["same_parts"]["best"] is None  # not in these configs
 
 
 def test_the_memory_version_under_water_is_reported():
     v = method5.verdict_of([_cfg("now", 0.02), _cfg("prev", -0.004)], True, 400, OK)
-    assert v["passes"] and "under water" in v["note"] and v["best_prev"]["delta_miou_at_equal_latency"] == -0.004
+    assert v["passes"] and "under water" in v["note"] and v["best_prev"]["delta_vs_fullframe"] == -0.004
     assert method5.verdict_of([_cfg("now", 0.02), _cfg("prev", 0.001)], True, 400, OK)["note"] is None
 
 

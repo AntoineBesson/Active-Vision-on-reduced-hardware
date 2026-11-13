@@ -34,12 +34,13 @@ __all__ = ["WarpConfig", "TIMINGS", "SUPERSAMPLE", "RESAMPLES", "RESAMPLE", "war
            "bound_clip", "resize_ref_name", "label_pixels"]
 
 TIMINGS = ("now", "prev")
-SUPERSAMPLE = 2  # spec (plan): the warped image is sampled at twice its size and averaged 2 x 2
-# How the warped image is resampled: "supersample" is the accepted spec's (plan) detail;
-# "antialias" (warp.grid._axis_filter) is the baseline's own antialiased filter with a local
-# width, proposed on 2026-11-13 because the 2 x 2 mean does not reproduce the baseline at alpha 0.
+SUPERSAMPLE = 2  # the plan's first guess: the warped image sampled at twice its size and averaged 2 x 2
+# How the warped image is resampled. "antialias" (warp.grid._axis_filter) is the baseline's own
+# antialiased filter with a local width, exact at alpha 0: the spec's since its amendment of
+# 2026-11-13, before any run. "supersample" (the plan's 2 x 2 mean, a box filter) does not
+# reproduce the baseline at alpha 0; it is kept to show that (tests) and is not run.
 RESAMPLES = ("supersample", "antialias")
-RESAMPLE = "supersample"
+RESAMPLE = "antialias"
 
 
 @dataclass(frozen=True)

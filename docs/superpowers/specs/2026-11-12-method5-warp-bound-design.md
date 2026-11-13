@@ -10,6 +10,9 @@ run, except in a dated "Amendments" section at the end.
 Three details were made precise on 2026-11-12 while writing the plan, before
 any code or run; they are marked *(plan)* below.
 
+**Amended on 2026-11-13, before any run:** the resampling of step 3 and the
+reference of the pass rule. See [Amendments](#amendments) at the end.
+
 ## Intent
 
 Methods 2, 3 and 4 are negative on a T4. Method 4's bound says why: a frozen
@@ -237,3 +240,35 @@ frames replaces the four chunk zips.
 3. **The lower clip d_min = 0.5 and the family of saliencies.** These decide
    how aggressive the best warp can be. Say so if a harder setting (d_min
    0.25, α = 1) should be in the grid before it is frozen.
+
+## Amendments
+
+### 2026-11-13, before any run (the user's decisions)
+
+1. **Resampling (replaces the *(plan)* detail of step 3).** The warped image
+   is resampled with the baseline's own antialiased triangle filter, its width
+   following the warp's local span (`--resample antialias`, the default), not
+   at twice the size with a 2 × 2 mean. *Why:* the uniform (α = 0) row must
+   reproduce the baseline, otherwise a warped number mixes the warp with a
+   worse downscale; the 2 × 2 mean is a box filter, 4 to 8 mIoU points off the
+   baseline on the fixture at scales 0.25 and 0.5. *Cost:* a filter with a
+   local width costs more at inference than a plain `grid_sample`; the bound
+   still counts resampling at 0 ms, so that cost lands in the budget phase 2
+   must fit in.
+2. **Reference of the pass rule.** The check passes if, for at least one
+   backbone, the best configuration with timing **now** has an mIoU at least
+   +1.0 point (0.010) above the full frame's at the same scale, on all 400
+   clips of `train_all`. *Why:* the rule as first written charged the
+   post-processing to the warped pass but not to the primary curve, so even
+   the full frame fell below "the full frame"; every configuration sits at one
+   of the curve's scales and pays the same backbone and post-processing as the
+   full frame there, so this is the equal-latency comparison the question
+   asks for. The margin, the restriction to **now** and the pipeline check are
+   unchanged; the primary and the measured end-to-end curves are still
+   reported (`verdict.curves`), and **prev** is "under water" when it is below
+   the full frame at its scale.
+
+Consequence of 2 *(Claude's)*: the latency budget (latency saved at equal
+mIoU) is read on the full-frame curve priced at backbone + post-processing,
+the same parts as a configuration (`judges_same_parts`, `budget_ms`); its
+reading on the primary curve stays in `judges`.

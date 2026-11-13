@@ -15,10 +15,12 @@ started again, it skips the clips already there. Each clip also gets the baselin
 at each scale (``ref/c*/resize``), which traces a pipeline-check gap to the resampling or to the
 reference file. ``score`` prices a configuration as the full frame at its scale
 (``LatencyTables.predict_warp_frame``: backbone + post-processing; resampling, unwarping and
-saliency at 0), reads it against the full-frame curve of the same model under both judges (mean
-and p95), against the full frame's measured end-to-end latency too, checks the pipeline (each
-uniform row within 0.1 mIoU point of the full-frame baseline at its scale), and applies the
-spec's pass rule.
+saliency at 0), checks the pipeline (each uniform row within 0.1 mIoU point of the full-frame
+baseline at its scale) and applies the spec's pass rule as amended on 2026-11-13: the mIoU above
+the full frame at the configuration's own scale, which pays the same parts. It also reads every
+configuration against three full-frame curves under both judges (mean and p95): that same curve
+priced with the post-processing (which gives the latency budget), the primary curve (backbone
+only, the spec's first reading) and the full frame's measured end-to-end latency.
 
 Train only: the bound is a go/no-go check, val is never read here. ``--fixture`` runs on the
 synthetic fixture with the dummy backbone (a smoke test, not results).
@@ -51,7 +53,7 @@ from scripts.method4 import DEFAULT_E2E, _append, e2e_curves, resume  # noqa: E4
 ensure_src_on_path()
 
 EXP = REPO_ROOT / "experiments" / "method5"
-PASS_MARGIN = 0.010  # the spec's rule: +1.0 mIoU point above the curve at equal mean latency
+PASS_MARGIN = 0.010  # the spec's rule: +1.0 mIoU point above the full frame at the same scale (amended 2026-11-13)
 CHECK_TOLERANCE = 0.001  # the pipeline check: each uniform row within 0.1 mIoU point of the baseline
 RULE_TIMING = "now"  # the rule is read on the oracle of the current frame; "prev" is reported only
 
@@ -190,10 +192,26 @@ def _iou(total) -> List[float]:
         return list(np.diag(total) / (total.sum(0) + total.sum(1) - np.diag(total)))
 
 
+def same_parts_curve(ref: Dict[str, Any], tables, model: str) -> Dict[str, Any]:
+    """The full-frame curve with each scale priced as a pass of the bound is (backbone and
+    post-processing, :meth:`LatencyTables.predict_warp_frame`), so that both sides of a comparison
+    pay the same parts (spec amendment of 2026-11-13). At a configuration's own scale, its ΔmIoU at
+    equal latency on this curve is its mIoU minus the full frame's at that scale."""
+    from eval.tradeoff import FullFrameCurve
+
+    lat = [tables.predict_warp_frame(model, s) for s in ref["scales"]]
+    med, p95 = [x["median_ms"] for x in lat], [x["p95_ms"] for x in lat]
+    return {"scales": list(ref["scales"]), "miou": list(ref["miou"]), "median_ms": med, "p95_ms": p95,
+            "curves": {"mean": FullFrameCurve(med, ref["miou"]), "p95": FullFrameCurve(p95, ref["miou"])}}
+
+
 def summarise(name: str, config: Dict[str, Any], total, clips: int, frames: int, tables, model: str,
-              class_names: Sequence[str], ref: Dict[str, Any], e2e: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+              class_names: Sequence[str], ref: Dict[str, Any], e2e: Optional[Dict[str, Any]],
+              same: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """One configuration over its clips: mIoU, per-class IoU, latency (the same on every frame:
-    the mean judge reads the median, the p95 judge the p95), both judges against both references."""
+    the mean judge reads the median, the p95 judge the p95), both judges against each reference:
+    ``judges`` the primary curve, ``judges_e2e`` the measured end-to-end one, ``judges_same_parts``
+    the full frame priced with the post-processing (:func:`same_parts_curve`)."""
     from eval.tradeoff import miou_of
 
     lat = tables.predict_warp_frame(model, float(config["scale"]))
@@ -206,8 +224,12 @@ def summarise(name: str, config: Dict[str, Any], total, clips: int, frames: int,
     if e2e is not None:
         out["judges_e2e"] = judge_readings(miou, latency["mean_ms"], latency["p95_ms"], e2e)
     # what the resampling, the unwarping and a real policy may cost per frame before the config is
-    # back on the curve (mean judge)
-    out["budget_ms"] = out["judges"]["mean"]["latency_saved_at_equal_miou"]
+    # back on the full frame's curve, both paying the backbone and the post-processing (mean judge;
+    # the primary curve's reading, which does not count the full frame's post-processing, is in
+    # ``judges``)
+    if same is not None:
+        out["judges_same_parts"] = judge_readings(miou, latency["mean_ms"], latency["p95_ms"], same)
+    out["budget_ms"] = out["judges_same_parts" if same is not None else "judges"]["mean"]["latency_saved_at_equal_miou"]
     return out
 
 
@@ -251,26 +273,29 @@ def _best(configs: Sequence[Dict[str, Any]], judges: str, judge: str, saliency: 
 def _best_same_size(configs: Sequence[Dict[str, Any]], timing: str) -> Optional[Dict[str, Any]]:
     """The warped config of ``timing`` with the highest mIoU above the full frame at its own scale."""
     cands = [c for c in configs if c["config"].get("alpha", 0.0) > 0 and c["config"]["timing"] == timing
-             and c.get("delta_vs_fullframe") is not None]
+             and c.get("delta_vs_fullframe") is not None and not math.isnan(c["delta_vs_fullframe"])]
     if not cands:
         return None
     c = max(cands, key=lambda c: c["delta_vs_fullframe"])
-    return {"name": c["name"], "miou": c["miou"], "delta_vs_fullframe": c["delta_vs_fullframe"],
-            "delta_vs_uniform": c.get("delta_vs_uniform"), "readable": len(cands)}
+    return {"name": c["name"], "scale": c["config"]["scale"], "miou": c["miou"],
+            "delta_vs_fullframe": c["delta_vs_fullframe"], "delta_vs_uniform": c.get("delta_vs_uniform"),
+            "latency_ms": c.get("latency", {}).get("mean_ms"), "budget_ms": c.get("budget_ms"),
+            "readable": len(cands)}
 
 
 def verdict_of(configs: Sequence[Dict[str, Any]], complete: bool, clips: int,
                check: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-    """The spec's pass rule for one model: the best warped config with timing ``now`` at equal mean
-    latency against the primary curve, read only on the whole clip set and a passed pipeline check.
+    """The spec's pass rule for one model, as amended on 2026-11-13: the best warped config with
+    timing ``now``, read as its mIoU minus the full frame's at the same scale. Both pay the same
+    backbone and post-processing there (resampling and unwarping at 0), so this is the comparison
+    at equal latency. Read only on the whole clip set and a passed pipeline check.
 
-    ``same_size`` is information only, not the rule: the same margin read on the mIoU above the
-    full frame at the configuration's own scale, which is the configuration priced as that full
-    frame on any reference (the primary curve does not count the full frame's post-processing,
-    while a configuration's latency does)."""
-    best = _best(configs, "judges", "mean", timing=RULE_TIMING)
-    prev = _best(configs, "judges", "mean", timing="prev")
-    delta = best["delta_miou_at_equal_latency"] if best else None
+    ``curves`` is information only, not the rule: the best ΔmIoU at equal mean latency against the
+    primary curve (backbone only: the spec's first reading), the measured end-to-end curve and the
+    full frame priced with the post-processing."""
+    best = _best_same_size(configs, RULE_TIMING)
+    prev = _best_same_size(configs, "prev")
+    delta = best["delta_vs_fullframe"] if best else None
     failed = sorted((k for k, v in check.items() if not v["ok"]), key=float)
     if not complete:
         passes, why = None, f"not read (partial: {clips} clips)"
@@ -282,16 +307,19 @@ def verdict_of(configs: Sequence[Dict[str, Any]], complete: bool, clips: int,
         passes = delta is not None and delta >= PASS_MARGIN
         why = "PASSES" if passes else "FAILS"
     note = None
-    if passes and (prev is None or prev["delta_miou_at_equal_latency"] < 0):
-        note = "passes, but the memory version starts under water (best prev config below the curve)"
-    same = _best_same_size(configs, RULE_TIMING)
-    return {"rule": f"best warped config with timing {RULE_TIMING} >= +{PASS_MARGIN * 100:g} mIoU points above "
-                    "the full-frame curve at equal mean latency, on every clip of train_all",
+    if passes and (prev is None or prev["delta_vs_fullframe"] < 0):
+        note = "passes, but the memory version starts under water (best prev config below the full frame at its scale)"
+    curves = {}
+    for key, judges in (("primary", "judges"), ("e2e", "judges_e2e"), ("same_parts", "judges_same_parts")):
+        curves[key] = {"best": _best(configs, judges, "mean", timing=RULE_TIMING),
+                       "best_prev": _best(configs, judges, "mean", timing="prev")}
+    return {"rule": f"best warped config with timing {RULE_TIMING} >= +{PASS_MARGIN * 100:g} mIoU points above the "
+                    "full frame at the same scale (same backbone and post-processing: equal latency), on every clip "
+                    "of train_all (spec, amended 2026-11-13)",
             "margin": PASS_MARGIN, "clips": clips, "complete": complete, "pipeline_check_ok": not failed and bool(check),
             "best": best, "best_prev": prev, "passes": passes, "state": why, "note": note,
-            "same_size": {"reading": "mIoU minus the full frame's at the same scale (information only, not the rule)",
-                          "best": same, "best_prev": _best_same_size(configs, "prev"),
-                          "at_margin": None if same is None else same["delta_vs_fullframe"] >= PASS_MARGIN}}
+            "curves": {"reading": "best ΔmIoU at equal mean latency on each full-frame curve (information only, "
+                                  "not the rule)", **curves}}
 
 
 def cmd_score(args: argparse.Namespace) -> int:
@@ -328,11 +356,12 @@ def cmd_score(args: argparse.Namespace) -> int:
             raise SystemExit(f"{path}: configs {short[:3]} lack clips: merge again from complete chunks")
         ref = fullframe_ref(Path(args.fullframe), model, args.split, tables, sorted(clip_ids))
         e2e = e2e_curves(args.e2e, model, ref)
+        same = same_parts_curve(ref, tables, model)
         n_frames = sum(frames.values())
         from eval.tradeoff import miou_of
 
         resize = {float(configs_of[n]["scale"]): miou_of(t) for n, t in totals.items() if "ref" in configs_of[n]}
-        configs = [summarise(n, configs_of[n], t, len(clip_ids), n_frames, tables, model, names, ref, e2e)
+        configs = [summarise(n, configs_of[n], t, len(clip_ids), n_frames, tables, model, names, ref, e2e, same)
                    for n, t in totals.items() if "ref" not in configs_of[n]]
         uniform = {float(c["config"]["scale"]): c["miou"] for c in configs if c["config"].get("alpha", 0.0) == 0.0}
         baseline = dict(zip(ref["scales"], ref["miou"]))
@@ -344,18 +373,20 @@ def cmd_score(args: argparse.Namespace) -> int:
         complete = expected is not None and clip_ids == expected
         verdict = verdicts[model] = verdict_of(configs, complete, len(clip_ids), check)
         best = {f"{k}/{tm}/{judges}/{judge}": _best(configs, judges, judge, k, tm)
-                for k in ("E", "B", "S") for tm in ("now", "prev") for judges in ("judges", "judges_e2e")
-                for judge in ("mean", "p95")}
+                for k in ("E", "B", "S") for tm in ("now", "prev")
+                for judges in ("judges", "judges_e2e", "judges_same_parts") for judge in ("mean", "p95")}
         payload = {"split": args.split, "model": model, "bound": str(path), "resample": resamples.pop(),
                    "fullframe": _public(ref),
                    "fullframe_e2e": None if e2e is None else {k: v for k, v in e2e.items() if k != "curves"},
+                   "fullframe_same_parts": {k: v for k, v in same.items() if k != "curves"},
                    "pipeline_check": check, "verdict": verdict, "best": best, "configs": configs}
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / f"score_{args.split}_{model}.json"
         out.write_text(json.dumps(payload, indent=1, allow_nan=True) + "\n")
         b = verdict["best"]
         shown = "no readable warped config" if b is None else (
-            f"best now {b['name']}: {b['delta_miou_at_equal_latency'] * 100:+.2f} pts at {b['latency_ms']:.2f} ms")
+            f"best now {b['name']}: {b['delta_vs_fullframe'] * 100:+.2f} pts vs the full frame at c{b['scale']:g} "
+            f"({b['latency_ms']:.2f} ms)")
         gaps = ", ".join(f"c{k} {'ok' if v['ok'] else 'NOT ok'}"
                          + ("" if v["gap"] is None else f" ({v['gap'] * 100:+.2f} pts)") for k, v in check.items())
         print(f"[method5 score] {model}: {len(configs)} configs over {len(clip_ids)} clips; pipeline check: {gaps}; "
@@ -397,7 +428,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     b.add_argument("--cell", type=int, default=16, help="Saliency cell, px (16: a 64 x 128 grid).")
     b.add_argument("--batch", type=int, default=4, help="Warped images of one scale per forward pass.")
     b.add_argument("--resample", default=RESAMPLE, choices=RESAMPLES,
-                   help="supersample: the spec's 2x supersampling + 2 x 2 mean; antialias: the baseline's filter.")
+                   help="antialias (the spec's, amended 2026-11-13): the baseline's filter, exact at alpha 0; "
+                        "supersample: the plan's 2x supersampling + 2 x 2 mean, not run.")
     b.set_defaults(fn=cmd_bound)
 
     m = sub.add_parser("merge", help="Chunk files -> one bound file per model.")

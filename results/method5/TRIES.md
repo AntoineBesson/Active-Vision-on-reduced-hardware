@@ -45,9 +45,8 @@ Added `--resample antialias`: per axis, a triangle filter whose half-width is
 the number of source pixels each output pixel covers (the inverse map's
 local span, at least 1), normalised per output pixel, as torch's own
 antialiased kernel. At α = 0 it equals the baseline's resize to float
-precision at every scale (tested). The default stays `supersample`, as in
-the spec, until the user decides; asked on 2026-11-13. A bound file, `merge`
-and `score` refuse rows of mixed resamplings.
+precision at every scale (tested). A bound file, `merge` and `score` refuse
+rows of mixed resamplings. Settled the same day, see below.
 
 ## 2026-11-13 — the uniform rows start below the primary curve
 
@@ -69,9 +68,8 @@ latency):
 So a warp must first make up the full frame's post-processing before it
 reaches the curve, mostly at small scales. The spec's question ("at the same
 input size") reads mIoU against the full frame at the same scale. `score`
-reports both: the rule as written (`verdict.best`) and the same margin read
-as `delta_vs_fullframe` (`verdict.same_size`, information only). Asked the
-user on 2026-11-13 which one the rule reads; until then it reads the spec's.
+reported both readings while the user decided. Settled the same day, see
+below.
 
 ## 2026-11-13 — the labelled+previous zip cannot be read as `train_all`
 
@@ -84,3 +82,24 @@ full-frame reference or the chunks. So the zip is not built (plan steps 2 and
 3 skipped) and the Colab notebook uses the four chunk zips of the Method 3
 notebook, already on Drive (about 7 GB each). A split with a larger
 `max_frame_gap` could read such a zip, but is not needed.
+
+## 2026-11-13 — the spec is amended before any run
+
+The user settled both points above, before any `bound` run, in a dated
+Amendments section of the spec:
+
+- **Resampling:** the antialiased filter (`--resample antialias`) is the
+  default. The uniform row must reproduce the baseline, otherwise a warped
+  number mixes the warp with a worse downscale. Its inference cost, above a
+  plain `grid_sample`, is counted at 0 ms in the bound and comes out of the
+  phase 2 budget.
+- **Pass rule:** the best **now** configuration's mIoU minus the full
+  frame's at the same scale, ≥ +1.0 point. The rule as first written charged
+  the post-processing to the warped pass but not to the curve. Margin, timing
+  and pipeline check unchanged; the primary and end-to-end curves are
+  reported in `verdict.curves`.
+
+Following from the second (Claude's reading, noted in the spec): the budget
+(`budget_ms`) is read on the full frame priced at `area` + `post`
+(`judges_same_parts`). On that curve, a configuration's ΔmIoU at equal latency
+is exactly the rule's reading, which a test checks.
