@@ -98,9 +98,10 @@ def _scan(path: Path) -> Tuple[List[str], Dict[str, set], bool]:
     return order, names, clean
 
 
-def resume(path: Path, expected: set) -> set:
+def resume(path: Path, expected: set, label: str = "method4 bound") -> set:
     """The clips ``path`` already holds in full. A cut-off last clip is dropped (the file is
-    rewritten without it); anything else that does not match the grid is refused."""
+    rewritten without it); anything else that does not match the grid is refused. ``label``
+    prefixes the message (Method 5 reuses this)."""
     if not path.exists():
         return set()
     order, names, clean = _scan(path)
@@ -120,7 +121,7 @@ def resume(path: Path, expected: set) -> set:
         kept = path.with_name(path.name + ".keep")
         _write_lines(kept, rows())
         kept.replace(path)
-        print(f"[method4 bound] {path.name}: dropped a cut-off tail, kept {len(done)} clips", flush=True)
+        print(f"[{label}] {path.name}: dropped a cut-off tail, kept {len(done)} clips", flush=True)
     return done
 
 
