@@ -170,9 +170,11 @@ from the chunk zips of the Method 3 notebook and saves the bound files to
 `bound` appends each finished clip and, started again, skips the clips already
 in the file. `--models pidnet_s` runs one model.
 
-**Run time:** not measured yet. The spec's guess is 2 to 3 h per model for the
-400 clips; the pipeline check gives the seconds per clip, and this line will
-be corrected from it.
+**Run time:** the pipeline check took 3.2 s per clip for PIDNet-S on the
+laptop RTX 2060 (5 clips, 4 warped passes per frame). The full grid has 144
+per frame, so by extrapolation about 30 to 40 s per clip: roughly 1 h per
+model per chunk and 4 to 5 h per model for the 400 clips, above the spec's
+guess of 2 to 3 h. Chunk 0 measures it.
 
 ## Results
 

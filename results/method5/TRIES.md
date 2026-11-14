@@ -103,3 +103,41 @@ Following from the second (Claude's reading, noted in the spec): the budget
 (`budget_ms`) is read on the full frame priced at `area` + `post`
 (`judges_same_parts`). On that curve, a configuration's ΔmIoU at equal latency
 is exactly the rule's reading, which a test checks.
+
+## 2026-11-14 — pipeline check on 5 clips: passes
+
+Plan task 6, step 1, approved by the user. PIDNet-S, laptop RTX 2060 (torch
+2.14.1, cu126), fp32, at `ae29b4b` (resampling `antialias`). The first 5 clips
+of `train_all` (`--chunk 0/80`: 0001, 0002, 0003, 0004, 0006), grid E, α 0.5,
+σ 1, timing now, plus the uniform rows and the baseline's resize at each
+scale, in `experiments/method5/pipecheck/`.
+
+Each uniform row against the full-frame baseline on the same clips (mIoU):
+
+| Scale | uniform | baseline | gap |
+|---|---|---|---|
+| 0.25 | 0.39505 | 0.39505 | +2.6e-7 |
+| 0.375 | 0.44934 | 0.44934 | +7.0e-7 |
+| 0.5 | 0.49421 | 0.49421 | −1.0e-7 |
+| 0.75 | 0.61518 | 0.61518 | +5.1e-7 |
+
+All four are within the 0.001 tolerance by four orders of magnitude, and the
+run's own resize equals the baseline file exactly at every scale, so the
+warp, the unwarp and the reference agree. The rule is not read (5 clips).
+
+Time: 3.2 s per clip (4.4 s for the first), 24.5 s for `bound`, 4.6 s for
+`score`; GPU at 70 °C at most. Extrapolated to the full grid (144 warped
+passes per frame instead of 4): about 30 to 40 s per clip, so roughly 1 h per
+model per chunk and 4 to 5 h per model on the laptop, above the spec's 2 to
+3 h. Chunk 0 will measure it.
+
+Not a reading, kept only as a smoke result: on these 5 clips the warped E
+configurations are −1.10, +0.73, +1.13 and −2.81 points against the full
+frame at scales 0.25, 0.375, 0.5 and 0.75. One α, one σ, 5 clips.
+
+`budget_ms` is NaN for every row. The curve code (`FullFrameCurve.latency_at`,
+unchanged) returns NaN unless the full-frame mIoU rises strictly with scale.
+On these 5 clips it most likely does not between 0.75 and 1 (not checked:
+the scale-1 mIoU was not in the report). The budget is reported only and
+does not enter the rule.
+
