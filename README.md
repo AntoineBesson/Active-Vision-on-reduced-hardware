@@ -81,9 +81,11 @@ whatever is selected or remembered. See
    indicative.
 4. **Method 4: stopped at the feasibility bound (negative), see above.** The
    learned policy is not built.
-5. Ideas not started: an oracle bound for a single pass on a non-uniformly
-   resampled frame (no crops, no second pass); the same readings on an
-   embedded card, where only the latency tables change.
+5. **Method 5: a single pass on a non-uniformly resampled frame** (no crops,
+   no second pass). Its oracle feasibility bound is coded and pre-registered,
+   not run yet, see [results/method5](results/method5/README.md). Not
+   started: the same readings on an embedded card, where only the latency
+   tables change.
 6. Optional: a secondary evaluation on the 500 official val images (frame
    `_000019`) for less noisy rare-class IoUs.
 
@@ -124,6 +126,7 @@ python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yam
 | Method 2: foveation without memory | ✅ negative, [results](results/method2/README.md) |
 | Method 3: motion-gated reuse | ✅ negative on train, val not run, [results](results/method3/README.md) |
 | Method 4: persistent canvas + glimpse policy | ✅ feasibility bound negative on train, policy not built, [results](results/method4/README.md) |
+| Method 5: one pass on an oracle-warped frame | 🚧 feasibility bound coded, runs not started, [plan of the reading](results/method5/README.md) |
 | Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout

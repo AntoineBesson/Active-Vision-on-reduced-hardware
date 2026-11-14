@@ -25,6 +25,10 @@ its eager records are kept; every other part keeps its graph-level records.
 
 Method 4's bound (:meth:`LatencyTables.predict_canvas_frame`) prices a canvas frame from
 the same entries, with the policy at 0.
+
+Method 5's bound (:meth:`LatencyTables.predict_warp_frame`) prices a warped pass as the full
+frame's at the same input size: the backbone and its post-processing, with the resampling,
+the unwarping and the saliency at 0.
 """
 
 from __future__ import annotations
@@ -198,6 +202,20 @@ class LatencyTables:
                     parts["motion"] = self._part_ms("reuse", op="motion", size=cfg.glimpse_size)
         return {"median_ms": sum(p["median_ms"] for p in parts.values()),
                 "p95_ms": sum(p["p95_ms"] for p in parts.values()), "gflops": gflops, "parts": parts}
+
+
+    def predict_warp_frame(self, model: str, scale: float) -> Dict[str, Any]:
+        """Predicted latency of one frame of Method 5's bound: one pass on the warped frame of
+        ``scale`` x the frame's size, i.e. the backbone on the full frame at ``scale`` (``area``)
+        plus its post-processing (upsample, argmax: ``reuse`` ``post``). Building the warped image,
+        unwarping the logits, the saliency and the grid are not measured and cost 0 (spec).
+        ``gflops``: the backbone pass."""
+        stride = self.strides[model]
+        area = self._find("area", model=model, kind="frame", scale=scale)
+        parts = {"backbone": {"median_ms": area["median_ms"], "p95_ms": area["p95_ms"]},
+                 "post": self._part_ms("reuse", op="post", stride=stride, scale=scale)}
+        return {"median_ms": sum(p["median_ms"] for p in parts.values()),
+                "p95_ms": sum(p["p95_ms"] for p in parts.values()), "gflops": area["gflops"], "parts": parts}
 
 
 def frame_latency_summary(per_frame_ms: Iterable[float]) -> Dict[str, float]:
