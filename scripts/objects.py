@@ -243,14 +243,32 @@ def _family(name: str) -> str:
     raise SystemExit(f"unknown config family of {name!r}")
 
 
-def choose_configs(args: argparse.Namespace, scores: Dict[str, Dict[str, Any]], fullframe: Dict[str, Any]) -> List[str]:
+def cached_scales(cache) -> set:
+    """Full-pass scales a cache can serve: ``full_{s}``, or ``ctx_{s}`` (the same full pass, see
+    :func:`reuse.replay.build_clip_cache`)."""
+    return {float(s) for s in cache.meta.get("full_scales", []) + cache.meta.get("ctx_scales", [])}
+
+
+def replayable(cfg: Dict[str, Any], scales: Optional[set]) -> bool:
+    """Whether every full pass the config needs is in the caches (``None``: assume so)."""
+    if scales is None:
+        return True
+    need = [cfg.get("full_scale"), cfg.get("ctx_scale")]
+    return all(float(s) in scales for s in need if s is not None)
+
+
+def choose_configs(args: argparse.Namespace, scores: Dict[str, Dict[str, Any]], fullframe: Dict[str, Any],
+                   scales_cached: Optional[set] = None) -> List[str]:
+    """Full-frame scales, explicit configs, and the upper edge of each family. With
+    ``scales_cached``, the edge is taken among the configs the caches can replay only."""
     scales = [float(v) for v in _strs(args.ff_scales)] if args.ff_scales else fullframe.get("scales", [])
     names = [f"ff/{s:g}" for s in scales]
     names += _strs(args.configs) if args.configs else []
     if args.edge:
         groups: Dict[str, List[Dict[str, Any]]] = {}
         for c in scores.values():
-            groups.setdefault(_family(c["name"]), []).append(c)
+            if replayable(c["config"], scales_cached):
+                groups.setdefault(_family(c["name"]), []).append(c)
         for fam in ("method3", "method4", "method2_screen"):
             names += upper_edge(groups.get(fam, []), args.edge)
     seen, out = set(), []
@@ -279,8 +297,12 @@ def predictions(cache, name: str, scores: Dict[str, Dict[str, Any]], device) -> 
     cfg = scores[name]["config"]
     if fam == "method3":
         from reuse.method import MotionReuseConfig
-        from reuse.replay import replay_clip
+        from reuse.replay import _key, replay_clip
 
+        for prefix in ("full", "full_conf"):  # a full pass at s < 1 may be cached as the context pass
+            key, alias = _key(prefix, cfg["full_scale"]), _key(prefix.replace("full", "ctx"), cfg["full_scale"])
+            if key not in cache._npz.files and alias in cache._npz.files:
+                cache._arrays[key] = cache[alias]
         _, preds = replay_clip(cache, MotionReuseConfig(**cfg), device, return_predictions=True)
     else:
         from canvas.replay import CanvasConfig, replay_canvas
@@ -307,12 +329,33 @@ def _tag(args: argparse.Namespace) -> str:
     return "all"
 
 
+def wait_for_gpu(max_temp: Optional[int], pause_s: float = 20.0) -> None:
+    """Block while the GPU is hotter than ``max_temp`` C (laptop guard; no-op without nvidia-smi)."""
+    import subprocess
+    import time
+
+    if not max_temp:
+        return
+    while True:
+        try:
+            out = subprocess.run(["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
+                                 capture_output=True, text=True, timeout=10).stdout
+            temp = max(int(v) for v in out.split())
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return
+        if temp <= max_temp:
+            return
+        print(f"[objects score] GPU {temp} C > {max_temp} C, pausing {pause_s:g} s", flush=True)
+        time.sleep(pause_s)
+
+
 def cmd_score(args: argparse.Namespace) -> int:
     scores, fullframe = load_scores(score_paths(args.score))
-    names = choose_configs(args, scores, fullframe)
     device = resolve_device(args.device)
     dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split)
     clips = select_clips([dataset.clip_id(i) for i in range(len(dataset))], args.clip_ids, args.chunk)
+    _, first = next(_caches(Path(args.root), args.split, _strs(args.models)[0], dataset, clips[:1]))
+    names = choose_configs(args, scores, fullframe, cached_scales(first))
     for model in _strs(args.models):
         path = EXP / args.split / f"iou_{model}_{_tag(args)}.jsonl.gz"
         done = {(r["name"], r["clip_id"]) for r in read_lines(path)} if path.is_file() else set()
@@ -324,7 +367,8 @@ def cmd_score(args: argparse.Namespace) -> int:
                 continue
             maps, objs = clip_ground_truth(dataset, i, cache.labeled_t)
             _append(path, ({"name": n, "clip_id": clip_id, "model": model,
-                            "iou": clip_ious(cache, maps, objs, n, scores, device)} for n in todo))
+                            "iou": (wait_for_gpu(args.max_temp), clip_ious(cache, maps, objs, n, scores, device))[1]}
+                           for n in todo))
     return 0
 
 
@@ -349,6 +393,8 @@ def collect_ious(files: Sequence[Path], cols) -> Dict[str, Any]:
                 raise SystemExit(f"{f}: ({key[0]}, {key[1]}) seen twice")
             seen.add(key)
             if r["clip_id"] not in starts:
+                if not r["iou"]:  # a clip without any thing object (6 of the 400 on train_all)
+                    continue
                 raise SystemExit(f"{f}: clip {r['clip_id']} is not in the object table")
             a, b = starts[r["clip_id"]]
             if len(r["iou"]) != b - a:
@@ -419,6 +465,47 @@ def build_report(cols, ious: Dict[str, Any], scores, fullframe, bins, n_boot: in
     return out
 
 
+def cmd_fullpass(args: argparse.Namespace) -> int:
+    """Full-frame passes the caches lack (e.g. 0.75), run live on the labelled frames only, scored
+    like ``ff/<scale>`` in ``score`` (same :func:`reuse.method.full_pass`, fp32 as the caches)."""
+    import torch
+
+    from eval.harness import frame_to_tensor
+    from models.registry import build_backbone
+    from reuse.method import full_pass
+    from reuse.motion import MOTION_FACTOR
+    from eval.objects import local_ious
+
+    device = resolve_device(args.device)
+    scales = [float(v) for v in _strs(args.scales)]
+    dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split)
+    clips = select_clips([dataset.clip_id(i) for i in range(len(dataset))], args.clip_ids, args.chunk)
+    for model in _strs(args.models):
+        path = EXP / args.split / f"iou_{model}_ff{'_'.join(f'{x:g}' for x in scales)}.jsonl.gz"
+        done = {(r["name"], r["clip_id"]) for r in read_lines(path)} if path.is_file() else set()
+        backbone = build_backbone(model_config(model, args.fixture)["backbone"],
+                                  context={"palette": dataset.palette}).to(device).eval()
+        print(f"[objects fullpass] {model}: scales {scales} x {len(clips)} clips; {len(done)} lines in {path}", flush=True)
+        for n, (i, cache) in enumerate(_caches(Path(args.root), args.split, model, dataset, clips)):
+            clip_id = dataset.clip_id(i)
+            todo = [s for s in scales if (f"ff/{s:g}", clip_id) not in done]
+            if not todo:
+                continue
+            wait_for_gpu(args.max_temp)
+            maps, objs = clip_ground_truth(dataset, i, cache.labeled_t)
+            ious: Dict[float, List[float]] = {s: [] for s in todo}
+            with torch.no_grad():
+                for t, inst, fo in zip(cache.labeled_t, maps, objs):
+                    frame = frame_to_tensor(dataset.load_frame(i, int(t)), device)
+                    small = (frame.shape[-2] // MOTION_FACTOR, frame.shape[-1] // MOTION_FACTOR)
+                    for s in todo:
+                        lab, _, _ = full_pass(backbone, frame, s, small)
+                        ious[s] += local_ious(inst, lab.to(torch.uint8).cpu().numpy(), fo).tolist()
+            _append(path, ({"name": f"ff/{s:g}", "clip_id": clip_id, "model": model, "iou": ious[s]} for s in todo))
+            print(f"[objects fullpass] {model} {n + 1}/{len(clips)}", flush=True)
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     cols, _ = load_table(Path(args.table) if args.table else table_path(args.split))
     bins = load_bins(args.bins)
@@ -473,7 +560,15 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     s.add_argument("--edge", type=int, default=0, help="Also take up to N upper-edge configs per family.")
     s.add_argument("--tag", default=None)
     s.add_argument("--device", default="auto")
+    s.add_argument("--max-temp", type=int, default=None, help="Pause before each config while the GPU is above this (C).")
     s.set_defaults(func=cmd_score)
+
+    f = sub.add_parser("fullpass", help="full-frame scales missing from the caches, run live on labelled frames")
+    common(f)
+    f.add_argument("--scales", default="0.75")
+    f.add_argument("--device", default="auto")
+    f.add_argument("--max-temp", type=int, default=None, help="Pause before each clip while the GPU is above this (C).")
+    f.set_defaults(func=cmd_fullpass)
 
     r = sub.add_parser("report", help="recall tables and the reading against the full-frame curve")
     common(r)
