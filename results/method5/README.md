@@ -283,6 +283,30 @@ have to resample, unwarp and choose the warp in 0.16 ms (PIDNet-S) or 0.58 ms
 where the full frame is 23 (PIDNet-S) and 14 (BiSeNetV2) points below its own
 scale 1. The best configuration is also picked in-sample among 72.
 
+### Post hoc extension: weaker warps (α 0.1 and 0.15)
+
+Decided after chunk 0, run on the same 400 clips with the same code, read
+next to the rule and not as the rule (spec amendment of 2026-11-16). Files:
+[ext/verdict_train_all.json](ext/verdict_train_all.json) and
+`ext/score_train_all_*.json.gz`. Pipeline check: passes.
+
+Best **now** against the full frame at the same scale, in mIoU points, for
+α 0.1 / 0.15 / 0.25 / 0.5 (the last two from the registered grid):
+
+| Scale | PIDNet-S | BiSeNetV2 |
+|---|---|---|
+| 0.25 | +0.86 / +0.96 / **+1.25** / −0.05 | +1.20 / +1.48 / **+1.80** / +0.04 |
+| 0.375 | +0.69 / **+0.92** / +0.91 / −0.39 | +0.98 / **+1.17** / +0.73 / −1.28 |
+| 0.5 | +0.78 / **+1.00** / +0.86 / −0.48 | +0.31 / **+0.33** / +0.08 / −1.67 |
+
+- A weaker warp does not beat α 0.25 at scale 0.25, but at 0.375 and 0.5 the
+  best strength is α 0.15: the optimum falls as the scale grows.
+- There the budgets are larger: BiSeNetV2 keeps +1.17 points for 1.18 ms at
+  scale 0.375, PIDNet-S +1.00 for 0.87 ms at scale 0.5 (against 0.58 and
+  0.16 ms at scale 0.25).
+- The best saliency is still the error oracle E; the weaker warps help the
+  small-class saliency S most (BiSeNetV2 +0.96, PIDNet-S +0.73).
+
 ## Files
 
 - Code: `src/warp/grid.py` (densities, forward and inverse maps, warp, unwarp),
