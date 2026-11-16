@@ -483,3 +483,21 @@ configurations, 4 uniform rows, 4 resize refs). `merge` in
 
 For phase 2 (open point 1 of its draft spec): α ∈ {0.15, 0.25, 0.35} covers
 the best strength at every scale kept; α 0.1 adds nothing.
+
+## 2026-11-16 — scale 1 magnification extension sent to the cluster (post hoc)
+
+The user's go, before accepting the phase 2 spec: it is the only version that
+can move the operating point a T4 uses, and if it gains, phase 2's scales
+change. Run `train_all_mag` of `scripts/cluster/m5_bound.sh` (`--scales 1
+--d-max 2 --saliencies B,S --alphas 0.1,0.25,0.5`, σ 1 and 4, both timings:
+24 configurations per model plus the uniform row), all four chunks, Tesla
+P100, cluster repository at `d843327`. Every pass is at full resolution.
+
+| Chunk | PIDNet-S job | BiSeNetV2 job |
+|---|---|---|
+| 0 | 1107500 | 1107504 |
+| 1 | 1107501 | 1107505 |
+| 2 | 1107502 | 1107506 |
+| 3 | 1107503 | 1107507 |
+
+The chunk 0 zip was already on the cluster. **Not finished, not scored.**
