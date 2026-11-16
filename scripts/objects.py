@@ -465,6 +465,47 @@ def build_report(cols, ious: Dict[str, Any], scores, fullframe, bins, n_boot: in
     return out
 
 
+def cmd_fullpass(args: argparse.Namespace) -> int:
+    """Full-frame passes the caches lack (e.g. 0.75), run live on the labelled frames only, scored
+    like ``ff/<scale>`` in ``score`` (same :func:`reuse.method.full_pass`, fp32 as the caches)."""
+    import torch
+
+    from eval.harness import frame_to_tensor
+    from models.registry import build_backbone
+    from reuse.method import full_pass
+    from reuse.motion import MOTION_FACTOR
+    from eval.objects import local_ious
+
+    device = resolve_device(args.device)
+    scales = [float(v) for v in _strs(args.scales)]
+    dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split)
+    clips = select_clips([dataset.clip_id(i) for i in range(len(dataset))], args.clip_ids, args.chunk)
+    for model in _strs(args.models):
+        path = EXP / args.split / f"iou_{model}_ff{'_'.join(f'{x:g}' for x in scales)}.jsonl.gz"
+        done = {(r["name"], r["clip_id"]) for r in read_lines(path)} if path.is_file() else set()
+        backbone = build_backbone(model_config(model, args.fixture)["backbone"],
+                                  context={"palette": dataset.palette}).to(device).eval()
+        print(f"[objects fullpass] {model}: scales {scales} x {len(clips)} clips; {len(done)} lines in {path}", flush=True)
+        for n, (i, cache) in enumerate(_caches(Path(args.root), args.split, model, dataset, clips)):
+            clip_id = dataset.clip_id(i)
+            todo = [s for s in scales if (f"ff/{s:g}", clip_id) not in done]
+            if not todo:
+                continue
+            wait_for_gpu(args.max_temp)
+            maps, objs = clip_ground_truth(dataset, i, cache.labeled_t)
+            ious: Dict[float, List[float]] = {s: [] for s in todo}
+            with torch.no_grad():
+                for t, inst, fo in zip(cache.labeled_t, maps, objs):
+                    frame = frame_to_tensor(dataset.load_frame(i, int(t)), device)
+                    small = (frame.shape[-2] // MOTION_FACTOR, frame.shape[-1] // MOTION_FACTOR)
+                    for s in todo:
+                        lab, _, _ = full_pass(backbone, frame, s, small)
+                        ious[s] += local_ious(inst, lab.to(torch.uint8).cpu().numpy(), fo).tolist()
+            _append(path, ({"name": f"ff/{s:g}", "clip_id": clip_id, "model": model, "iou": ious[s]} for s in todo))
+            print(f"[objects fullpass] {model} {n + 1}/{len(clips)}", flush=True)
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     cols, _ = load_table(Path(args.table) if args.table else table_path(args.split))
     bins = load_bins(args.bins)
@@ -521,6 +562,13 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     s.add_argument("--device", default="auto")
     s.add_argument("--max-temp", type=int, default=None, help="Pause before each config while the GPU is above this (C).")
     s.set_defaults(func=cmd_score)
+
+    f = sub.add_parser("fullpass", help="full-frame scales missing from the caches, run live on labelled frames")
+    common(f)
+    f.add_argument("--scales", default="0.75")
+    f.add_argument("--device", default="auto")
+    f.add_argument("--max-temp", type=int, default=None, help="Pause before each clip while the GPU is above this (C).")
+    f.set_defaults(func=cmd_fullpass)
 
     r = sub.add_parser("report", help="recall tables and the reading against the full-frame curve")
     common(r)
