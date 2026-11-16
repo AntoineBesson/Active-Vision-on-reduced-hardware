@@ -175,6 +175,24 @@ foreach ($c in 0, 1, 2, 3) {
 & $py -m scripts.method5 score --split train_all --out-dir experiments/method5/train_all_ext
 ```
 
+**Extension, scale 1 with magnification (added 2026-11-16 after chunk 0, post
+hoc).** At scale 1 the registered warp is the identity. With `--d-max 2` a
+region may be sampled up to twice finer than the source pixels, at the full
+frame's own cost. 24 full-resolution passes per frame, about two thirds of
+the registered grid's compute.
+
+```powershell
+foreach ($c in 0, 1, 2, 3) {
+    & $py -m scripts.method5 bound --split train_all --chunk "$c/4" --scales 1 --d-max 2 `
+        --saliencies B,S --alphas 0.1,0.25,0.5 --out-dir experiments/method5/train_all_mag
+}
+& $py -m scripts.method5 merge --split train_all --out-dir experiments/method5/train_all_mag
+& $py -m scripts.method5 score --split train_all --out-dir experiments/method5/train_all_mag
+```
+
+What comes after the bound (local warps, fixed priors) is listed in
+[docs/research/2026-11-16-warp-next-research-points.md](../../docs/research/2026-11-16-warp-next-research-points.md).
+
 A bound file refuses rows of another resampling, and so do `merge` and
 `score`: keep the default `--resample antialias` for every run.
 

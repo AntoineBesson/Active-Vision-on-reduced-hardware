@@ -283,3 +283,22 @@ The registered rule stays on α ∈ {0.25, 0.5, 0.75}. The extension is reported
 next to it as chosen after looking at a quarter of the data (spec amendment of
 2026-11-16). Not run yet: it goes to the cluster with chunks 1 to 3.
 
+## 2026-11-16 — second extension decided after chunk 0: scale 1 with magnification (post hoc)
+
+The user's objection to the chunk 0 reading: a T4 runs the full frame at
+scale 1, and there the registered warp is the identity, so nothing in the
+grid can move the operating point. Extension: `--scales 1 --d-max 2` (density
+up to 2, i.e. sampling up to twice finer than the source pixels), saliencies
+B and S, α ∈ {0.1, 0.25, 0.5}, in `experiments/method5/train_all_mag` (24
+configurations per model). `d_max` is a new optional argument of
+`axis_density` / `make_grid` / `bound_clip`; the default path is unchanged
+(tests). Tried on the synthetic fixture only. Not run yet.
+
+The α = 0.1 / 0.15 extension is kept (the user first read them as image
+scales; they are warp strengths at the same cost).
+
+Also noted for the paper: the warp is separable, which the user had assumed
+local. The next research points with frozen weights (local 2-D warp first,
+fixed priors, related work) are in
+`docs/research/2026-11-16-warp-next-research-points.md`.
+

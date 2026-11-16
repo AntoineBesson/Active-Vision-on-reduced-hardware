@@ -292,3 +292,21 @@ on the edge of the grid, so weaker warps are added:
 - If the registered grid fails and the extension is above +1.0 point, that is
   written as such (a result found after looking), not as a pass.
 
+### 2026-11-16, after chunk 0 was scored: scale 1 with magnification, as an extension (the user's decision)
+
+The user's objection: on a T4 the full frame at scale 1 runs in real time, so
+a gain below scale 1 does not move the operating point, and at scale 1 the
+warp is the identity (the upper clip 1/c is 1).
+
+- **Extension:** c = 1 with the upper clip of the density raised to 2
+  (`--d-max 2`): a region may be sampled up to twice finer than the source
+  pixels, the rest down to half, at the pixel count and the cost of the full
+  frame. Saliencies B and S (E is empty at scale 1: the uniform pass is the
+  teacher), α ∈ {0.1, 0.25, 0.5}, σ ∈ {1, 4}, both timings: 24 configurations
+  per model plus the uniform row, in `experiments/method5/train_all_mag`.
+- Same reading as the rule (mIoU above the full frame at the same scale, here
+  scale 1) and same pipeline check, but **post hoc**: reported next to the
+  registered rule, not as the rule.
+- Code: `axis_density` and `make_grid` take an optional `d_max`; without it
+  nothing changes.
+
