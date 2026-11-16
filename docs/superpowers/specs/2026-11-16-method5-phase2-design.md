@@ -1,11 +1,13 @@
 # Method 5, phase 2: a warp a real policy can compute, at its real cost
 
-Status: **draft for the user's review, 2026-11-16. Nothing is built or run.**
-The user asked for this spec on 2026-11-16, after phase 1 passed. The design
-is Claude's proposal. Points marked *(my call)* are Claude's choices, and the
-[open points](#open-points-for-the-user) at the end need the user's answer.
-Once the user accepts it, nothing here changes after the first stage B run,
-except in a dated "Amendments" section at the end, as for phase 1.
+Status: **draft, 2026-11-16. Nothing is built or run.** The user asked for
+this spec on 2026-11-16, after phase 1 passed, and settled its open points
+the same evening ([decisions](#the-users-decisions-2026-11-16)). Acceptance
+waits for the scale 1 magnification extension, which is running: if it
+gains, the scales of stage B change. The design is Claude's proposal; points
+marked *(my call)* are Claude's choices. Once the user accepts it, nothing
+here changes after the first stage B run, except in a dated "Amendments"
+section at the end, as for phase 1.
 
 ## What phase 1 leaves
 
@@ -138,7 +140,7 @@ smoothed by σ, as in phase 1.
 |---|---|
 | input scale c | 0.25, 0.375, and 0.5 for PIDNet-S |
 | saliency | B, S, U, P |
-| strength α | 0.15, 0.25, 0.35 (proposed from the α extension; open point 1) |
+| strength α | 0.1, 0.15, 0.25 (the user's decision, from the α extension) |
 | smoothing σ (cells) | 1, 4 |
 | resampling | the variants that passed gate A |
 
@@ -153,8 +155,13 @@ The draft left it out because +0.86 is under phase 1's +1.0 margin. But phase
 boundary saliency B, which a policy can compute, and it keeps +0.80 from the
 teacher at t − 1.
 
-**Why the rest is left out:** BiSeNetV2 at 0.5 (+0.08) and both models at
-0.75 (+0.15 or less) have almost no gain to lose to a real saliency.
+**Why the rest is left out:**
+- **BiSeNetV2 at 0.5** has the largest budget of all, 0.7 to 1.3 ms on the
+  measured curve, but its gain with a saliency a policy can compute
+  (boundaries or small classes from the teacher at t − 1) is only +0.20 to
+  +0.36 points. Fifty val clips are unlikely to resolve that *(the user's
+  reason, 2026-11-16)*.
+- **Both models at 0.75** gain +0.21 points or less, oracle included.
 
 **References, not rerun:** the phase 1 oracle (now) and teacher (prev) on the
 same clips.
@@ -222,15 +229,16 @@ the user. Method 3 stopped this way.
 > interval is also above 0. Otherwise it is **negative**.
 
 The p95 judge, the same-scale delta and the share of the oracle's gain kept
-are reported but do not enter the rule. The margin is open point 2.
+are reported but do not enter the rule. There is no margin (the user's
+decision 2).
 
 ## Non-goals
 
 - No training, neither of the backbone nor of a policy. A learned or RL
   policy comes only if this passes.
-- No free 2-D warp (research point 1). See open point 3.
-- No scale 1 unless the magnification extension is run and gains. See open
-  point 4.
+- No free 2-D warp (research point 1), unless gate A leaves room (decision 3).
+- No scale 1 unless the magnification extension, now running, gains
+  (decision 4).
 - No embedded card. Only the latency tables would change.
 
 ## Anti-goals
@@ -261,32 +269,41 @@ are reported but do not enter the rule. The margin is open point 2.
 - **Results:** a phase 2 section in `results/method5/README.md`, and the
   ledger in `results/method5/TRIES.md`.
 
-## Open points for the user
+## The user's decisions (2026-11-16)
 
-1. **α values.** The α 0.1 / 0.15 extension is scored (post hoc,
-   [results](../../../results/method5/README.md#post-hoc-extension-weaker-warps-α-01-and-015)).
-   The best strength falls as the scale grows: α 0.25 at scale 0.25, α 0.15
-   at 0.375 and 0.5, and α 0.1 is below α 0.15 at every scale kept here.
-   Proposed: α ∈ {0.15, 0.25, 0.35}, with 0.35 because at scale 0.25 the
-   optimum lies between 0.25 and 0.5. The extension also gives the oracle a
-   larger budget at those scales: BiSeNetV2 +1.17 points for 1.18 ms at
-   0.375, PIDNet-S +1.00 for 0.87 ms at 0.5.
-2. **The margin of the pass rule.** The draft rule is "above 0 with the
-   interval above 0", the val reading of Methods 2 and 3. A fixed margin
-   such as +0.5 points would be stricter.
-3. **The free 2-D warp (research point 1).** A local warp magnifies regions
-   instead of whole rows and columns, but it costs more: a 2-D inverse, and a
-   filter that follows the local Jacobian. My recommendation is to bound it
-   with an oracle only if gate A shows that the separable machinery costs well
-   under the budget.
-4. **Scale 1 with magnification.** This extension is not submitted. It is the
-   only version that can move the top of the curve, where a T4 actually runs.
-   If you want it, it goes to the cluster now, next to the α extension. If it
-   gains, phase 2 should be read at scale 1 first.
-5. **Both models, or BiSeNetV2 only.** BiSeNetV2 has three times the budget
-   at scales 0.25 and 0.375; PIDNet-S has its largest at 0.5. I propose both,
-   because the closed loop costs 1 to 2.5 h per chunk and model on the
-   cluster.
+The open points of the draft, settled by the user after the α extension was
+scored.
+
+1. **α ∈ {0.1, 0.15, 0.25}.** The draft proposed {0.15, 0.25, 0.35}, on the
+   error oracle E at scale 0.25, which a real policy cannot compute. For the
+   two saliencies phase 2 can use, the gain peaks at α 0.25 or below and is
+   negative at α 0.5 in every cell. With the teacher at t − 1 (timing
+   **prev**), best Δ against the full frame at the same scale, in points:
+
+   | Saliency | Model, scale | α 0.1 | α 0.15 | α 0.25 | α 0.5 |
+   |---|---|---|---|---|---|
+   | small classes S | PIDNet-S, 0.25 | +0.76 | +0.60 | −0.19 | −4.16 |
+   | small classes S | BiSeNetV2, 0.375 | +0.70 | +0.77 | +0.01 | −6.73 |
+   | boundaries B | PIDNet-S, 0.5 | +0.47 | +0.68 | +0.80 | −0.71 |
+   | boundaries B | BiSeNetV2, 0.25 | +0.60 | +0.72 | +0.92 | −0.20 |
+
+   S already loses at α 0.25, so dropping α 0.1 would drop its best setting.
+   (The draft's "α 0.1 is below α 0.15 at every scale" held for E only.)
+2. **Margin: none.** The rule stays "above 0, with the interval above 0".
+   The oracle gains are about one point, so a +0.5 margin would decide the
+   result before the run.
+3. **Free 2-D warp: as drafted.** Bound it with an oracle only if gate A
+   leaves room under the budget.
+4. **Scale 1 with magnification: run now, before acceptance.** It is the only
+   version that can move the operating point a T4 actually uses. If it gains,
+   the scales of stage B change. Submitted on 2026-11-16 (8 cluster jobs).
+5. **Both models.** With saliencies from the previous frame, the budgets on
+   the measured curve are about 0.4 to 0.7 ms for PIDNet-S at scale 0.5 and
+   about 0.65 to 0.75 ms for BiSeNetV2 at 0.375: each model has one scale
+   with real room.
+
+Still to confirm at acceptance: the rule when the gate A sessions straddle
+the budget (stage B goes on, marked *to confirm* above).
 
 ## Changes after review (2026-11-16, before acceptance)
 
@@ -302,7 +319,7 @@ user's request:
    rule.
 5. The cost of fitting the static prior P is counted.
 
-The reviewer's advice on the open points, which stay the user's to settle:
+The reviewer's advice on the open points, since settled by the user (above):
 run the α extension and the scale 1 extension before accepting this spec
 (points 1 and 4); stage A can start meanwhile, since its timings are needed
 either way; keep the draft margin (point 2); bound the 2-D warp only if gate A
