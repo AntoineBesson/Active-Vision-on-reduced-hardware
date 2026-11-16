@@ -47,10 +47,20 @@ class FullFrameCurve:
             return float("nan")
         return float(np.interp(latency_ms, self.latency, self.miou))
 
-    def latency_at(self, miou: float) -> float:
-        if not np.all(np.diff(self.miou) > 0) or not self.miou[0] <= miou <= self.miou[-1]:
+    def latency_at(self, miou: float, frontier: bool = False) -> float:
+        """The curve's latency at ``miou``; NaN outside it, or where mIoU does not rise with latency.
+
+        ``frontier``: read the cheapest full frame that reaches ``miou`` instead. A scale that is
+        no better than a cheaper one is dropped first (a plateau or a dip at the top of the
+        curve), and the rest, which rises strictly, is interpolated. Same value as the default
+        on a rising curve; NaN only below the cheapest scale's mIoU or above the best one."""
+        lat, m = self.latency, self.miou
+        if frontier:
+            keep = np.concatenate([[True], m[1:] > np.maximum.accumulate(m)[:-1]])
+            lat, m = lat[keep], m[keep]
+        if not np.all(np.diff(m) > 0) or not m[0] <= miou <= m[-1]:
             return float("nan")
-        return float(np.interp(miou, self.miou, self.latency))
+        return float(np.interp(miou, m, lat))
 
 
 def delta_miou_at_equal_latency(miou: float, latency_ms: float, curve: FullFrameCurve) -> float:

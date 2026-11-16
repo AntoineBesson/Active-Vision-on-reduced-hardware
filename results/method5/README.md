@@ -93,7 +93,9 @@ the reference and the pipeline check. Names read
   per-class IoU.
 - **Budget:** the latency saved at equal mIoU on the full frame priced at
   `area` + `post` (`budget_ms`). It is what resampling, unwarping and a real
-  policy may cost per frame, the antialiased filter included.
+  policy may cost per frame, the antialiased filter included. Read on the
+  frontier of that curve (the cheapest full frame that reaches the same
+  mIoU), so that a flat top of the curve does not make it unreadable.
 
 **Pipeline check, before any reading:** each uniform row must be within 0.1
 mIoU point of the full-frame baseline at the same scale. Otherwise `score`

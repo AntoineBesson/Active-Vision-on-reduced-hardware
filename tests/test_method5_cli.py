@@ -210,7 +210,8 @@ def test_score_prices_and_reads_every_config(work):
             assert c[judges]["mean"]["latency_ms"] == c["latency"]["mean_ms"]
         # the budget is read on the full frame priced with the post-processing, as the configuration is
         budget, saved = c["budget_ms"], c["judges_same_parts"]["mean"]["latency_saved_at_equal_miou"]
-        assert (math.isnan(budget) and math.isnan(saved)) or budget == saved
+        # (on the frontier of that curve: a number where the judges' reading is one, and the same)
+        assert math.isnan(saved) or budget == pytest.approx(saved)
         # on that curve, ΔmIoU at equal latency is exactly the rule's reading (mIoU above the full frame at c)
         assert c["judges_same_parts"]["mean"]["delta_miou_at_equal_latency"] == pytest.approx(c["delta_vs_fullframe"])
         assert len(c["per_class_iou"]) == 19 and c["clips"] == 3

@@ -229,7 +229,13 @@ def summarise(name: str, config: Dict[str, Any], total, clips: int, frames: int,
     # ``judges``)
     if same is not None:
         out["judges_same_parts"] = judge_readings(miou, latency["mean_ms"], latency["p95_ms"], same)
-    out["budget_ms"] = out["judges_same_parts" if same is not None else "judges"]["mean"]["latency_saved_at_equal_miou"]
+    # Read on the frontier of that curve: the cheapest full frame that reaches the config's mIoU.
+    # ``latency_saved_at_equal_miou`` in the judges is NaN as soon as mIoU does not rise with
+    # scale (BiSeNetV2 on the 400 clips: 0.7339 at 0.75, 0.7335 at 1); the frontier drops the
+    # beaten scale and is the same number on a rising curve (decided 2026-11-16, before the
+    # reading on the 400 clips; the budget is not in the pass rule).
+    curve = (same if same is not None else ref)["curves"]["mean"]
+    out["budget_ms"] = curve.latency_at(miou, frontier=True) - latency["mean_ms"]
     return out
 
 

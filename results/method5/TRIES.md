@@ -203,3 +203,31 @@ Both files read cleanly: `bound_train_all_pidnet_s_c0of4.jsonl.gz` and
 5 h for both models. `merge` and `score` of chunk 0 are left to another
 session at the user's request.
 
+
+## 2026-11-16 — decisions taken before the reading on the 400 clips
+
+Taken while chunk 0 was running (PIDNet-S done, BiSeNetV2 started), before
+any `score` of a complete chunk. Nothing below changes `bound`; merged into
+the branch after chunk 0 finished.
+
+- **Budget on a curve that does not rise.** `budget_ms` was NaN whenever the
+  full-frame mIoU does not rise strictly with scale, which is the case of
+  BiSeNetV2 on the 400 clips (0.7339 at 0.75, 0.7335 at 1). It is now read on
+  the frontier of the curve priced at `area` + `post`: the cheapest full frame
+  that reaches the configuration's mIoU, a scale beaten by a cheaper one being
+  dropped (`FullFrameCurve.latency_at(..., frontier=True)`). Same number as
+  before on a rising curve; the judges' own readings and Methods 2 to 4 are
+  not touched. The budget is not in the pass rule.
+- **Moving-object recall (user: worth reading if cheap).** `bound` keeps one
+  confusion per clip and configuration, so per-object recall cannot be read
+  from its files, and chunk 0 was already running. Rule fixed now: once the
+  mIoU reading is done, per model, the best **now** and the best **prev**
+  configuration of each scale by mIoU (8 configurations, chosen on mIoU only)
+  are run again on the labelled frames with a prediction pass scored by
+  `eval.objects` (found at local IoU > 0.5, frozen bins), and read against the
+  full frame's recall at the same scale, already scored on these clips. About
+  8 passes per frame in place of 148. Reported only: it does not enter the
+  pass rule. Not written yet (it needs the objects branch merged).
+- The 16 GB of Method 3 per-clip caches were deleted (user's request). They
+  can be rebuilt with `scripts.method3 cache`; the objects scores made from
+  them are kept.
