@@ -22,6 +22,9 @@ clips of `train_all`, narrowly
 | best boundary saliency B (now) | +0.86 (c0.5) | +1.29 (c0.25) |
 | budget at c0.25, on the measured end-to-end curve | about 0.18 ms | about 0.55 ms |
 | budget at c0.375, same | about 0.26 ms | about 0.68 ms |
+| best at scale 0.5 (now) | +0.86 (`B/a0.25/s1`) | +0.08 |
+| same saliency B at 0.5, teacher at t − 1 | +0.80 (`B/a0.25/s4`) | — |
+| budget at c0.5, same | about 0.75 ms (0.70 ms at t − 1) | not kept |
 
 The budget is the latency at which the full frame, measured end to end on the
 T4 and interpolated between scales, reaches the oracle's mIoU, minus the full
@@ -82,10 +85,21 @@ two resampling steps on a T4 against that budget".
   precomputed and it has no policy step.
 
 **Gate A, fixed before stage A runs:**
-- Overhead Δ(c) is the median of W(c) minus the median of FF(c), for the
-  cheapest variant, measured in the same sessions.
-- If Δ(c) exceeds the phase 1 budget above for every model and scale, Method 5
-  stops: even a free oracle saliency cannot pay for its own resampling.
+- Overhead, per session: Δs(c) is the median of W(c) minus the median of
+  FF(c) in that session, for the cheapest variant. Both are timed interleaved
+  in the session, so the difference is paired and the session's speed cancels.
+- Δ(c) is the median of the three Δs(c). Its range over the sessions is
+  reported next to it.
+- Why this matters: between sessions a median moves by 3 to 5%
+  ([latency floor](../../../results/latency_floor/README.md), Repeatability).
+  At 4 ms that is 0.12 to 0.2 ms, the size of PIDNet-S's budget at scale 0.25
+  (0.18 ms). Unpaired medians could not decide the gate.
+- If the **smallest** of the three Δs(c) exceeds the phase 1 budget above for
+  every model and scale kept in stage B, Method 5 stops: even a free oracle
+  saliency cannot pay for its own resampling.
+- If the sessions straddle the budget somewhere (smallest under, largest
+  over), stage B goes on for that model and scale, and the README says the
+  gate was not decided by the timing *(reviewer's call, to confirm)*.
 - If only r3 fits, stage B goes on with r3 alone, and its accuracy decides.
 - If only P fits, stage B goes on with P alone.
 
@@ -122,18 +136,25 @@ smoothed by σ, as in phase 1.
 
 | Dimension | Values |
 |---|---|
-| input scale c | 0.25, 0.375 |
+| input scale c | 0.25, 0.375, and 0.5 for PIDNet-S |
 | saliency | B, S, U, P |
 | strength α | 0.1, 0.15, 0.25 (**to be fixed from the α extension before this spec is accepted**) |
 | smoothing σ (cells) | 1, 4 |
 | resampling | the variants that passed gate A |
 
-**Size:** 2 × 4 × 3 × 2 = 48 configurations per model and resampling
-variant, plus the uniform pass at each scale.
+**Size**, per resampling variant, plus the uniform pass at each scale:
+- BiSeNetV2: 2 × 4 × 3 × 2 = 48 configurations;
+- PIDNet-S: 3 × 4 × 3 × 2 = 72 configurations.
 
-**Why scales 0.5 and 0.75 are left out** *(my call)*: phase 1's best there is
-+0.86 (PIDNet-S, 0.5) and +0.15 or less otherwise. That is under the margin
-before any loss to a real saliency.
+**Scale 0.5 is kept for PIDNet-S only** *(changed in review, 2026-11-16)*.
+The draft left it out because +0.86 is under phase 1's +1.0 margin. But phase
+2 is judged at equal latency, where the budget counts, not that margin: at
+0.5 PIDNet-S has about 0.75 ms, four times its budget at 0.25, with the
+boundary saliency B, which a policy can compute, and it keeps +0.80 from the
+teacher at t − 1.
+
+**Why the rest is left out:** BiSeNetV2 at 0.5 (+0.08) and both models at
+0.75 (+0.15 or less) have almost no gain to lose to a real saliency.
 
 **References, not rerun:** the phase 1 oracle (now) and teacher (prev) on the
 same clips.
@@ -144,10 +165,24 @@ same clips.
 - From phase 1's speed on the P100 (about 900 passes per clip in 18 to 21 s),
   about 20 to 40 s per clip. That is at most about 1 h per chunk and model,
   as 8 cluster jobs.
+- PIDNet-S's 24 configurations at scale 0.5 add 720 passes per clip at four
+  times the pixels of scale 0.25, which is more than its two other scales
+  together: count 2 to 2.5 h per chunk for PIDNet-S (an estimate, not
+  measured).
+- Fitting the static prior P is a run of its own, before stage B: phase 1
+  kept confusion matrices, not saliency maps, so the teacher and the uniform
+  pass at each scale are run again on the 2400 labelled train frames (about 4
+  passes per frame and model, minutes per chunk).
 
 ### Pricing and reading
 
 **Pricing:**
+- **One latency quantity throughout, as in Methods 2 to 4:** a pipeline's
+  latency is the median over the three sessions of its session median; its
+  p95 is read the same way. The "mean" judge of the earlier methods is the
+  mean over a clip's frames of that per-frame latency. Every frame of Method
+  5 costs the same, so here it is W(c)'s median itself. Gate A, the pricing
+  and the pass rule all read this number.
 - Each configuration takes the measured W(c) of its variant from stage A,
   median and p95.
 - It is compared with the full frame measured end to end
@@ -243,6 +278,27 @@ are reported but do not enter the rule. The margin is open point 2.
    only version that can move the top of the curve, where a T4 actually runs.
    If you want it, it goes to the cluster now, next to the α extension. If it
    gains, phase 2 should be read at scale 1 first.
-5. **Both models, or BiSeNetV2 only.** BiSeNetV2 has three times the budget.
-   I propose both, because the closed loop costs about 1 h per chunk and
-   model on the cluster.
+5. **Both models, or BiSeNetV2 only.** BiSeNetV2 has three times the budget
+   at scales 0.25 and 0.375; PIDNet-S has its largest at 0.5. I propose both,
+   because the closed loop costs 1 to 2.5 h per chunk and model on the
+   cluster.
+
+## Changes after review (2026-11-16, before acceptance)
+
+A second session checked the draft against the phase 1 result files (the
+figures of the first table are reproduced) and made five changes, at the
+user's request:
+
+1. Scale 0.5 is kept for PIDNet-S, with its budget in the first table.
+2. Gate A reads paired differences per session and says what happens when
+   the sessions straddle the budget.
+3. The budget table has the scale 0.5 row that gate A needs.
+4. One latency quantity is named and used by the gate, the pricing and the
+   rule.
+5. The cost of fitting the static prior P is counted.
+
+The reviewer's advice on the open points, which stay the user's to settle:
+run the α extension and the scale 1 extension before accepting this spec
+(points 1 and 4); stage A can start meanwhile, since its timings are needed
+either way; keep the draft margin (point 2); bound the 2-D warp only if gate A
+leaves room (point 3); both models (point 5).
