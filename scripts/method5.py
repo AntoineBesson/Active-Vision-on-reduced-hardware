@@ -121,9 +121,11 @@ def cmd_bound(args: argparse.Namespace) -> int:
             clip_id = dataset.clip_id(i)
             frames = int(sum(bool(v) for v in dataset.labeled_mask(i)))
             out = bound_clip(dataset, i, backbone, cfgs, device, allow_any_frame_size=args.fixture, cell=args.cell,
-                             batch=args.batch, resize_refs=True, resample=args.resample)
+                             batch=args.batch, resize_refs=True, resample=args.resample, d_max=args.d_max)
             base = {"split": args.split, "model": model, "clip_id": clip_id, "resample": args.resample,
                     "frames": frames}
+            if args.d_max is not None:
+                base["d_max"] = args.d_max
             rows = [{**base, "name": c.name(), "config": asdict(c), "conf": out[c.name()].tolist()} for c in cfgs]
             rows += [{**base, "name": resize_ref_name(s), "ref": "resize", "config": {"scale": s},
                       "conf": out[resize_ref_name(s)].tolist()} for s in scales]
@@ -431,6 +433,9 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     b.add_argument("--alphas", default="0.25,0.5,0.75", help="Warp strengths (the uniform pass, 0, is always run).")
     b.add_argument("--sigmas", default="1,4", help="Saliency smoothing, in cells.")
     b.add_argument("--timings", default="now,prev", help="now: teacher of frame t; prev: of frame t - 1.")
+    b.add_argument("--d-max", type=float, default=None,
+                   help="Upper clip of the density in place of 1/scale: above it the warp magnifies beyond the "
+                        "source pixels (extension of 2026-11-16, with --scales 1; keep it in its own --out-dir).")
     b.add_argument("--cell", type=int, default=16, help="Saliency cell, px (16: a 64 x 128 grid).")
     b.add_argument("--batch", type=int, default=4, help="Warped images of one scale per forward pass.")
     b.add_argument("--resample", default=RESAMPLE, choices=RESAMPLES,

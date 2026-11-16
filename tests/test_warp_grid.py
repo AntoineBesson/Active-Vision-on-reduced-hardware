@@ -201,3 +201,23 @@ def test_antialiased_filter_widens_where_the_warp_compresses():
     assert taps[:8].max() < taps[-8:].min()  # fewer taps where magnified, more where compressed
     centre = ((idx.double() + 0.5) * w).sum(1)  # each output pixel's footprint moves forward
     assert (centre[1:] > centre[:-1]).all()
+
+
+def test_d_max_lets_the_warp_magnify_at_scale_one():
+    p = torch.zeros(128)
+    p[40:44] = 1.0
+    assert torch.allclose(axis_density(p, 0.5, 1.0), torch.ones(128))  # 1/scale = 1: the identity
+    d = axis_density(p, 0.5, 1.0, d_max=2.0)
+    assert d.max() <= 2 + 1e-5 and d.max() > 1.5 and d.min() >= 0.5 - 1e-5
+    assert abs(float(d.mean()) - 1) < 1e-5 and d.argmax() in range(40, 44)
+    assert torch.allclose(axis_density(p, 0.5, 0.5, d_max=2.0), axis_density(p, 0.5, 0.5))  # 1/scale is 2 there
+    with pytest.raises(ValueError):
+        axis_density(p, 0.5, 1.0, d_max=0.9)
+    sal = torch.zeros(4, 8)
+    sal[1, 5] = 1.0
+    frame = torch.rand(1, 3, 32, 64, generator=torch.Generator().manual_seed(0))
+    g = make_grid(sal, 0.5, 1.0, d_max=2.0)
+    out = warp_frame(frame, g, (32, 64), antialias=True)
+    assert out.shape == frame.shape and torch.isfinite(out).all() and not torch.allclose(out, frame)
+    assert out.min() >= frame.min() - 1e-6 and out.max() <= frame.max() + 1e-6  # interpolation only
+    assert torch.allclose(warp_frame(frame, make_grid(sal, 0.0, 1.0, d_max=2.0), (32, 64), antialias=True), frame)

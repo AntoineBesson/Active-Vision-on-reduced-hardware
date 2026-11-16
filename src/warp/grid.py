@@ -50,12 +50,15 @@ MAX_ITER = 50  # clip-and-renormalise rounds (the worst of 20 000 random profile
 TOL = 1e-6  # the clip is "stable" when it moves no value by more than this
 
 
-def axis_density(profile: torch.Tensor, alpha: float, scale: float, d_min: float = D_MIN) -> torch.Tensor:
+def axis_density(profile: torch.Tensor, alpha: float, scale: float, d_min: float = D_MIN,
+                 d_max: Optional[float] = None) -> torch.Tensor:
     """Sampling density over the G cells of one axis, from a (G,) non-negative saliency profile.
 
     ``d = (1 - alpha) + alpha * p / mean(p)`` (all ones when ``alpha`` is 0 or ``p`` is all
     zeros), then clipped to [``d_min``, 1/``scale``] and renormalised to mean 1 until the clip
-    changes nothing. 1/``scale`` is "never sample finer than the source pixels". Returns (G,)
+    changes nothing. 1/``scale`` is "never sample finer than the source pixels". ``d_max``
+    replaces that upper clip: above 1/``scale`` the warp magnifies beyond the source pixels (the
+    only way it can differ from the identity at scale 1; extension of 2026-11-16). Returns (G,)
     float32."""
     if not 0.0 <= alpha <= 1.0:
         raise ValueError(f"alpha must be in [0, 1], got {alpha}")
@@ -63,6 +66,9 @@ def axis_density(profile: torch.Tensor, alpha: float, scale: float, d_min: float
         raise ValueError(f"scale must be in (0, 1] (the upper clip 1/scale must allow a mean of 1), got {scale}")
     if not 0.0 < d_min <= 1.0:
         raise ValueError(f"d_min must be in (0, 1], got {d_min}")
+    top = 1.0 / scale if d_max is None else float(d_max)
+    if top < 1.0:
+        raise ValueError(f"d_max must be >= 1 (the upper clip must allow a mean of 1), got {d_max}")
     p = profile.detach().to(torch.float64).flatten()
     if not torch.isfinite(p).all() or bool((p < 0).any()):
         raise ValueError("a saliency profile must be finite and non-negative")
@@ -71,7 +77,7 @@ def axis_density(profile: torch.Tensor, alpha: float, scale: float, d_min: float
         return torch.ones(p.numel(), dtype=torch.float32, device=profile.device)
     d = (1.0 - alpha) + alpha * p / mean
     for _ in range(MAX_ITER):
-        clipped = d.clamp(d_min, 1.0 / scale)
+        clipped = d.clamp(d_min, top)
         change = float((clipped - d).abs().max())
         d = clipped / clipped.mean()
         if change < TOL:
@@ -132,13 +138,14 @@ class WarpGrid:
         return bool((self.dy == 1).all()) and bool((self.dx == 1).all())
 
 
-def make_grid(saliency: torch.Tensor, alpha: float, scale: float, d_min: float = D_MIN) -> WarpGrid:
+def make_grid(saliency: torch.Tensor, alpha: float, scale: float, d_min: float = D_MIN,
+              d_max: Optional[float] = None) -> WarpGrid:
     """The warp of a (gh, gw) saliency map: its mean over columns sets the rows' density, its
     mean over rows the columns'."""
     if saliency.dim() != 2:
         raise ValueError(f"saliency must be (gh, gw), got shape {tuple(saliency.shape)}")
-    return WarpGrid(dy=axis_density(saliency.mean(1), alpha, scale, d_min),
-                    dx=axis_density(saliency.mean(0), alpha, scale, d_min))
+    return WarpGrid(dy=axis_density(saliency.mean(1), alpha, scale, d_min, d_max),
+                    dx=axis_density(saliency.mean(0), alpha, scale, d_min, d_max))
 
 
 def _sampling_grid(gy: torch.Tensor, gx: torch.Tensor, batch: int, dtype: torch.dtype) -> torch.Tensor:

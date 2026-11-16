@@ -139,13 +139,15 @@ class _Frame:
 
 def bound_clip(dataset, index: int, model: torch.nn.Module, cfgs: Sequence[WarpConfig], device,
                allow_any_frame_size: bool = False, cell: int = SAL_CELL, batch: int = 1,
-               resize_refs: bool = False, resample: str = RESAMPLE) -> Dict[str, np.ndarray]:
+               resize_refs: bool = False, resample: str = RESAMPLE,
+               d_max: Optional[float] = None) -> Dict[str, np.ndarray]:
     """Configuration name -> (19, 19) int64 confusion summed over the clip's labelled frames.
 
     ``batch``: warped images of one scale run through the network together (the predictions are
     the same up to the floating-point noise of batched kernels). ``resize_refs``: also return, for
     every scale of ``cfgs``, the confusion of the baseline's own resize at that scale
-    (:func:`resize_ref_name`). Refuses a frame that is not 1024 x 2048 unless
+    (:func:`resize_ref_name`). ``d_max``: the upper clip of the density in place of 1/scale
+    (:func:`warp.grid.axis_density`; above it the warp magnifies beyond the source pixels). Refuses a frame that is not 1024 x 2048 unless
     ``allow_any_frame_size``, and a labelled frame whose previous frame is not on disk (a split
     with only the labelled frames, such as ``train``: ``prev`` would be 5 frames old)."""
     names = [c.name() for c in cfgs]
@@ -185,7 +187,8 @@ def bound_clip(dataset, index: int, model: torch.nn.Module, cfgs: Sequence[WarpC
             for scale, group in by_scale.items():
                 if resize_refs:
                     conf[resize_ref_name(scale)] += _confusion_t(label, frames["now"].labels(scale))
-                grids = [make_grid(frames[c.timing].saliency(c.saliency, c.sigma, c.scale), c.alpha, c.scale)
+                grids = [make_grid(frames[c.timing].saliency(c.saliency, c.sigma, c.scale), c.alpha, c.scale,
+                                   d_max=d_max)
                          if not c.uniform else make_grid(torch.zeros(1, 1), 0.0, c.scale) for c in group]
                 for start in range(0, len(group), batch):
                     preds = warped_passes(model, now, grids[start:start + batch], scale, resample=resample)
