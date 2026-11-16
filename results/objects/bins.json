@@ -1,0 +1,6 @@
+{
+  "size_edges": [1024, 4096, 16384],
+  "size_names": ["tiny", "small", "medium", "large"],
+  "motion_edges": [2.0, 8.0],
+  "motion_names": ["static", "slow", "fast"]
+}
