@@ -302,3 +302,30 @@ local. The next research points with frozen weights (local 2-D warp first,
 fixed priors, related work) are in
 `docs/research/2026-11-16-warp-next-research-points.md`.
 
+## 2026-11-16 — chunks 1 to 3 of the registered grid sent to the school cluster
+
+The user connected the VPN and asked for chunks 1 to 3. Commit `94d5618`
+(`warp-bound`), job script `scripts/cluster/m5_bound.sh`, Tesla P100, one job
+per chunk and model, registered grid only (148 configurations + 4 resize refs).
+
+| Chunk | PIDNet-S job | BiSeNetV2 job | Submitted |
+|---|---|---|---|
+| 3 | 1107212 | 1107213 | 19:56 |
+| 1 | 1107234 | 1107235 | 20:13 |
+| 2 | 1107250 | 1107251 | 20:24, waiting on the 4-jobs-per-user limit |
+
+- Data: the cluster only had the Method 3 zip of chunk 3. The zips of chunks 1
+  and 2 were rebuilt on the laptop (7.27 and 7.12 GB) and uploaded at about
+  11 MB/s; the first `scp` was cut by a network drop after 1.1 GB, the retry
+  with `sftp reput` resumed it, and both md5 sums match the laptop's.
+- The job's root holds one chunk only, so `bound` runs without `--chunk` and
+  with `--tag c<i>of4`: the zip chunks and `--chunk i/4` are both the i-th
+  contiguous block of the sorted clip ids (same 100 clips).
+- Speed while running: about 18.5 s per clip for PIDNet-S and 21 s for
+  BiSeNetV2 (the laptop: 28 and 34 s when not paused), so about 35 minutes per
+  chunk and model.
+- State when this was written: chunk 3 at 87 and 76 clips of 100, chunk 1 at
+  35 and 29, chunk 2 queued. **Not finished, not copied back, not merged, not
+  scored: the rule is not read.** The two extensions are not submitted (they
+  also need the chunk 0 zip on the cluster).
+

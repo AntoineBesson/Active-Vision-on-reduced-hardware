@@ -87,7 +87,8 @@ tail -n 2 ~/avrh_jobs/m5_c1_*.out
   limit or fails midway is simply submitted again.
 - Measured on 2026-11-16 (registered grid, Tesla P100): about 19 s per clip
   for PIDNet-S and 22 s for BiSeNetV2, so about 35 minutes per chunk and
-  model. Several jobs ran at the same time without trouble.
+  model. The QoS runs 4 jobs per user at a time; the others wait
+  (`QOSMaxJobsPerUserLimit`) and start by themselves.
 - The extensions need chunk 0 too: upload `vps_train_all_chunk0.zip` first
   (`scp` to `~/avrh_data/`, 7 GB, about 11 MB/s through the VPN).
 - A lesson from Method 3: do not test `pytest -q` output with
