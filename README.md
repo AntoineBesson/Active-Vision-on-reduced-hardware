@@ -17,7 +17,7 @@ Nothing outside one dataset adapter is Cityscapes-specific: preprocessing,
 policies and evaluation are written against a dataset-agnostic interface so
 they can be retrained or reused on other video segmentation datasets.
 
-## Where we are (2026-11-10)
+## Where we are (2026-11-16)
 
 **Method 1 (full frame) is done and validated on real data.** The data
 layer, backbones, evaluation harness and baseline CLI run end to end on
@@ -67,6 +67,19 @@ whatever is selected or remembered. See
 [results/method4](results/method4/README.md) and the ledger
 [results/method4/TRIES.md](results/method4/TRIES.md).
 
+**Method 5 (one pass on a non-uniformly resampled frame) passes its
+feasibility bound on VPS train, narrowly.** With an oracle warp that costs
+nothing, one pass at input scale 0.25 beats the full frame at the same scale
+by +1.25 mIoU points (PIDNet-S) and +1.80 (BiSeNetV2) on the 400 clips,
+against a pass rule of +1.0 fixed before the runs. The margin holds only at
+scale 0.25 and with the weakest warp of the grid, the winning saliency is the
+model's own error (which a real policy cannot see), and it leaves 0.16 ms
+(PIDNet-S) and 0.58 ms (BiSeNetV2) per frame for resampling, unwarping and
+the policy. On the full-frame mIoU-vs-latency curves, where the full frame's
+scale is free, the gain is gone (−0.26 and +0.04). See
+[results/method5](results/method5/README.md) and the ledger
+[results/method5/TRIES.md](results/method5/TRIES.md).
+
 ### Next steps
 
 1. **Method 2: done (negative), see above.** The finalists' latency is confirmed
@@ -82,10 +95,11 @@ whatever is selected or remembered. See
 4. **Method 4: stopped at the feasibility bound (negative), see above.** The
    learned policy is not built.
 5. **Method 5: a single pass on a non-uniformly resampled frame** (no crops,
-   no second pass). Its oracle feasibility bound is coded and pre-registered,
-   not run yet, see [results/method5](results/method5/README.md). Not
-   started: the same readings on an embedded card, where only the latency
-   tables change.
+   no second pass). Its oracle feasibility bound passes narrowly on train,
+   see above and [results/method5](results/method5/README.md). Phase 2 (a
+   warp a real policy can compute, within a budget of 0.16 to 0.58 ms) waits
+   for a decision. Not started: the same readings on an embedded card, where
+   only the latency tables change.
 6. Optional: a secondary evaluation on the 500 official val images (frame
    `_000019`) for less noisy rare-class IoUs.
 
@@ -126,7 +140,7 @@ python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yam
 | Method 2: foveation without memory | ✅ negative, [results](results/method2/README.md) |
 | Method 3: motion-gated reuse | ✅ negative on train, val not run, [results](results/method3/README.md) |
 | Method 4: persistent canvas + glimpse policy | ✅ feasibility bound negative on train, policy not built, [results](results/method4/README.md) |
-| Method 5: one pass on an oracle-warped frame | 🚧 feasibility bound coded, runs not started, [plan of the reading](results/method5/README.md) |
+| Method 5: one pass on an oracle-warped frame | ✅ feasibility bound passes narrowly on train (scale 0.25 only), phase 2 not started, [results](results/method5/README.md) |
 | Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout
