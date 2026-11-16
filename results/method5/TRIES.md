@@ -437,3 +437,49 @@ The scale 1 magnification extension (`train_all_mag`) is not submitted.
   the user wrote it in the thread.
 - Expected: about 25 minutes per job, 4 at a time, about 1 h in all. **Not
   finished, not copied back, not scored.** Its verdict is not the pass rule.
+
+## 2026-11-16 — α 0.1 / 0.15 extension done and scored (post hoc, not the rule)
+
+All eight jobs (1107366 to 1107373, nodes 16 to 21) ended `COMPLETED` with
+`JOB_OK` on the first try, 21 to 25 minutes each. No resubmission. Copied back
+to the laptop: 8 files of 10,400 lines (100 clips × 104 rows: 96
+configurations, 4 uniform rows, 4 resize refs). `merge` in
+`experiments/method5/train_all_ext`: 41,600 lines and 400 clips per model.
+`score` there; the verdict and scores are committed in `results/method5/ext/`
+(`a6da6f9`).
+
+- **Pipeline check: passes** for both models at the four scales (largest gap
+  2.1e-7 mIoU).
+- The extension's own verdict file says BiSeNetV2 "passes" and PIDNet-S
+  "fails" (+0.996, 0 of 48 at +1.0). **It is not the pass rule**, which is
+  read on the registered grid only (spec amendment of 2026-11-16).
+- Best **now** against the full frame at the same scale, all four strengths
+  (α 0.25 and 0.5 from the registered grid), in mIoU points:
+
+  | Scale | PIDNet-S α 0.1 / 0.15 / 0.25 / 0.5 | BiSeNetV2 α 0.1 / 0.15 / 0.25 / 0.5 |
+  |---|---|---|
+  | 0.25 | +0.86 / +0.96 / **+1.25** / −0.05 | +1.20 / +1.48 / **+1.80** / +0.04 |
+  | 0.375 | +0.69 / **+0.92** / +0.91 / −0.39 | +0.98 / **+1.17** / +0.73 / −1.28 |
+  | 0.5 | +0.78 / **+1.00** / +0.86 / −0.48 | +0.31 / **+0.33** / +0.08 / −1.67 |
+  | 0.75 | **+0.21** / +0.10 / +0.15 / … | +0.07 / −0.09 / +0.03 / … |
+
+- The best strength falls as the scale grows: α 0.25 at scale 0.25, α 0.15
+  at 0.375 and 0.5. α 0.1 is below α 0.15 everywhere except at scale 0.75,
+  where every gain is under 0.25 point. The registered grid's edge
+  (α 0.25) was therefore the optimum only at scale 0.25.
+- Budgets (frontier, same parts) grow with the scale: BiSeNetV2 at 0.375 with
+  α 0.15 keeps +1.17 points for 1.18 ms (0.58 ms for its best at 0.25);
+  PIDNet-S at 0.5 with α 0.15 keeps +1.00 for 0.87 ms (0.16 ms at 0.25).
+- **prev**: PIDNet-S +1.00 at c0.5 (`E/a0.15/s4`, the same as now to 5e-6),
+  +0.99 at c0.25; BiSeNetV2 +1.14 at c0.25 (`E/a0.1/s1`), +0.96 at c0.375.
+- Best per saliency (now): PIDNet-S E +1.00, B +0.83, S +0.73; BiSeNetV2 E
+  +1.48, S +0.96, B +0.81. The weaker warps help the small-class saliency S
+  most (registered grid: +0.41 and +0.48).
+- `budget_ms` is NaN for some BiSeNetV2 configurations at scale 0.75 and
+  negative for one: its full-frame curve is flat at the top (0.7339 at 0.75,
+  0.7335 at 1), so an mIoU above the full frame at 0.75 is reached by no full
+  frame (NaN), and a negative Δ gives a negative budget. Same reading as in
+  phase 1.
+
+For phase 2 (open point 1 of its draft spec): α ∈ {0.15, 0.25, 0.35} covers
+the best strength at every scale kept; α 0.1 adds nothing.
