@@ -412,3 +412,28 @@ What the pass does and does not say, for the decision on phase 2:
   all counted at 0 ms here.
 - Scale 0.25 is far below the full frame's useful range on a T4 (PIDNet-S
   full frame at scale 1: 0.7608 in 19.4 ms).
+
+## 2026-11-16 — α 0.1 / 0.15 extension sent to the cluster (post hoc)
+
+The user's go, after the registered reading. Run `train_all_ext` of
+`scripts/cluster/m5_bound.sh` (`--alphas 0.1,0.15`, the registered scales,
+saliencies, smoothings and timings: 96 configurations per model plus the
+uniform rows), all four chunks, Tesla P100, cluster repository at `f0f9c01`.
+The scale 1 magnification extension (`train_all_mag`) is not submitted.
+
+| Chunk | PIDNet-S job | BiSeNetV2 job |
+|---|---|---|
+| 0 | 1107366 | 1107367 |
+| 1 | 1107368 | 1107369 |
+| 2 | 1107370 | 1107371 |
+| 3 | 1107372 | 1107373 |
+
+- Chunk 0 had run on the laptop, so its zip was not on the cluster. The zip
+  built on the laptop on 2026-11-16 (7,405,269,880 bytes, clips 0001 to 0124)
+  was uploaded with `sftp put` in 675 s, about 11 MB/s, without a drop. Its md5
+  matches on both sides (`544491c666be2a633d4a3ed871a45f50`).
+- The first submission was refused by the laptop's permission check, because
+  the user's go had reached it through the project chat; it went through once
+  the user wrote it in the thread.
+- Expected: about 25 minutes per job, 4 at a time, about 1 h in all. **Not
+  finished, not copied back, not scored.** Its verdict is not the pass rule.
