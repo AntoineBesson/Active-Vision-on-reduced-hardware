@@ -138,7 +138,7 @@ smoothed by σ, as in phase 1.
 |---|---|
 | input scale c | 0.25, 0.375, and 0.5 for PIDNet-S |
 | saliency | B, S, U, P |
-| strength α | 0.1, 0.15, 0.25 (**to be fixed from the α extension before this spec is accepted**) |
+| strength α | 0.15, 0.25, 0.35 (proposed from the α extension; open point 1) |
 | smoothing σ (cells) | 1, 4 |
 | resampling | the variants that passed gate A |
 
@@ -263,9 +263,14 @@ are reported but do not enter the rule. The margin is open point 2.
 
 ## Open points for the user
 
-1. **α values.** Pick them from the α 0.1 / 0.15 extension once it is
-   scored. If the gain still grows below 0.25, the grid keeps 0.1, 0.15 and
-   0.25. If 0.25 stays best, it keeps 0.25 and adds 0.35.
+1. **α values.** The α 0.1 / 0.15 extension is scored (post hoc,
+   [results](../../../results/method5/README.md#post-hoc-extension-weaker-warps-α-01-and-015)).
+   The best strength falls as the scale grows: α 0.25 at scale 0.25, α 0.15
+   at 0.375 and 0.5, and α 0.1 is below α 0.15 at every scale kept here.
+   Proposed: α ∈ {0.15, 0.25, 0.35}, with 0.35 because at scale 0.25 the
+   optimum lies between 0.25 and 0.5. The extension also gives the oracle a
+   larger budget at those scales: BiSeNetV2 +1.17 points for 1.18 ms at
+   0.375, PIDNet-S +1.00 for 0.87 ms at 0.5.
 2. **The margin of the pass rule.** The draft rule is "above 0 with the
    interval above 0", the val reading of Methods 2 and 3. A fixed margin
    such as +0.5 points would be stricter.
