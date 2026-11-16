@@ -329,3 +329,86 @@ per chunk and model, registered grid only (148 configurations + 4 resize refs).
   scored: the rule is not read.** The two extensions are not submitted (they
   also need the chunk 0 zip on the cluster).
 
+
+## 2026-11-16 — chunks 1 to 3 done on the cluster; the reading on the 400 clips: the check PASSES
+
+All six jobs ended `COMPLETED` with `JOB_OK` in their logs, at commit
+`94d5618`, on Tesla P100-PCIE-16GB nodes. No failure, no resubmission.
+
+| Job | Chunk | Model | Node | Elapsed | s per clip |
+|---|---|---|---|---|---|
+| 1107212 | 3 | PIDNet-S | node17 | 31:44 | 18.7 |
+| 1107213 | 3 | BiSeNetV2 | node18 | 35:45 | 21.1 |
+| 1107234 | 1 | PIDNet-S | node19 | 30:59 | 18.1 |
+| 1107235 | 1 | BiSeNetV2 | node20 | 35:23 | 20.8 |
+| 1107250 | 2 | PIDNet-S | node17 | 31:06 | 18.4 |
+| 1107251 | 2 | BiSeNetV2 | node18 | 35:55 | 21.2 |
+
+- Copied back to the laptop with `scp`: each of the 6 bound files has 15200
+  lines (100 clips × 152 rows: 148 configurations and 4 resize refs), all with
+  `resample = antialias`. Clip ids: chunk 1 0126 to 0249, chunk 2 0251 to
+  0374, chunk 3 0376 to 0499; chunk 0 (laptop) 0001 to 0124. No overlap.
+- `merge`: 4 files per model, 60800 lines, 400 clips. `score` on the laptop,
+  then `results/method5/verdict_train_all.json` and the two
+  `score_train_all_*.json.gz` committed (`18a6d2b`).
+- **Pipeline check: passes** for both models at the four scales. The largest
+  gap between a uniform row and the full-frame baseline is 2.2e-7 mIoU
+  (tolerance 1e-3); the `ref/c*/resize` rows agree too.
+- **Rule (amended 2026-11-13): PASSES for both backbones**, on the 400 clips:
+
+  | | PIDNet-S | BiSeNetV2 |
+  |---|---|---|
+  | best **now** | `c0.25/E/a0.25/s1` | `c0.25/E/a0.25/s4` |
+  | mIoU (full frame at c 0.25) | 0.5410 (0.5285) | 0.6099 (0.5919) |
+  | Δ vs full frame, same scale | **+1.25** pts | **+1.80** pts |
+  | predicted latency (area + post) | 4.86 ms | 5.10 ms |
+  | budget (frontier, same parts) | 0.16 ms | 0.58 ms |
+  | best **prev** (same config) | +0.98 pts, 0.12 ms | +1.59 pts, 0.51 ms |
+
+  prev stays above the full frame for both, so no "under water" note.
+
+- Best **now** per scale (Δ vs the full frame at that scale, budget):
+
+  | Scale | PIDNet-S | BiSeNetV2 |
+  |---|---|---|
+  | 0.25 | +1.25 (`E/a0.25/s1`), 0.16 ms | +1.80 (`E/a0.25/s4`), 0.58 ms |
+  | 0.375 | +0.91 (`E/a0.25/s4`), 0.22 ms | +0.73 (`E/a0.25/s4`), 0.73 ms |
+  | 0.5 | +0.86 (`B/a0.25/s1`), 0.76 ms | +0.08 (`B/a0.25/s4`), 0.31 ms |
+  | 0.75 | +0.15 (`S/a0.25/s1`), 0.91 ms | +0.03 (`B/a0.25/s1`), NaN |
+
+  Best prev per scale: PIDNet-S +0.98 / +0.55 / +0.81 / +0.15; BiSeNetV2
+  +1.59 / +0.63 / −0.00 / −0.10.
+- Configurations with timing now at +1.0 point or more: 2 of 72 (PIDNet-S),
+  4 of 72 (BiSeNetV2); prev: 0 and 2. Mean Δ of the now configurations per
+  scale (0.25 to 0.75): PIDNet-S −2.75 / −2.37 / −1.66 / −0.36, BiSeNetV2
+  −3.52 / −4.18 / −3.21 / −0.69. Most of the grid loses.
+- Best now per saliency: E +1.25 / +1.80, B +0.86 / +1.29, S +0.41 / +0.48
+  (PIDNet-S / BiSeNetV2). Per strength: α 0.25 +1.25 / +1.80, α 0.5 +0.00 /
+  +0.04, α 0.75 −0.09 / −0.54.
+- Per class, best now against the uniform pass at the same scale: PIDNet-S
+  bus +5.4, motorcycle +4.3, bicycle +2.9, pole +2.7, traffic sign +1.9, truck
+  +1.7 … train −1.6, wall −0.5, road −0.3. BiSeNetV2 truck +6.6, train +6.3,
+  bus +5.0, fence +2.9, terrain +2.8, bicycle +2.4, pole +1.7 … rider −0.6.
+- Curves (information only, `verdict.curves`): at equal mean latency on the
+  primary curve the best is PIDNet-S −0.26 (`c0.75/S`), BiSeNetV2 +0.04; on
+  the measured end-to-end curve +0.36 (`c0.5/B`) and +0.03. Once the full
+  frame's scale is free to move, the gain is gone.
+- Against chunk 0 alone, PIDNet-S's best fell from +2.10 to +1.25 and its
+  count at +1 or more from 11 to 2; BiSeNetV2's best rose from +1.55 to
+  +1.80. Chunk 0 was the easiest quarter for PIDNet-S.
+
+What the pass does and does not say, for the decision on phase 2:
+
+- It is narrow: only scale 0.25 and α 0.25 clear +1.0, and α 0.25 is the
+  weakest warp of the grid, so the optimum may lie below it (the post hoc
+  α = 0.1 / 0.15 extension, not run, would say).
+- It is the E oracle, which reads the teacher's error on the current frame:
+  the one saliency a real policy cannot see. B (boundaries) clears the margin
+  for BiSeNetV2 only (+1.29), S for neither.
+- The best is picked in-sample, out of 72 configurations, on the clips it is
+  scored on.
+- The budgets are 0.16 ms (PIDNet-S) and 0.58 ms (BiSeNetV2) for the
+  antialiased resampling with a local width, the unwarping and the policy,
+  all counted at 0 ms here.
+- Scale 0.25 is far below the full frame's useful range on a T4 (PIDNet-S
+  full frame at scale 1: 0.7608 in 19.4 ms).
