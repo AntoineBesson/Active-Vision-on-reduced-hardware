@@ -187,3 +187,19 @@ model; the best of 72 configurations is picked on the same clips).
 Full-frame mIoU on these clips: 0.7378, 0.7243, 0.6506, 0.5951, 0.4897 at
 scales 1, 0.75, 0.5, 0.375, 0.25.
 
+## 2026-11-16 — chunk 0 finished on the laptop
+
+The user chose to let the laptop cycle under the heat guard (pause at 85 °C
+on two readings or on a thermal-slowdown flag, resume at 65 °C with no other
+GPU job) rather than wait for the Colab upload. From the restart at 09:50 to
+15:11 local (5.35 h), the guard paused 89 times, always on the software
+thermal slowdown at 86 to 87 °C, and the run spent 3.54 h (66 %) paused.
+While running: about 28 s per clip for PIDNet-S, 34 s for BiSeNetV2. Peak
+87 °C. No traceback, no process death.
+
+Both files read cleanly: `bound_train_all_pidnet_s_c0of4.jsonl.gz` and
+`bound_train_all_bisenetv2_c0of4.jsonl.gz`, 15 200 lines each (100 clips ×
+152, clips 0001 to 0124). On this laptop and this rule, a chunk takes about
+5 h for both models. `merge` and `score` of chunk 0 are left to another
+session at the user's request.
+
