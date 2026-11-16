@@ -1,7 +1,14 @@
-# Method 5, phase 1: feasibility bound of a single pass on a warped frame — pending
+# Method 5, phase 1: feasibility bound of a single pass on a warped frame — passes, narrowly
 
-**Result: pending. Nothing has been run.** The code is on the `warp-bound`
-branch. The grid, the latency parts and the pass rule were fixed in the
+**Result (2026-11-16, 400 clips of `train_all`): the pre-registered check
+passes for both backbones, by a narrow margin.** With an oracle warp, one pass
+at input scale 0.25 beats the full frame at the same scale by +1.25 mIoU
+points (PIDNet-S) and +1.80 (BiSeNetV2), against a margin of +1.0. The pass
+holds at scale 0.25 and the grid's weakest warp only, with the error oracle
+that a real policy cannot see, and leaves 0.16 and 0.58 ms for everything the
+bound counts at 0. See [Results](#results).
+
+The grid, the latency parts and the pass rule were fixed in the
 [spec](../../docs/superpowers/specs/2026-11-12-method5-warp-bound-design.md)
 (accepted 2026-11-12) before any run, and amended on 2026-11-13, still before
 any run (see [Amended before the first run](#amended-before-the-first-run)).
@@ -204,15 +211,77 @@ from the chunk zips of the Method 3 notebook and saves the bound files to
 `bound` appends each finished clip and, started again, skips the clips already
 in the file. `--models pidnet_s` runs one model.
 
-**Run time:** the pipeline check took 3.2 s per clip for PIDNet-S on the
-laptop RTX 2060 (5 clips, 4 warped passes per frame). The full grid has 144
-per frame, so by extrapolation about 30 to 40 s per clip: roughly 1 h per
-model per chunk and 4 to 5 h per model for the 400 clips, above the spec's
-guess of 2 to 3 h. Chunk 0 measures it.
+**Run time (measured):** on the laptop RTX 2060, 28 s per clip for PIDNet-S
+and 34 s for BiSeNetV2 when not paused for heat (chunk 0 took 5.35 h, two
+thirds of it paused). On the school cluster's P100 (chunks 1 to 3, one job per
+chunk and model, `scripts/cluster/m5_bound.sh`, how-to in
+[docs/cluster.md](../../docs/cluster.md)): 18.1 to 18.7 s per clip for
+PIDNet-S and 20.8 to 21.2 s for BiSeNetV2, 31 to 36 minutes per job.
 
 ## Results
 
-Pending.
+Read on 2026-11-16 on the 400 clips of `train_all` (2400 labelled frames),
+fp32, registered grid only. Chunk 0 ran on the laptop, chunks 1 to 3 on the
+cluster; job ids and timings are in [TRIES.md](TRIES.md). Files:
+[verdict_train_all.json](verdict_train_all.json),
+`score_train_all_{pidnet_s,bisenetv2}.json.gz`.
+
+**Pipeline check: passes.** Every uniform row is within 2.2e-7 mIoU of the
+full-frame baseline at its scale (tolerance 1e-3), for both models.
+
+**Pass rule: passes for both backbones.**
+
+| | PIDNet-S | BiSeNetV2 |
+|---|---|---|
+| best **now** | `5o/c0.25/E/a0.25/s1` | `5o/c0.25/E/a0.25/s4` |
+| mIoU (full frame at scale 0.25) | 0.5410 (0.5285) | 0.6099 (0.5919) |
+| Δ vs full frame, same scale | **+1.25** pts | **+1.80** pts |
+| predicted T4 latency (area + post) | 4.86 ms | 5.10 ms |
+| budget (frontier, same parts) | 0.16 ms | 0.58 ms |
+| same config, **prev** | +0.98 pts, 0.12 ms | +1.59 pts, 0.51 ms |
+
+Best **now** per scale, Δ against the full frame at that scale (budget):
+
+| Scale | PIDNet-S | BiSeNetV2 |
+|---|---|---|
+| 0.25 | +1.25 (`E/a0.25/s1`), 0.16 ms | +1.80 (`E/a0.25/s4`), 0.58 ms |
+| 0.375 | +0.91 (`E/a0.25/s4`), 0.22 ms | +0.73 (`E/a0.25/s4`), 0.73 ms |
+| 0.5 | +0.86 (`B/a0.25/s1`), 0.76 ms | +0.08 (`B/a0.25/s4`), 0.31 ms |
+| 0.75 | +0.15 (`S/a0.25/s1`), 0.91 ms | +0.03 (`B/a0.25/s1`), not readable |
+
+Full-frame mIoU on the 400 clips, scales 1 / 0.75 / 0.5 / 0.375 / 0.25:
+PIDNet-S 0.7608, 0.7480, 0.6794, 0.6174, 0.5285; BiSeNetV2 0.7335, 0.7339,
+0.7055, 0.6685, 0.5919.
+
+What else the grid shows:
+
+- **The weakest warp wins.** Best at α 0.25: +1.25 / +1.80 (PIDNet-S /
+  BiSeNetV2); at α 0.5: +0.00 / +0.04; at α 0.75: −0.09 / −0.54. The optimum
+  may lie below the grid; the post hoc α 0.1 / 0.15 extension (not run) would
+  tell.
+- **Most of the grid loses.** Only 2 (PIDNet-S) and 4 (BiSeNetV2) of the 72
+  now configurations clear +1.0. The mean now configuration is 0.4 to 4.2
+  points below the full frame at its scale.
+- **The saliency that wins is the one a policy cannot see.** Best per
+  saliency: error E +1.25 / +1.80, boundaries B +0.86 / +1.29, small classes
+  S +0.41 / +0.48. B, which a policy could approximate from the previous
+  prediction, clears the margin for BiSeNetV2 only.
+- **The previous frame keeps most of it:** prev +0.98 / +1.59.
+- **The gain goes to large and thin objects:** for PIDNet-S bus +5.4,
+  motorcycle +4.3, bicycle +2.9, pole +2.7 IoU points against the uniform
+  pass (train −1.6); for BiSeNetV2 truck +6.6, train +6.3, bus +5.0, fence
+  +2.9.
+- **On the curves, nothing is left** (reported only): at equal mean latency,
+  the best warped configuration is −0.26 (PIDNet-S) and +0.04 (BiSeNetV2) on
+  the primary curve, +0.36 and +0.03 on the measured end-to-end curve. A
+  slightly larger full frame buys the same accuracy.
+
+**Reading.** The bound is met, so Method 5 is not ruled out, but only at the
+bottom of the scale range and with almost no latency to spend. Phase 2 would
+have to resample, unwarp and choose the warp in 0.16 ms (PIDNet-S) or 0.58 ms
+(BiSeNetV2) per frame on a T4, with a saliency it can compute, at scale 0.25,
+where the full frame is 23 (PIDNet-S) and 14 (BiSeNetV2) points below its own
+scale 1. The best configuration is also picked in-sample among 72.
 
 ## Files
 
