@@ -141,3 +141,39 @@ def test_reuse_frame_counts_the_network_gflops():
     assert t.predict_reuse_frame("pidnet_s", a, 3, False, False)["gflops"] == pytest.approx(1.0)  # 3 glimpses
     assert t.predict_reuse_frame("pidnet_s", a, 0, False, False)["gflops"] == 0
     assert t.predict_reuse_frame("pidnet_s", b, 2, False, False)["gflops"] == pytest.approx(2.0)  # glimpses + context
+
+
+def test_canvas_frame_sums_its_parts():
+    from canvas.replay import CanvasConfig
+
+    t = _reuse_tables()
+    ctx = 2.7 + 0.25  # context backbone + its post-processing
+    two = 3.0 + 0.1  # 2 glimpses + their post-processing
+    n, a, b = (CanvasConfig(ctx_scale=0.25, glimpse_size=384, variant=v, k=2) for v in ("off", "iclk", "none"))
+    for first in (True, False):
+        assert t.predict_canvas_frame("pidnet_s", n, 2, first)["median_ms"] == pytest.approx(ctx + two)
+    assert t.predict_canvas_frame("pidnet_s", n, 0, False)["median_ms"] == pytest.approx(ctx)  # no glimpse: context only
+    assert t.predict_canvas_frame("pidnet_s", b, 2, True)["median_ms"] == pytest.approx(ctx + two)  # empty canvas
+    assert t.predict_canvas_frame("pidnet_s", b, 2, False)["median_ms"] == pytest.approx(ctx + two + 0.2)  # + fusion
+    assert t.predict_canvas_frame("pidnet_s", a, 2, True)["median_ms"] == pytest.approx(ctx + two + 0.1)  # + gray
+    later = t.predict_canvas_frame("pidnet_s", a, 3, False)
+    assert later["median_ms"] == pytest.approx(ctx + 4.5 + 0.15 + 0.1 + 0.2 + 2.0 + 0.4)  # gray, fusion, H, warps
+    assert later["p95_ms"] == pytest.approx(2 * later["median_ms"])
+    assert set(later["parts"]) == {"context_backbone", "context_post", "glimpses", "glimpse_post", "gray", "fusion",
+                                   "homography", "warp"}  # no policy, no motion map
+    motion = t.predict_canvas_frame("pidnet_s", a, 3, False, with_motion=True)
+    assert motion["median_ms"] == pytest.approx(later["median_ms"] + 0.3)
+    for cfg, first in ((b, False), (n, False), (a, True)):  # the motion map belongs to variant A's later frames only
+        assert "motion" not in t.predict_canvas_frame("pidnet_s", cfg, 2, first, with_motion=True)["parts"]
+    assert later["gflops"] == pytest.approx(2.0)  # context + glimpses
+    assert t.predict_canvas_frame("pidnet_s", a, 0, False)["gflops"] == pytest.approx(1.0)
+
+
+def test_unmeasured_canvas_point_names_the_missing_run():
+    from canvas.replay import CanvasConfig
+
+    t = _reuse_tables()
+    with pytest.raises(KeyError, match="latency_floor"):
+        t.predict_canvas_frame("pidnet_s", CanvasConfig(ctx_scale=0.25, glimpse_size=384, variant="off", k=4), 4, False)
+    with pytest.raises(KeyError, match="latency_floor"):
+        t.predict_canvas_frame("pidnet_s", CanvasConfig(ctx_scale=0.5, glimpse_size=384, variant="off", k=1), 1, False)

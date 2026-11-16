@@ -17,7 +17,7 @@ Nothing outside one dataset adapter is Cityscapes-specific: preprocessing,
 policies and evaluation are written against a dataset-agnostic interface so
 they can be retrained or reused on other video segmentation datasets.
 
-## Where we are (2026-11-05)
+## Where we are (2026-11-10)
 
 **Method 1 (full frame) is done and validated on real data.** The data
 layer, backbones, evaluation harness and baseline CLI run end to end on
@@ -56,13 +56,22 @@ about 6.8 ms, a frame-old prediction already loses about 5 points, and motion
 is a poor proxy for error. See [results/method3](results/method3/README.md) and
 the ledger [results/method3/TRIES.md](results/method3/TRIES.md).
 
+**Method 4 (persistent canvas + learned glimpse policy) is stopped at its
+feasibility bound, which is negative.** Before building it, the canvas was
+replayed on VPS train with a greedy oracle selector that costs nothing. None of
+the 693 configurations per model reaches the full-frame curve on a T4; the best
+is BiSeNetV2 at -0.85 mIoU at equal mean latency (PIDNet-S: -4.6), against a
+pass rule of +1.0 fixed before the runs. The glimpses are the ceiling: a frozen
+model on crops stays below the same model on the whole frame at scale 0.75,
+whatever is selected or remembered. See
+[results/method4](results/method4/README.md) and the ledger
+[results/method4/TRIES.md](results/method4/TRIES.md).
+
 ### Next steps
 
 1. **Method 2: done (negative), see above.** The finalists' latency is confirmed
    by 3 end-to-end T4 sessions.
-2. **Method 3: done (negative on train), see above.** Next memory idea, not
-   started: a persistent canvas with `SceneMemory` (logits/confidence with age)
-   and a canvas-aware policy.
+2. **Method 3: done (negative on train), see above.**
 3. **Latency on a T4** (Colab): the latency floor is measured (3 sessions,
    CUDA graphs, FP16, batch 1), see
    [results/latency_floor](results/latency_floor/README.md). Full frame:
@@ -70,8 +79,13 @@ the ledger [results/method3/TRIES.md](results/method3/TRIES.md).
    tested is 1.6–1.7× (PIDNet-S) and 2.1–2.2× (BiSeNetV2) faster, before any
    accuracy is measured. The laptop RTX 2060 numbers below are only
    indicative.
-4. Optional: Method 4 (RL policy); a secondary evaluation on the 500 official
-   val images (frame `_000019`) for less noisy rare-class IoUs.
+4. **Method 4: stopped at the feasibility bound (negative), see above.** The
+   learned policy is not built.
+5. Ideas not started: an oracle bound for a single pass on a non-uniformly
+   resampled frame (no crops, no second pass); the same readings on an
+   embedded card, where only the latency tables change.
+6. Optional: a secondary evaluation on the 500 official val images (frame
+   `_000019`) for less noisy rare-class IoUs.
 
 ## Quickstart
 
@@ -109,8 +123,7 @@ python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yam
 | Real-data diagnostics script | ✅ run on real data, no problem |
 | Method 2: foveation without memory | ✅ negative, [results](results/method2/README.md) |
 | Method 3: motion-gated reuse | ✅ negative on train, val not run, [results](results/method3/README.md) |
-| Persistent canvas memory | ⬜ not started |
-| RL-trained policy | ⬜ optional |
+| Method 4: persistent canvas + glimpse policy | ✅ feasibility bound negative on train, policy not built, [results](results/method4/README.md) |
 | Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout
