@@ -231,3 +231,41 @@ the branch after chunk 0 finished.
 - The 16 GB of Method 3 per-clip caches were deleted (user's request). They
   can be rebuilt with `scripts.method3 cache`; the objects scores made from
   them are kept.
+
+## 2026-11-16 — chunk 0 merged and scored (100 clips, partial, rule not read)
+
+`merge` then `score` on chunk 0 alone, CPU, at `4897742` (frontier budget).
+100 of 400 clips, both models, 148 configurations each. The rule is not read:
+a quarter of the clips, and the best configuration is picked on those clips.
+
+- Pipeline check: passes for both models at the four scales (gaps below 0.01
+  point).
+- Best **now** against the full frame at the same scale, in mIoU points, with
+  the budget in ms (cheapest full frame at the same mIoU, minus the pass):
+
+  | Scale | PIDNet-S | BiSeNetV2 |
+  |---|---|---|
+  | 0.25 | +2.10 (`E/a0.25/s1`), 0.23 ms | +1.55 (`B/a0.25/s1`), 0.53 ms |
+  | 0.375 | +1.12 (`S/a0.25/s1`), 0.29 ms | +1.22 (`B/a0.25/s4`), 1.02 ms |
+  | 0.5 | +1.46 (`S/a0.25/s4`), 1.15 ms | +0.30 (`B/a0.25/s4`), 1.01 ms |
+  | 0.75 | +0.40 (`S/a0.25/s1`), 2.31 ms | +0.34 (`S/a0.25/s1`), 12.09 ms |
+
+- Best **prev**: PIDNet-S +1.45 / +1.00 / +1.24 / +0.35 at 0.25 / 0.375 / 0.5
+  / 0.75; BiSeNetV2 +1.36 / +1.61 / +0.10 / +0.28. The saliency of the
+  previous frame keeps most of the gain.
+- α = 0.25 wins everywhere. Best at α = 0.5: +1.33 (PIDNet-S), +0.59
+  (BiSeNetV2); at α = 0.75: +0.11 and +0.16. The grid's weakest warp is its
+  best, so a weaker one is not covered.
+- Configurations with timing now at +1.0 point or more: 11 of 72 (PIDNet-S),
+  6 of 72 (BiSeNetV2).
+- The budgets are small where the gain is: 0.2 to 1.2 ms below scale 0.75,
+  because the full-frame curve is steep there (a slightly larger full frame
+  buys the same mIoU for about 1 ms). BiSeNetV2's 12 ms at 0.75 comes from its
+  flat top (0.7283 at 0.75, 0.7318 at 1 on these clips).
+- `budget_ms` is NaN for 18 (PIDNet-S) and 24 (BiSeNetV2) of the 148
+  configurations: those whose mIoU is below the full frame at 0.25, off the
+  curve.
+
+Full-frame mIoU on these clips, scales 1 / 0.75 / 0.5 / 0.375 / 0.25:
+PIDNet-S 0.7577, 0.7439, 0.6672, 0.6095, 0.5073; BiSeNetV2 0.7318, 0.7283,
+0.6963, 0.6516, 0.5789.
