@@ -272,3 +272,23 @@ Consequence of 2 *(Claude's)*: the latency budget (latency saved at equal
 mIoU) is read on the full-frame curve priced at backbone + post-processing,
 the same parts as a configuration (`judges_same_parts`, `budget_ms`); its
 reading on the primary curve stays in `judges`.
+
+### 2026-11-16, after chunk 0 was scored: weaker warps, as an extension (the user's decision)
+
+On the 100 clips of chunk 0, α = 0.25, the weakest warp of the grid, is the
+best at every scale and for both models, and the gain falls as α grows
+(PIDNet-S: +2.1, +1.3, +0.1 points at α = 0.25, 0.5, 0.75). The best value is
+on the edge of the grid, so weaker warps are added:
+
+- **Extension grid:** α ∈ {0.1, 0.15}, with the same scales, saliencies,
+  smoothings and timings (96 configurations per model, plus the 4 uniform
+  rows), on the same 400 clips. It is run and scored in its own folder,
+  `experiments/method5/train_all_ext`, with the same code and the same
+  pipeline check.
+- **The registered rule is not changed.** It is read on the grid fixed on
+  2026-11-12 (α ∈ {0.25, 0.5, 0.75}) and on that grid only. The extension was
+  chosen after seeing a quarter of the data: it is reported next to the rule,
+  labelled as post hoc, and its `verdict` file is not the pass rule.
+- If the registered grid fails and the extension is above +1.0 point, that is
+  written as such (a result found after looking), not as a pass.
+

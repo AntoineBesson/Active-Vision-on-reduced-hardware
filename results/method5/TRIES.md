@@ -269,3 +269,17 @@ a quarter of the clips, and the best configuration is picked on those clips.
 Full-frame mIoU on these clips, scales 1 / 0.75 / 0.5 / 0.375 / 0.25:
 PIDNet-S 0.7577, 0.7439, 0.6672, 0.6095, 0.5073; BiSeNetV2 0.7318, 0.7283,
 0.6963, 0.6516, 0.5789.
+
+## 2026-11-16 — extension decided after chunk 0: α = 0.1 and 0.15 (post hoc)
+
+The user's decision, after the chunk 0 scores above (α = 0.25 best everywhere,
+on the edge of the grid). Two weaker strengths are added as an extension, run
+in `experiments/method5/train_all_ext` with `--alphas 0.1,0.15`: 96
+configurations per model on the 400 clips, about two thirds of the registered
+grid's passes plus the teacher and uniform passes again. No code change; the
+command line was tried on the synthetic fixture (`bound` and `merge`).
+
+The registered rule stays on α ∈ {0.25, 0.5, 0.75}. The extension is reported
+next to it as chosen after looking at a quarter of the data (spec amendment of
+2026-11-16). Not run yet: it goes to the cluster with chunks 1 to 3.
+

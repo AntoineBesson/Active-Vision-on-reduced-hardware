@@ -161,6 +161,20 @@ foreach ($c in 1, 2, 3) { & $py -m scripts.method5 bound --split train_all --chu
 & $py -m scripts.method5 score --split train_all      # writes verdict_train_all.json
 ```
 
+**Extension, weaker warps (added 2026-11-16 after chunk 0, post hoc; see the
+spec's amendment).** α = 0.1 and 0.15 on the same clips, in their own folder.
+Its verdict file is not the pass rule, which is read on the registered grid
+only.
+
+```powershell
+foreach ($c in 0, 1, 2, 3) {
+    & $py -m scripts.method5 bound --split train_all --chunk "$c/4" --alphas 0.1,0.15 `
+        --out-dir experiments/method5/train_all_ext
+}
+& $py -m scripts.method5 merge --split train_all --out-dir experiments/method5/train_all_ext
+& $py -m scripts.method5 score --split train_all --out-dir experiments/method5/train_all_ext
+```
+
 A bound file refuses rows of another resampling, and so do `merge` and
 `score`: keep the default `--resample antialias` for every run.
 
