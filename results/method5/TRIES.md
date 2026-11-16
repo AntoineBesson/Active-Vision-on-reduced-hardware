@@ -141,3 +141,49 @@ On these 5 clips it most likely does not between 0.75 and 1 (not checked:
 the scale-1 mIoU was not in the report). The budget is reported only and
 does not enter the rule.
 
+## 2026-11-14 to 16 — chunk 0 on the laptop: too hot, moved to Colab
+
+Plan task 6, step 2, approved by the user. `bound --chunk 0/4`, full grid,
+both models, laptop RTX 2060 Max-Q, at `52ceec3`. About 29 s per clip for
+PIDNet-S, as extrapolated from the pipeline check.
+
+- 2026-11-14: stopped after 14 clips, the GPU holding 88 °C (stop rule then:
+  above 87 °C for 1 min).
+- 2026-11-16: resumed after cooling. The GPU sat at 87 °C, throttled to about
+  975 MHz, which is the state in which this laptop crashed during Method 2,
+  and the 87 °C rule never fired. The guard was tightened to pause at 85 °C on
+  two readings or on any thermal-slowdown flag, and to resume at 65 °C with no
+  other job on the GPU. It held the run while the moving-object full pass used
+  the GPU (08:41 to 08:53 local).
+- Under that rule the laptop heats to 86 °C about 75 s after each restart and
+  needs about 20 min to cool: about 2 clips per 22 min, so about a day for the
+  rest of the chunk. Stopped at 66 PIDNet-S clips (0001 to 0082, 10 032 lines,
+  read cleanly). The user chose Colab for the rest. The chunk zips were no
+  longer on Drive (as in Method 4); chunk 0's was rebuilt on the laptop
+  (7.41 GB, 100 clips) for upload.
+
+The school cluster (P100s, used for Method 3) needs the Telecom Paris OpenVPN,
+which asks for a password at each connection; one SSH test timed out.
+
+## 2026-11-16 — first look on 66 PIDNet-S clips (not a reading)
+
+`score` on the partial PIDNet-S file of chunk 0 (CPU only), to answer whether
+the bound is worth finishing. The rule is not read (66 of 400 clips, one
+model; the best of 72 configurations is picked on the same clips).
+
+- Pipeline check: every uniform row within 2e-7 of the full frame.
+- Best **now**: `5o/c0.25/E/a0.25/s1/now`, +1.92 points above the full frame
+  at 0.25 (0.5089 against 0.4897). Best **prev**: `c0.25/E/a0.25/s4/prev`,
+  +1.80.
+- Best per scale (now / prev): 0.25 +1.92 / +1.80; 0.375 +0.67 / +0.51; 0.5
+  +1.41 (`S/a0.25/s4`) / +1.11; 0.75 +0.72 / +0.74.
+- Best per saliency (now): E +1.92, S +1.70, B +1.00. α = 0.25, the weakest
+  warp of the grid, wins at every scale and for every saliency.
+- Per class at 0.25 against the uniform pass: pole +3.1, bicycle +2.8,
+  traffic sign +0.9, person +0.8, motorcycle −1.5, wall −6.8 points.
+- On the curves (information only): primary +0.29 (`c0.75/S/a0.25/s1`), end
+  to end +0.87 (`c0.5/S/a0.25/s4`).
+
+Full-frame mIoU on these clips: 0.7378, 0.7243, 0.6506, 0.5951, 0.4897 at
+scales 1, 0.75, 0.5, 0.375, 0.25.
+
