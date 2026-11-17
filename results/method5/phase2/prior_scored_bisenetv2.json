@@ -1,0 +1,32 @@
+{
+ "model": "bisenetv2",
+ "split": "train_all",
+ "scored_only": true,
+ "clips": 400,
+ "cell": 16,
+ "files": [
+  "prior_scored_train_all_bisenetv2_c0of4.jsonl.gz",
+  "prior_scored_train_all_bisenetv2_c1of4.jsonl.gz",
+  "prior_scored_train_all_bisenetv2_c2of4.jsonl.gz",
+  "prior_scored_train_all_bisenetv2_c3of4.jsonl.gz"
+ ],
+ "scales": {
+  "0.25": {
+   "frames": 2400,
+   "mean_e_share": 0.06170557121435801
+  },
+  "0.375": {
+   "frames": 2400,
+   "mean_e_share": 0.043927948077519735
+  }
+ },
+ "max_rounds": {
+  "B/c0.25": 1,
+  "B/c0.375": 1,
+  "E/c0.25": 1,
+  "E/c0.375": 11,
+  "S/c0.25": 10,
+  "S/c0.375": 11
+ },
+ "max_rounds_all": 11
+}
