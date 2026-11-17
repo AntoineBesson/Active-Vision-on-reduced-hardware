@@ -307,6 +307,25 @@ Best **now** against the full frame at the same scale, in mIoU points, for
 - The best saliency is still the error oracle E; the weaker warps help the
   small-class saliency S most (BiSeNetV2 +0.96, PIDNet-S +0.73).
 
+### Post hoc extension: scale 1 with magnification
+
+At scale 1 the registered warp is the identity. With the density allowed up
+to 2 (`--d-max 2`), a region can be sampled up to twice finer than the source
+pixels, at the full frame's own cost. Saliencies B and S, α 0.1 / 0.25 / 0.5,
+σ 1 and 4, both timings, on the same 400 clips; read next to the rule, not
+as the rule. Files: [mag/verdict_train_all.json](mag/verdict_train_all.json)
+and `mag/score_train_all_*.json.gz`. Pipeline check: passes.
+
+- **No gain worth reading.** Best against the full frame at scale 1:
+  PIDNet-S +0.36 points (`B/a0.1/s1`; +0.31 with the teacher at t − 1),
+  BiSeNetV2 −0.02 (nothing above 0). Every α above 0.1 loses, up to −8 points
+  at α 0.5.
+- The magnified pass gains on large rigid classes (PIDNet-S: motorcycle +2.2,
+  train +2.0, bus +1.1) and loses on riders and people (−1.4 and −0.5; −2.2
+  and −0.7 for BiSeNetV2).
+- So this warp cannot move the operating point a T4 actually uses, even with
+  an oracle saliency.
+
 ## Files
 
 - Code: `src/warp/grid.py` (densities, forward and inverse maps, warp, unwarp),

@@ -483,3 +483,54 @@ configurations, 4 uniform rows, 4 resize refs). `merge` in
 
 For phase 2 (open point 1 of its draft spec): α ∈ {0.15, 0.25, 0.35} covers
 the best strength at every scale kept; α 0.1 adds nothing.
+
+## 2026-11-16 — scale 1 magnification extension sent to the cluster (post hoc)
+
+The user's go, before accepting the phase 2 spec: it is the only version that
+can move the operating point a T4 uses, and if it gains, phase 2's scales
+change. Run `train_all_mag` of `scripts/cluster/m5_bound.sh` (`--scales 1
+--d-max 2 --saliencies B,S --alphas 0.1,0.25,0.5`, σ 1 and 4, both timings:
+24 configurations per model plus the uniform row), all four chunks, Tesla
+P100, cluster repository at `d843327`. Every pass is at full resolution.
+
+| Chunk | PIDNet-S job | BiSeNetV2 job |
+|---|---|---|
+| 0 | 1107500 | 1107504 |
+| 1 | 1107501 | 1107505 |
+| 2 | 1107502 | 1107506 |
+| 3 | 1107503 | 1107507 |
+
+The chunk 0 zip was already on the cluster. **Not finished, not scored.**
+
+## 2026-11-16 — scale 1 magnification extension done and scored (post hoc, not the rule)
+
+All eight jobs (1107500 to 1107507) ended `COMPLETED` with `JOB_OK` on the
+first try, 11 to 15 minutes each. No resubmission. Copied back: 8 files of
+2,600 lines (100 clips × 26 rows: 24 configurations, the uniform row, the
+resize ref). `merge` in `experiments/method5/train_all_mag`: 10,400 lines and
+400 clips per model. Verdict and scores committed in `results/method5/mag/`
+(`24a73e0`, on 2026-11-17 after the user's go).
+
+- **Pipeline check: passes** at scale 1 (gaps 2.7e-8 and −1.5e-8).
+- **No gain worth reading.** Best against the full frame at scale 1, in mIoU
+  points:
+
+  | | PIDNet-S (FF 0.7608) | BiSeNetV2 (FF 0.7335) |
+  |---|---|---|
+  | best now | +0.36 (`B/a0.1/s1`) | −0.02 (`B/a0.1/s4`) |
+  | best prev | +0.31 (`B/a0.1/s1`) | −0.01 (`B/a0.1/s4`) |
+  | B, α 0.1 / 0.25 / 0.5 (now) | +0.36 / +0.04 / −1.34 | −0.02 / −0.85 / −3.71 |
+  | S, α 0.1 / 0.25 / 0.5 (now) | +0.06 / −1.11 / −4.78 | −0.15 / −2.53 / −7.90 |
+  | configurations above 0 | 4 of 12 now, 4 of 12 prev | 0 of 12 now, 0 of 12 prev |
+
+- Magnifying beyond the source pixels gains on large rigid classes and loses
+  on people: PIDNet-S's best gains motorcycle +2.2, train +2.0, bus +1.1 and
+  loses rider −1.4, person −0.5; BiSeNetV2's best loses rider −2.2,
+  motorcycle −0.9, person −0.7.
+- `budget_ms` is NaN for every positive configuration (no full frame on the
+  curve reaches a higher mIoU than scale 1) and strongly negative otherwise.
+  For BiSeNetV2, −13 ms: its full frame at 0.75 already matches scale 1.
+- **Consequence for phase 2:** the operating point a T4 uses (scale 1) cannot
+  be moved by this warp, with an oracle saliency. +0.36 point is below what 50
+  val clips can resolve, the user's criterion for leaving BiSeNetV2 at 0.5
+  out. The scales of the phase 2 spec stay as drafted.
