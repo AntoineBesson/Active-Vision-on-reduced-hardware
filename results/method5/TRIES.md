@@ -534,3 +534,65 @@ resize ref). `merge` in `experiments/method5/train_all_mag`: 10,400 lines and
   be moved by this warp, with an oracle saliency. +0.36 point is below what 50
   val clips can resolve, the user's criterion for leaving BiSeNetV2 at 0.5
   out. The scales of the phase 2 spec stay as drafted.
+
+## 2026-11-17 — phase 2, stage A: the warp step timed on a T4; gate A says continue, with the static prior P only
+
+Spec `docs/superpowers/specs/2026-11-16-method5-phase2-design.md` and plan
+`docs/superpowers/plans/2026-11-17-method5-phase2.md`, both accepted by the
+user on 2026-11-17 before this run. Code: tasks 1 to 3 (`d567457`,
+`2ed0e92`, `93ba77d`).
+
+Three Colab T4 sessions run by the user (`m5w-s1` 08:06, `m5w-s2` 08:15,
+`m5w-s3` 08:48, local time of the runtime; 426 to 450 s each; torch
+2.14.1+cu130), `latency_floor --parts warp`, graph level, FP16, batch 1. The
+CUDA graph test of the step passed on the T4 first. Per model and scale 0.25 /
+0.375 / 0.5: the full frame and 26 variants of the step (r1/r2/r3 × u1/u2 ×
+B/S/U/P at 50 density rounds, B and U at 10 rounds on r2/u2), α 0.25, σ 4.
+163 records per session: BiSeNetV2 at 0.5 did not fit in one chunk and was
+split in two, the full frame repeated (chunks 5 and 6). SM clock median 1185 /
+1275 / 1200 MHz, maximum temperature 81 / 82 / 83 °C, `sw_power_cap`
+throttling only, as in every T4 session so far. The full frame here is within
+3 % of `latency_floor_final` at every scale.
+
+`python -m scripts.method5 cost` → `results/method5/phase2/gate_a.json`
+(sessions and gate committed in `c51cfe5`).
+Δ = median over the sessions of (W − FF) paired in its chunk, ms, against
+the phase 1 budget (the registered grid's best `now` configuration on the
+measured end-to-end curve):
+
+| | budget | P, r3u1 | P, r2u1 | cheapest B or S | cheapest U |
+|---|---|---|---|---|---|
+| PIDNet-S 0.25 | 0.176 | −0.08 fits | +0.06 fits | +1.70 (B r3u1) over | +1.58 (r3u1) over |
+| PIDNet-S 0.375 | 0.262 | −0.16 fits | +0.13 fits | +1.62 (B r3u1) over | +1.57 (r3u1) over |
+| PIDNet-S 0.5 | 0.754 | −0.14 fits | +0.28 fits | +1.57 (B r3u1) over | +1.65 (r3u1) over |
+| BiSeNetV2 0.25 | 0.552 | −0.12 fits | +0.07 fits | +1.62 (B r3u1) over | +4.69 (r3u1) over |
+| BiSeNetV2 0.375 | 0.676 | −0.20 fits | +0.17 fits | +1.45 (B r3u1) over | +8.50 (r3u1) over |
+| BiSeNetV2 0.5 (not in stage B) | 0.284 | −0.17 fits | +0.31 straddles | +1.52 over | +14.5 over |
+
+- **Verdict: continue**, by the spec's rule "if only P fits, stage B goes on
+  with P alone". Every model and scale of stage B fits with P; no variant
+  with a saliency computed per frame (B, S, U) fits anywhere, and the
+  smallest of them is 1.45 ms over the full frame, 2 to 8 times the budget.
+  Variants kept: `r3u1/P/n50` and `r2u1/P/n50` (the rounds do not matter for
+  P, whose warp is computed once).
+- **Why P is cheaper than the full frame with r3:** a precomputed bilinear
+  `grid_sample` downscale costs less than the full frame's antialiased
+  `F.interpolate`. r3 does not antialias, so stage B reads its accuracy
+  (the spec: "its accuracy decides"); r2 is the baseline's own filter and
+  costs 0.06 to 0.28 ms.
+- **Where the per-frame cost goes** (PIDNet-S 0.25): r3u1 with B minus with P
+  is 1.78 ms. 40 density rounds cost 0.58 ms (r2u2 B at 50 against 10
+  rounds), about 15 µs a round, so 50 rounds are about 0.7 ms; the other
+  1.0 ms is building the maps and filters each frame (many small float64
+  operations, slow on a T4) and the B or S mask on the full-size labels. U is
+  far dearer on BiSeNetV2 (stride 1: the top-2 softmax over 19 channels at
+  the warped image's full resolution).
+- **Implementation readings:** u2 (two lerps) is about 1.7 ms slower than u1
+  (`grid_sample`), against the spec's expectation, because it writes the
+  full-size logits several times; r1 (tap-by-tap gather) is about 3 ms slower
+  than r2. Neither is kept.
+- Room under the budget is left only for a fixed warp: with r3u1 the whole
+  budget, with r2u1 0.12 / 0.13 / 0.47 ms (PIDNet-S) and 0.49 / 0.51 ms
+  (BiSeNetV2). This is the spec's condition for the local 2-D warp's own
+  oracle bound (decision 3), and only for a fixed 2-D warp: a per-frame one
+  has no room.

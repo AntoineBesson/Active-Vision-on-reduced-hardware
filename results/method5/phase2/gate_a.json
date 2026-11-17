@@ -6756,8 +6756,8 @@
   }
  },
  "files": [
-  "results\\method5\\phase2\\latency_floor_m5w-s1.json",
-  "results\\method5\\phase2\\latency_floor_m5w-s2.json",
-  "results\\method5\\phase2\\latency_floor_m5w-s3.json"
+  "results/method5/phase2/latency_floor_m5w-s1.json",
+  "results/method5/phase2/latency_floor_m5w-s2.json",
+  "results/method5/phase2/latency_floor_m5w-s3.json"
  ]
 }

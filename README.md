@@ -80,6 +80,12 @@ scale is free, the gain is gone (−0.26 and +0.04). See
 [results/method5](results/method5/README.md) and the ledger
 [results/method5/TRIES.md](results/method5/TRIES.md).
 
+Phase 2 times the method on a T4 before reading its accuracy. A warp chosen
+each frame from the method's own previous output costs 1.45 ms or more per
+frame over the full frame, 2 to 8 times that budget, at every model and scale.
+Only a fixed warp (the mean oracle saliency of the train frames, computed
+once) fits, so the closed-loop accuracy stage goes on with that prior alone.
+
 ### Next steps
 
 1. **Method 2: done (negative), see above.** The finalists' latency is confirmed
@@ -140,7 +146,7 @@ python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yam
 | Method 2: foveation without memory | ✅ negative, [results](results/method2/README.md) |
 | Method 3: motion-gated reuse | ✅ negative on train, val not run, [results](results/method3/README.md) |
 | Method 4: persistent canvas + glimpse policy | ✅ feasibility bound negative on train, policy not built, [results](results/method4/README.md) |
-| Method 5: one pass on an oracle-warped frame | ✅ feasibility bound passes narrowly on train (scale 0.25 only), phase 2 not started, [results](results/method5/README.md) |
+| Method 5: one pass on an oracle-warped frame | ✅ feasibility bound passes narrowly on train (scale 0.25 only); phase 2 stage A (T4 cost): only the static prior P fits the budget, a per-frame saliency costs 1.5 ms or more; stage B next with P, [results](results/method5/README.md) |
 | Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout

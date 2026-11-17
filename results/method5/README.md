@@ -326,11 +326,47 @@ and `mag/score_train_all_*.json.gz`. Pipeline check: passes.
 - So this warp cannot move the operating point a T4 actually uses, even with
   an oracle saliency.
 
+## Phase 2, stage A: the cost on a T4
+
+[Spec](../../docs/superpowers/specs/2026-11-16-method5-phase2-design.md) and
+[plan](../../docs/superpowers/plans/2026-11-17-method5-phase2.md), accepted on
+2026-11-17. One frame of the method (saliency from the previous output,
+densities, resampling, network, unwarp, argmax: `warp.policy.WarpStep`) was
+timed against the full frame on a T4, three Colab sessions, the two paired
+within each session (`latency_floor --parts warp`; read by
+`python -m scripts.method5 cost`, `phase2/gate_a.json`).
+
+**Gate A: continue, with the static prior P only.** Overhead over the full
+frame (median of the three paired session differences, ms), against the
+phase 1 budget:
+
+| | budget | P, bilinear (r3u1) | P, antialiased (r2u1) | best per-frame saliency |
+|---|---|---|---|---|
+| PIDNet-S 0.25 | 0.18 | −0.08 | +0.06 | +1.58 (U) |
+| PIDNet-S 0.375 | 0.26 | −0.16 | +0.13 | +1.57 (U) |
+| PIDNet-S 0.5 | 0.75 | −0.14 | +0.28 | +1.57 (B) |
+| BiSeNetV2 0.25 | 0.55 | −0.12 | +0.07 | +1.62 (B) |
+| BiSeNetV2 0.375 | 0.68 | −0.20 | +0.17 | +1.45 (B) |
+
+- A warp chosen per frame from the method's own output (B, S, U) costs 1.45
+  to 1.7 ms or more per frame in this implementation, 2 to 8 times the time
+  the oracle's gain would pay for, at every model and scale. It does not go
+  on to stage B.
+- The fixed warp of the static prior costs nothing per frame (its weights
+  are computed once). Stage B goes on with P alone, both resamplings: the
+  bilinear one is cheaper than the full frame's antialiased resize but does
+  not antialias, so its accuracy is read in stage B.
+- Details, per-variant table and where the per-frame time goes:
+  [TRIES](TRIES.md).
+
 ## Files
 
 - Code: `src/warp/grid.py` (densities, forward and inverse maps, warp, unwarp),
   `src/warp/oracle.py` (E, B, S), `src/warp/bound.py` (per-clip runner),
   `scripts/method5.py` (`bound`, `merge`, `score`),
   `LatencyTables.predict_warp_frame` in `src/foveation/latency_model.py`.
+- Phase 2: `src/warp/policy.py` (saliencies B, S, U, P and `WarpStep`), the
+  `warp` part of `scripts/latency_floor.py`, `scripts/method5.py cost`;
+  results in `phase2/` (the three T4 sessions and `gate_a.json`).
 - Design: [spec](../../docs/superpowers/specs/2026-11-12-method5-warp-bound-design.md),
   [plan](../../docs/superpowers/plans/2026-11-12-method5-warp-bound.md).

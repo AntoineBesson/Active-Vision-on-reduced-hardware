@@ -566,7 +566,8 @@ def cmd_cost(args: argparse.Namespace) -> int:
         raise SystemExit(f"no session matches {args.sessions}")
     sessions = [_read_json(Path(p)) for p in paths]
     out = gate_a(sessions, stage_a_budgets(Path(args.scores), args.e2e))
-    out["files"] = [str(Path(p).relative_to(REPO_ROOT)) if Path(p).is_relative_to(REPO_ROOT) else p for p in paths]
+    out["files"] = [Path(p).relative_to(REPO_ROOT).as_posix() if Path(p).is_relative_to(REPO_ROOT) else p
+                    for p in paths]
     dest = Path(args.out)
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(out, indent=1) + "\n")
