@@ -1,0 +1,3228 @@
+{
+ "split": "train_all",
+ "model": "pidnet_s",
+ "gate_a": "C:\\Users\\trash\\Active-Vision-on-reduced-hardware\\results\\method5\\phase2\\gate_a.json",
+ "fullframe": {
+  "scales": [
+   1.0,
+   0.75,
+   0.5,
+   0.375,
+   0.25
+  ],
+  "miou": [
+   0.7608271785202243,
+   0.7479547825283435,
+   0.6794208938639265,
+   0.6173515073443419,
+   0.528506245273344
+  ],
+  "median_ms": [
+   19.346176147460938,
+   10.740303993225098,
+   5.217280149459839,
+   3.591823935508728,
+   2.73145592212677
+  ],
+  "p95_ms": [
+   19.786421012878417,
+   10.97922124862671,
+   5.369216012954712,
+   3.6843985080718995,
+   3.7109424829483033
+  ],
+  "gflops": [
+   94.388453376,
+   53.093695488,
+   23.597187072,
+   13.273694208,
+   5.899419648
+  ]
+ },
+ "fullframe_e2e": {
+  "scales": [
+   1.0,
+   0.75,
+   0.5,
+   0.375,
+   0.25
+  ],
+  "miou": [
+   0.7608271785202243,
+   0.7479547825283435,
+   0.6794208938639265,
+   0.6173515073443419,
+   0.528506245273344
+  ],
+  "median_ms": [
+   21.467007637023926,
+   13.022063732147217,
+   7.043535947799683,
+   5.2513439655303955,
+   3.995903968811035
+  ],
+  "p95_ms": [
+   21.670266342163085,
+   13.256611394882203,
+   7.107455873489379,
+   5.34537935256958,
+   5.389209628105164
+  ],
+  "sessions": 3
+ },
+ "gate_b": {
+  "rule": "gate B (spec, stage B): continue when, for at least one model, a configuration lies above the measured full-frame curve at equal mean latency on train (all clips; pipeline check of r1/r2 passed)",
+  "clips": 400,
+  "complete": true,
+  "verdict": "continue",
+  "state": "CONTINUE: 21 configurations above the measured full-frame curve",
+  "above": [
+   "5p/c0.25/P/a0.25/s4/r2u1",
+   "5p/c0.375/P/a0.1/s1/r2u1",
+   "5p/c0.375/P/a0.1/s4/r2u1",
+   "5p/c0.375/P/a0.15/s1/r2u1",
+   "5p/c0.375/P/a0.15/s4/r2u1",
+   "5p/c0.5/P/a0.1/s1/r2u1",
+   "5p/c0.5/P/a0.1/s4/r2u1",
+   "5p/c0.5/P/a0.15/s1/r2u1",
+   "5p/c0.5/P/a0.15/s4/r2u1",
+   "5p/c0.375/P/a0.1/s1/r3u1",
+   "5p/c0.375/P/a0.1/s4/r3u1",
+   "5p/c0.375/P/a0.15/s1/r3u1",
+   "5p/c0.375/P/a0.15/s4/r3u1",
+   "5p/c0.375/P/a0.25/s1/r3u1",
+   "5p/c0.375/P/a0.25/s4/r3u1",
+   "5p/c0.5/P/a0.1/s1/r3u1",
+   "5p/c0.5/P/a0.1/s4/r3u1",
+   "5p/c0.5/P/a0.15/s1/r3u1",
+   "5p/c0.5/P/a0.15/s4/r3u1",
+   "5p/c0.5/P/a0.25/s1/r3u1",
+   "5p/c0.5/P/a0.25/s4/r3u1"
+  ],
+  "best": {
+   "name": "5p/c0.375/P/a0.15/s1/r3u1",
+   "miou": 0.6158560709397269,
+   "latency_ms": 4.956416130065918,
+   "delta_miou_at_equal_latency": 0.01937608346279851,
+   "delta_vs_fullframe": -0.0014954364046149138,
+   "delta_vs_uniform": 0.0007116471333953323,
+   "uniform_delta_miou_at_equal_latency": 0.018664436329403178
+  }
+ },
+ "pipeline_check": {
+  "r2u1": {
+   "0.25": {
+    "scale": 0.25,
+    "uniform_miou": 0.5285062385520799,
+    "baseline_miou": 0.528506245273344,
+    "gap": -6.721264100839619e-09,
+    "checked": true,
+    "tolerance": 0.001,
+    "ok": true
+   },
+   "0.375": {
+    "scale": 0.375,
+    "uniform_miou": 0.6173512766348136,
+    "baseline_miou": 0.6173515073443419,
+    "gap": -2.307095282594318e-07,
+    "checked": true,
+    "tolerance": 0.001,
+    "ok": true
+   },
+   "0.5": {
+    "scale": 0.5,
+    "uniform_miou": 0.6794209100585352,
+    "baseline_miou": 0.6794208938639265,
+    "gap": 1.61946087651188e-08,
+    "checked": true,
+    "tolerance": 0.001,
+    "ok": true
+   }
+  },
+  "r3u1": {
+   "0.25": {
+    "scale": 0.25,
+    "uniform_miou": 0.5264050473593581,
+    "baseline_miou": 0.528506245273344,
+    "gap": -0.002101197913985886,
+    "checked": false,
+    "tolerance": 0.001,
+    "ok": null
+   },
+   "0.375": {
+    "scale": 0.375,
+    "uniform_miou": 0.6151444238063316,
+    "baseline_miou": 0.6173515073443419,
+    "gap": -0.002207083538010246,
+    "checked": false,
+    "tolerance": 0.001,
+    "ok": null
+   },
+   "0.5": {
+    "scale": 0.5,
+    "uniform_miou": 0.6782546206219928,
+    "baseline_miou": 0.6794208938639265,
+    "gap": -0.0011662732419336352,
+    "checked": false,
+    "tolerance": 0.001,
+    "ok": null
+   }
+  }
+ },
+ "files": [
+  "C:\\Users\\trash\\Active-Vision-on-reduced-hardware\\experiments\\method5\\phase2\\train_all\\stream_train_all_pidnet_s_r2u1.jsonl.gz",
+  "C:\\Users\\trash\\Active-Vision-on-reduced-hardware\\experiments\\method5\\phase2\\train_all\\stream_train_all_pidnet_s_r3u1.jsonl.gz"
+ ],
+ "positions": [
+  4,
+  9,
+  14,
+  19,
+  24,
+  29
+ ],
+ "configs": [
+  {
+   "name": "5p/c0.25/P/a0.1/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5286165155844007,
+   "per_class_iou": {
+    "road": 0.920112356201716,
+    "sidewalk": 0.5728122945848494,
+    "building": 0.8333189392561398,
+    "wall": 0.4753224602270677,
+    "fence": 0.3442188482699955,
+    "pole": 0.2096223697246555,
+    "traffic light": 0.3378426185289915,
+    "traffic sign": 0.3989595504137468,
+    "vegetation": 0.8349123394241357,
+    "terrain": 0.4532049579419629,
+    "sky": 0.8605826975339044,
+    "person": 0.48850013328094444,
+    "rider": 0.33084055015497055,
+    "car": 0.8054156642049918,
+    "truck": 0.5085636686767478,
+    "bus": 0.5164290150904668,
+    "train": 0.4533169707081005,
+    "motorcycle": 0.20141734907026515,
+    "bicycle": 0.49832101280996227
+   },
+   "miou_by_position": {
+    "4": 0.5082340915895384,
+    "9": 0.5156405816808728,
+    "14": 0.5154828219717198,
+    "19": 0.529888149768488,
+    "24": 0.5345245867248289,
+    "29": 0.5470498675327551
+   },
+   "latency": {
+    "mean_ms": 4.028448104858398,
+    "p95_ms": 4.199092984199524,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.05819201469421387
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.028448104858398,
+     "delta_miou_at_equal_latency": -0.0021928204806639373,
+     "latency_saved_at_equal_miou": -0.030985946497079198,
+     "latency_saved_frontier": -0.030985946497079198
+    },
+    "p95": {
+     "latency_ms": 4.199092984199524,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": 0.00011027031105670382,
+   "oracle": {
+    "miou": 0.5356937379595732,
+    "delta_vs_fullframe": 0.007187492686229202,
+    "share_kept": 0.015341971932434103
+   },
+   "delta_vs_uniform": 0.00011027703232080466
+  },
+  {
+   "name": "5p/c0.25/P/a0.1/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5291396041839282,
+   "per_class_iou": {
+    "road": 0.9210354413494813,
+    "sidewalk": 0.5748336203372242,
+    "building": 0.8331077872268875,
+    "wall": 0.47829231261141675,
+    "fence": 0.34563746438954074,
+    "pole": 0.209233918160954,
+    "traffic light": 0.3376796307012603,
+    "traffic sign": 0.3994775421163354,
+    "vegetation": 0.8347684077503407,
+    "terrain": 0.4529494443032454,
+    "sky": 0.8606469064138162,
+    "person": 0.48791254592164734,
+    "rider": 0.3300130380289222,
+    "car": 0.8052946976693445,
+    "truck": 0.5137703102045379,
+    "bus": 0.5113628177885061,
+    "train": 0.4599021174241009,
+    "motorcycle": 0.20218420089643846,
+    "bicycle": 0.4955502762006384
+   },
+   "miou_by_position": {
+    "4": 0.5084153962790399,
+    "9": 0.5148026775975173,
+    "14": 0.5163339314421481,
+    "19": 0.5279923157844831,
+    "24": 0.5369777315560788,
+    "29": 0.5491057337091995
+   },
+   "latency": {
+    "mean_ms": 4.028448104858398,
+    "p95_ms": 4.199092984199524,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.05819201469421387
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.028448104858398,
+     "delta_miou_at_equal_latency": -0.0016697318811363937,
+     "latency_saved_at_equal_miou": -0.02359437226603056,
+     "latency_saved_frontier": -0.02359437226603056
+    },
+    "p95": {
+     "latency_ms": 4.199092984199524,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": 0.0006333589105842474,
+   "oracle": {
+    "miou": 0.5371105985464005,
+    "delta_vs_fullframe": 0.00860435327305653,
+    "share_kept": 0.07360912441467653
+   },
+   "delta_vs_uniform": 0.0006333656318483483
+  },
+  {
+   "name": "5p/c0.25/P/a0.15/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5285468221560429,
+   "per_class_iou": {
+    "road": 0.9194332558247353,
+    "sidewalk": 0.5720210902716838,
+    "building": 0.8330854927456164,
+    "wall": 0.47566146951764676,
+    "fence": 0.34311190549706044,
+    "pole": 0.20870750571914934,
+    "traffic light": 0.3382547693104083,
+    "traffic sign": 0.39865490487036387,
+    "vegetation": 0.8356519084191318,
+    "terrain": 0.45562365104673624,
+    "sky": 0.8600883762638603,
+    "person": 0.4887231940454584,
+    "rider": 0.33238694710069117,
+    "car": 0.8084412278078613,
+    "truck": 0.5218263121261172,
+    "bus": 0.5064114707758584,
+    "train": 0.4270309107197268,
+    "motorcycle": 0.21601130251922795,
+    "bicycle": 0.5012639263834824
+   },
+   "miou_by_position": {
+    "4": 0.5107545985333181,
+    "9": 0.512956865151756,
+    "14": 0.522841840017813,
+    "19": 0.5333520879115419,
+    "24": 0.5309063791535735,
+    "29": 0.5434199875655004
+   },
+   "latency": {
+    "mean_ms": 4.028448104858398,
+    "p95_ms": 4.199092984199524,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.05819201469421387
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.028448104858398,
+     "delta_miou_at_equal_latency": -0.0022625139090217683,
+     "latency_saved_at_equal_miou": -0.03197075891621548,
+     "latency_saved_frontier": -0.03197075891621548
+    },
+    "p95": {
+     "latency_ms": 4.199092984199524,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": 4.057688269887283e-05,
+   "oracle": {
+    "miou": 0.5381375769808263,
+    "delta_vs_fullframe": 0.009631331707482316,
+    "share_kept": 0.004213008536228668
+   },
+   "delta_vs_uniform": 4.058360396297367e-05
+  },
+  {
+   "name": "5p/c0.25/P/a0.15/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5276132263542138,
+   "per_class_iou": {
+    "road": 0.9209199084972008,
+    "sidewalk": 0.5753354005091924,
+    "building": 0.8331332911080799,
+    "wall": 0.47907355463231305,
+    "fence": 0.3428982609792805,
+    "pole": 0.20834474623520777,
+    "traffic light": 0.33771837904941954,
+    "traffic sign": 0.39874591676806254,
+    "vegetation": 0.8352773619396426,
+    "terrain": 0.4539556289532952,
+    "sky": 0.8601579501270218,
+    "person": 0.48987345159077017,
+    "rider": 0.33041485323876063,
+    "car": 0.8080627656300937,
+    "truck": 0.522970729738845,
+    "bus": 0.49344897279692657,
+    "train": 0.43002021704798216,
+    "motorcycle": 0.20522792268185083,
+    "bicycle": 0.49907198920611706
+   },
+   "miou_by_position": {
+    "4": 0.5066160751013049,
+    "9": 0.5134700736676598,
+    "14": 0.5199748483693636,
+    "19": 0.5319613413745118,
+    "24": 0.5330325712825632,
+    "29": 0.54282098368365
+   },
+   "latency": {
+    "mean_ms": 4.028448104858398,
+    "p95_ms": 4.199092984199524,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.05819201469421387
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.028448104858398,
+     "delta_miou_at_equal_latency": -0.003196109710850825,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.199092984199524,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.000893018919130184,
+   "oracle": {
+    "miou": 0.537489893062825,
+    "delta_vs_fullframe": 0.00898364778948102,
+    "share_kept": -0.09940493439377962
+   },
+   "delta_vs_uniform": -0.0008930121978660832
+  },
+  {
+   "name": "5p/c0.25/P/a0.25/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5301289457528888,
+   "per_class_iou": {
+    "road": 0.9186626753159218,
+    "sidewalk": 0.5717263929975529,
+    "building": 0.833277780918926,
+    "wall": 0.47652265569367536,
+    "fence": 0.3484060252369532,
+    "pole": 0.20991541903748942,
+    "traffic light": 0.3266309405803322,
+    "traffic sign": 0.39824806274205893,
+    "vegetation": 0.836322639092977,
+    "terrain": 0.4572483655362525,
+    "sky": 0.8609966364817297,
+    "person": 0.48962424083441053,
+    "rider": 0.3283251488471917,
+    "car": 0.8106985941112534,
+    "truck": 0.5274735061301857,
+    "bus": 0.5216239862137939,
+    "train": 0.4184943546457013,
+    "motorcycle": 0.23136529741707573,
+    "bicycle": 0.5068872474714045
+   },
+   "miou_by_position": {
+    "4": 0.5111579232902613,
+    "9": 0.5155012820128521,
+    "14": 0.5198609510265111,
+    "19": 0.5370705322992875,
+    "24": 0.540157224790229,
+    "29": 0.5410048909306697
+   },
+   "latency": {
+    "mean_ms": 4.028448104858398,
+    "p95_ms": 4.199092984199524,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.05819201469421387
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.028448104858398,
+     "delta_miou_at_equal_latency": -0.0006803903121758159,
+     "latency_saved_at_equal_miou": -0.009614347365010545,
+     "latency_saved_frontier": -0.009614347365010545
+    },
+    "p95": {
+     "latency_ms": 4.199092984199524,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": 0.0016227004795448252,
+   "oracle": {
+    "miou": 0.5409769410670742,
+    "delta_vs_fullframe": 0.012470695793730169,
+    "share_kept": 0.13012108597506344
+   },
+   "delta_vs_uniform": 0.001622707200808926
+  },
+  {
+   "name": "5p/c0.25/P/a0.25/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5309871175234979,
+   "per_class_iou": {
+    "road": 0.9208721033291778,
+    "sidewalk": 0.5773953431783796,
+    "building": 0.8334729728423282,
+    "wall": 0.48194850524887595,
+    "fence": 0.34926296629225234,
+    "pole": 0.20956510102146506,
+    "traffic light": 0.3288475450866969,
+    "traffic sign": 0.3991931421553823,
+    "vegetation": 0.8362003630785434,
+    "terrain": 0.458654156937372,
+    "sky": 0.8611425903001085,
+    "person": 0.49103701984868153,
+    "rider": 0.33584986747053064,
+    "car": 0.8104769987938953,
+    "truck": 0.5350526606488956,
+    "bus": 0.5125073033751967,
+    "train": 0.423074640187652,
+    "motorcycle": 0.22017266352647918,
+    "bicycle": 0.5040292896245471
+   },
+   "miou_by_position": {
+    "4": 0.5125351520294616,
+    "9": 0.5152682993102982,
+    "14": 0.5235917830467273,
+    "19": 0.5352243334374209,
+    "24": 0.536761509130681,
+    "29": 0.5457248433908376
+   },
+   "latency": {
+    "mean_ms": 4.028448104858398,
+    "p95_ms": 4.199092984199524,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.05819201469421387
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.028448104858398,
+     "delta_miou_at_equal_latency": 0.0001777814584332793,
+     "latency_saved_at_equal_miou": 0.0025121649527450884,
+     "latency_saved_frontier": 0.0025121649527450884
+    },
+    "p95": {
+     "latency_ms": 4.199092984199524,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": 0.0024808722501539204,
+   "oracle": {
+    "miou": 0.540311110978999,
+    "delta_vs_fullframe": 0.011804865705654977,
+    "share_kept": 0.21015675332634143
+   },
+   "delta_vs_uniform": 0.0024808789714180213
+  },
+  {
+   "name": "5p/c0.375/P/a0.1/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6184476363124777,
+   "per_class_iou": {
+    "road": 0.9455563045207835,
+    "sidewalk": 0.6703561173128502,
+    "building": 0.8701043028429118,
+    "wall": 0.5467536439051989,
+    "fence": 0.4602712025044315,
+    "pole": 0.29795761365408663,
+    "traffic light": 0.4502009728894325,
+    "traffic sign": 0.5254116820070701,
+    "vegetation": 0.8717199651568932,
+    "terrain": 0.49745474527263817,
+    "sky": 0.902147740480935,
+    "person": 0.5898993072307332,
+    "rider": 0.44492831264670735,
+    "car": 0.8700126937602056,
+    "truck": 0.6997700474701584,
+    "bus": 0.645493203082712,
+    "train": 0.534749515165022,
+    "motorcycle": 0.3432715765632376,
+    "bicycle": 0.584446143471069
+   },
+   "miou_by_position": {
+    "4": 0.5916790135430083,
+    "9": 0.610132637186454,
+    "14": 0.6121976913738785,
+    "19": 0.6242550548281977,
+    "24": 0.6249817169824811,
+    "29": 0.6325617587653787
+   },
+   "latency": {
+    "mean_ms": 5.24617600440979,
+    "p95_ms": 5.353379106521606,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.13351988792419434
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 5.24617600440979,
+     "delta_miou_at_equal_latency": 0.001461856411369089,
+     "latency_saved_at_equal_miou": 0.03681759805726603,
+     "latency_saved_frontier": 0.03681759805726603
+    },
+    "p95": {
+     "latency_ms": 5.353379106521606,
+     "delta_miou_at_equal_latency": 0.017311866325165237,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.02311805189325611
+    }
+   },
+   "delta_vs_fullframe": 0.0010961289681358233,
+   "oracle": {
+    "miou": 0.6242392601782839,
+    "delta_vs_fullframe": 0.006887752833942051,
+    "share_kept": 0.15914173963011946
+   },
+   "delta_vs_uniform": 0.0010963596776640827
+  },
+  {
+   "name": "5p/c0.375/P/a0.1/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6185524135787703,
+   "per_class_iou": {
+    "road": 0.9459332318067385,
+    "sidewalk": 0.6726029686761084,
+    "building": 0.8698328317968965,
+    "wall": 0.5482301002246426,
+    "fence": 0.45929194569013615,
+    "pole": 0.29837916561032535,
+    "traffic light": 0.450139364502428,
+    "traffic sign": 0.5259804923196253,
+    "vegetation": 0.8715473091729377,
+    "terrain": 0.4975126750831978,
+    "sky": 0.9021729460420761,
+    "person": 0.5888932153242077,
+    "rider": 0.4449097822655473,
+    "car": 0.8694638324729709,
+    "truck": 0.7022261976691434,
+    "bus": 0.6427734757028777,
+    "train": 0.5402711630353007,
+    "motorcycle": 0.33822164726175075,
+    "bicycle": 0.5841135133397258
+   },
+   "miou_by_position": {
+    "4": 0.5870017451830671,
+    "9": 0.6107347732349896,
+    "14": 0.6120540899899404,
+    "19": 0.6257164296158505,
+    "24": 0.6261471411011601,
+    "29": 0.6331744155162208
+   },
+   "latency": {
+    "mean_ms": 5.24617600440979,
+    "p95_ms": 5.353379106521606,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.13351988792419434
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 5.24617600440979,
+     "delta_miou_at_equal_latency": 0.001566633677661744,
+     "latency_saved_at_equal_miou": 0.039842937715079074,
+     "latency_saved_frontier": 0.039842937715079074
+    },
+    "p95": {
+     "latency_ms": 5.353379106521606,
+     "delta_miou_at_equal_latency": 0.017416643591457892,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.02609255464272575
+    }
+   },
+   "delta_vs_fullframe": 0.0012009062344284782,
+   "oracle": {
+    "miou": 0.6219985595572538,
+    "delta_vs_fullframe": 0.004647052212911951,
+    "share_kept": 0.25842322819006214
+   },
+   "delta_vs_uniform": 0.0012011369439567376
+  },
+  {
+   "name": "5p/c0.375/P/a0.15/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6187619969080478,
+   "per_class_iou": {
+    "road": 0.944874427955785,
+    "sidewalk": 0.6689071033004913,
+    "building": 0.8703647154188818,
+    "wall": 0.546495519455655,
+    "fence": 0.4655571969279239,
+    "pole": 0.29667646432656763,
+    "traffic light": 0.4472710523547619,
+    "traffic sign": 0.5250546434220302,
+    "vegetation": 0.8722934078384906,
+    "terrain": 0.49587850645668735,
+    "sky": 0.9023816613652466,
+    "person": 0.5899156933802162,
+    "rider": 0.44242969492155954,
+    "car": 0.8704768875881663,
+    "truck": 0.7069612958767335,
+    "bus": 0.6508442124685632,
+    "train": 0.5430649256726174,
+    "motorcycle": 0.32925802834998397,
+    "bicycle": 0.587772504172546
+   },
+   "miou_by_position": {
+    "4": 0.5913620211373862,
+    "9": 0.6035231015284775,
+    "14": 0.6192550398925407,
+    "19": 0.628657170881848,
+    "24": 0.6244971990277538,
+    "29": 0.6309827663252393
+   },
+   "latency": {
+    "mean_ms": 5.24617600440979,
+    "p95_ms": 5.353379106521606,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.13351988792419434
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 5.24617600440979,
+     "delta_miou_at_equal_latency": 0.0017762170069391958,
+     "latency_saved_at_equal_miou": 0.04589444850663238,
+     "latency_saved_frontier": 0.04589444850663238
+    },
+    "p95": {
+     "latency_ms": 5.353379106521606,
+     "delta_miou_at_equal_latency": 0.017626226920735344,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.0320423776457206
+    }
+   },
+   "delta_vs_fullframe": 0.00141048956370593,
+   "oracle": {
+    "miou": 0.6265348485116503,
+    "delta_vs_fullframe": 0.009183341167308456,
+    "share_kept": 0.15359219896208323
+   },
+   "delta_vs_uniform": 0.0014107202732341895
+  },
+  {
+   "name": "5p/c0.375/P/a0.15/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6175480440942956,
+   "per_class_iou": {
+    "road": 0.9455624142304127,
+    "sidewalk": 0.6718018396155961,
+    "building": 0.8701378052761377,
+    "wall": 0.5431051910353598,
+    "fence": 0.46062335585856445,
+    "pole": 0.29733484986540343,
+    "traffic light": 0.4470152252405672,
+    "traffic sign": 0.5254777831458685,
+    "vegetation": 0.8722341562653979,
+    "terrain": 0.4978390611073721,
+    "sky": 0.9024084744680962,
+    "person": 0.5890957572537091,
+    "rider": 0.4398907584515171,
+    "car": 0.8702129998783853,
+    "truck": 0.7062155891641629,
+    "bus": 0.652557142570965,
+    "train": 0.5354568650117677,
+    "motorcycle": 0.3223562268139218,
+    "bicycle": 0.5840873425384137
+   },
+   "miou_by_position": {
+    "4": 0.5881257674036146,
+    "9": 0.6045558913538819,
+    "14": 0.6180073969567373,
+    "19": 0.6250401354460191,
+    "24": 0.6213887655324125,
+    "29": 0.6324776912985197
+   },
+   "latency": {
+    "mean_ms": 5.24617600440979,
+    "p95_ms": 5.353379106521606,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.13351988792419434
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 5.24617600440979,
+     "delta_miou_at_equal_latency": 0.0005622641931870564,
+     "latency_saved_at_equal_miou": 0.010842764872327493,
+     "latency_saved_frontier": 0.010842764872327493
+    },
+    "p95": {
+     "latency_ms": 5.353379106521606,
+     "delta_miou_at_equal_latency": 0.016412274106983205,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": -0.002420307915738995
+    }
+   },
+   "delta_vs_fullframe": 0.00019653674995379067,
+   "oracle": {
+    "miou": 0.626166525930512,
+    "delta_vs_fullframe": 0.008815018586170176,
+    "share_kept": 0.022295670511930158
+   },
+   "delta_vs_uniform": 0.0001967674594820501
+  },
+  {
+   "name": "5p/c0.375/P/a0.25/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6169577733606502,
+   "per_class_iou": {
+    "road": 0.9432289078055245,
+    "sidewalk": 0.6645499411586012,
+    "building": 0.8698426387756607,
+    "wall": 0.5448786464433416,
+    "fence": 0.46749003705614195,
+    "pole": 0.2968105304635426,
+    "traffic light": 0.4453755327812423,
+    "traffic sign": 0.5250164777643255,
+    "vegetation": 0.872483824926519,
+    "terrain": 0.49747844393808843,
+    "sky": 0.902857460408665,
+    "person": 0.5899642677446039,
+    "rider": 0.44056758692896897,
+    "car": 0.8690736303635103,
+    "truck": 0.6781745900724202,
+    "bus": 0.6647036441504767,
+    "train": 0.5484687862747619,
+    "motorcycle": 0.31483910953466193,
+    "bicycle": 0.5863936372612971
+   },
+   "miou_by_position": {
+    "4": 0.5899928106115986,
+    "9": 0.600552960582312,
+    "14": 0.6143000566892179,
+    "19": 0.6190585547587378,
+    "24": 0.627171657298229,
+    "29": 0.6334341536169077
+   },
+   "latency": {
+    "mean_ms": 5.24617600440979,
+    "p95_ms": 5.353379106521606,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.13351988792419434
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 5.24617600440979,
+     "delta_miou_at_equal_latency": -2.80065404584251e-05,
+     "latency_saved_at_equal_miou": -0.00039575020931525984,
+     "latency_saved_frontier": -0.00039575020931525984
+    },
+    "p95": {
+     "latency_ms": 5.353379106521606,
+     "delta_miou_at_equal_latency": 0.015822003373337723,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0003937339836916909,
+   "oracle": {
+    "miou": 0.6257773373998476,
+    "delta_vs_fullframe": 0.00842583005550579,
+    "share_kept": -0.04672940008259585
+   },
+   "delta_vs_uniform": -0.00039350327416343145
+  },
+  {
+   "name": "5p/c0.375/P/a0.25/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6168659501383988,
+   "per_class_iou": {
+    "road": 0.9451354861077047,
+    "sidewalk": 0.6702976123318449,
+    "building": 0.8701660866213768,
+    "wall": 0.5431650226132776,
+    "fence": 0.4661117075195402,
+    "pole": 0.29732351436140997,
+    "traffic light": 0.44758244708006695,
+    "traffic sign": 0.5264085934121101,
+    "vegetation": 0.8719987028716716,
+    "terrain": 0.49445470313332457,
+    "sky": 0.903181928051814,
+    "person": 0.5903082169628706,
+    "rider": 0.4396132538298131,
+    "car": 0.869424814597188,
+    "truck": 0.6795843974561078,
+    "bus": 0.6579629365440611,
+    "train": 0.5472745896943559,
+    "motorcycle": 0.3150106130418383,
+    "bicycle": 0.5854484263992014
+   },
+   "miou_by_position": {
+    "4": 0.5902552622835495,
+    "9": 0.6034213281132758,
+    "14": 0.6138260574613753,
+    "19": 0.6225783560529801,
+    "24": 0.6246883844658164,
+    "29": 0.6309978701472846
+   },
+   "latency": {
+    "mean_ms": 5.24617600440979,
+    "p95_ms": 5.353379106521606,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.13351988792419434
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 5.24617600440979,
+     "delta_miou_at_equal_latency": -0.00011982976270974444,
+     "latency_saved_at_equal_miou": -0.001693270675289682,
+     "latency_saved_frontier": -0.001693270675289682
+    },
+    "p95": {
+     "latency_ms": 5.353379106521606,
+     "delta_miou_at_equal_latency": 0.015730180151086404,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0004855572059430102,
+   "oracle": {
+    "miou": 0.6264373614899748,
+    "delta_vs_fullframe": 0.009085854145632899,
+    "share_kept": -0.05344100820464882
+   },
+   "delta_vs_uniform": -0.0004853264964147508
+  },
+  {
+   "name": "5p/c0.5/P/a0.1/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6834414629878265,
+   "per_class_iou": {
+    "road": 0.9590547810073135,
+    "sidewalk": 0.7332310720546824,
+    "building": 0.8943276539273991,
+    "wall": 0.5652157240539336,
+    "fence": 0.5307227067696846,
+    "pole": 0.4141253939159077,
+    "traffic light": 0.534945110013433,
+    "traffic sign": 0.6308054498320906,
+    "vegetation": 0.8975877972840233,
+    "terrain": 0.5451384576672136,
+    "sky": 0.9290279718190305,
+    "person": 0.6763772548494507,
+    "rider": 0.5319420620419689,
+    "car": 0.9057230203840948,
+    "truck": 0.7074401984406483,
+    "bus": 0.7317408953207194,
+    "train": 0.6072013455557866,
+    "motorcycle": 0.525471486077041,
+    "bicycle": 0.665309415754281
+   },
+   "miou_by_position": {
+    "4": 0.6590030540139262,
+    "9": 0.666552475085694,
+    "14": 0.6771696834189181,
+    "19": 0.6991849882667054,
+    "24": 0.6865969856660699,
+    "29": 0.6974592391664932
+   },
+   "latency": {
+    "mean_ms": 7.192575931549072,
+    "p95_ms": 7.3440834283828735,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.2797279357910156
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 7.192575931549072,
+     "delta_miou_at_equal_latency": 0.0023120733166932528,
+     "latency_saved_at_equal_miou": 0.2016928388666761,
+     "latency_saved_frontier": 0.2016928388666761
+    },
+    "p95": {
+     "latency_ms": 7.3440834283828735,
+     "delta_miou_at_equal_latency": 0.0013832953640178225,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.12411521498536882
+    }
+   },
+   "delta_vs_fullframe": 0.004020569123900031,
+   "oracle": {
+    "miou": 0.6872487016669763,
+    "delta_vs_fullframe": 0.007827807803049813,
+    "share_kept": 0.5136264488166874
+   },
+   "delta_vs_uniform": 0.004020552929291266
+  },
+  {
+   "name": "5p/c0.5/P/a0.1/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6824888338238676,
+   "per_class_iou": {
+    "road": 0.9588662801625262,
+    "sidewalk": 0.7322871609124139,
+    "building": 0.8942249686031629,
+    "wall": 0.5628464688911877,
+    "fence": 0.531289834045389,
+    "pole": 0.41386242465936796,
+    "traffic light": 0.5361621147613415,
+    "traffic sign": 0.631441502979801,
+    "vegetation": 0.8974666442298597,
+    "terrain": 0.5456801392831364,
+    "sky": 0.9290719216359892,
+    "person": 0.6757533957472311,
+    "rider": 0.5304479136962996,
+    "car": 0.9039536584934721,
+    "truck": 0.7025632063015528,
+    "bus": 0.7279098276471373,
+    "train": 0.6105280297552803,
+    "motorcycle": 0.5177191578161566,
+    "bicycle": 0.6652131930321808
+   },
+   "miou_by_position": {
+    "4": 0.6580085759318083,
+    "9": 0.6708470682845004,
+    "14": 0.6759925853173901,
+    "19": 0.697217582533421,
+    "24": 0.6840401556110396,
+    "29": 0.6956501799763964
+   },
+   "latency": {
+    "mean_ms": 7.192575931549072,
+    "p95_ms": 7.3440834283828735,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.2797279357910156
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 7.192575931549072,
+     "delta_miou_at_equal_latency": 0.0013594441527343681,
+     "latency_saved_at_equal_miou": 0.11859059505857061,
+     "latency_saved_frontier": 0.11859059505857061
+    },
+    "p95": {
+     "latency_ms": 7.3440834283828735,
+     "delta_miou_at_equal_latency": 0.00043066620005893785,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.0386412254372015
+    }
+   },
+   "delta_vs_fullframe": 0.003067939959941146,
+   "oracle": {
+    "miou": 0.6848960847488081,
+    "delta_vs_fullframe": 0.005475190884881687,
+    "share_kept": 0.5603347946119035
+   },
+   "delta_vs_uniform": 0.003067923765332381
+  },
+  {
+   "name": "5p/c0.5/P/a0.15/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6828490794741291,
+   "per_class_iou": {
+    "road": 0.9585870516379986,
+    "sidewalk": 0.7317067606152863,
+    "building": 0.8941206490198643,
+    "wall": 0.5610760516254045,
+    "fence": 0.5231540605440065,
+    "pole": 0.4140982095188374,
+    "traffic light": 0.5339134400402059,
+    "traffic sign": 0.6301520372257468,
+    "vegetation": 0.8976596397443476,
+    "terrain": 0.5472632055056301,
+    "sky": 0.9288101776275315,
+    "person": 0.6758603206480446,
+    "rider": 0.5265897748519016,
+    "car": 0.9079741299925294,
+    "truck": 0.7551126630733163,
+    "bus": 0.7310862111468972,
+    "train": 0.588144850540834,
+    "motorcycle": 0.5035082721723093,
+    "bicycle": 0.66531500447776
+   },
+   "miou_by_position": {
+    "4": 0.6576704019394907,
+    "9": 0.6762231151439604,
+    "14": 0.6715324870947781,
+    "19": 0.6968522996395577,
+    "24": 0.6866689539558216,
+    "29": 0.6955323759765953
+   },
+   "latency": {
+    "mean_ms": 7.192575931549072,
+    "p95_ms": 7.3440834283828735,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.2797279357910156
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 7.192575931549072,
+     "delta_miou_at_equal_latency": 0.0017196898029958607,
+     "latency_saved_at_equal_miou": 0.1500164877264254,
+     "latency_saved_frontier": 0.1500164877264254
+    },
+    "p95": {
+     "latency_ms": 7.3440834283828735,
+     "delta_miou_at_equal_latency": 0.0007909118503204304,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.07096401599429658
+    }
+   },
+   "delta_vs_fullframe": 0.0034281856102026387,
+   "oracle": {
+    "miou": 0.6892848911221148,
+    "delta_vs_fullframe": 0.009863997258188317,
+    "share_kept": 0.34754527200996815
+   },
+   "delta_vs_uniform": 0.0034281694155938736
+  },
+  {
+   "name": "5p/c0.5/P/a0.15/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6843171764298368,
+   "per_class_iou": {
+    "road": 0.9592460237967444,
+    "sidewalk": 0.7342010246230363,
+    "building": 0.8939366501063336,
+    "wall": 0.5623975166806457,
+    "fence": 0.5252154146961457,
+    "pole": 0.4146335134697334,
+    "traffic light": 0.5353280213071202,
+    "traffic sign": 0.6298099286506259,
+    "vegetation": 0.8974283860611422,
+    "terrain": 0.549697144605011,
+    "sky": 0.9288730515703802,
+    "person": 0.6765828664522182,
+    "rider": 0.5288609448905705,
+    "car": 0.9078976570493954,
+    "truck": 0.7518957281118918,
+    "bus": 0.7343460691712804,
+    "train": 0.5963873388882946,
+    "motorcycle": 0.5103550960809268,
+    "bicycle": 0.6649339759554017
+   },
+   "miou_by_position": {
+    "4": 0.6595490626021534,
+    "9": 0.6778050857501989,
+    "14": 0.6731101491418766,
+    "19": 0.6993463646603132,
+    "24": 0.688738412195758,
+    "29": 0.6946438234949651
+   },
+   "latency": {
+    "mean_ms": 7.192575931549072,
+    "p95_ms": 7.3440834283828735,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.2797279357910156
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 7.192575931549072,
+     "delta_miou_at_equal_latency": 0.00318778675870357,
+     "latency_saved_at_equal_miou": 0.27808536884292323,
+     "latency_saved_frontier": 0.27808536884292323
+    },
+    "p95": {
+     "latency_ms": 7.3440834283828735,
+     "delta_miou_at_equal_latency": 0.00225900880602814,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.20268799484707056
+    }
+   },
+   "delta_vs_fullframe": 0.004896282565910348,
+   "oracle": {
+    "miou": 0.689384062116839,
+    "delta_vs_fullframe": 0.009963168252912546,
+    "share_kept": 0.49143830974439395
+   },
+   "delta_vs_uniform": 0.004896266371301583
+  },
+  {
+   "name": "5p/c0.5/P/a0.25/s1/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6798190478461412,
+   "per_class_iou": {
+    "road": 0.9590347015992082,
+    "sidewalk": 0.7353155960334711,
+    "building": 0.8936907463885718,
+    "wall": 0.5620242177769939,
+    "fence": 0.5268490918326183,
+    "pole": 0.4101058260834251,
+    "traffic light": 0.5360522324925493,
+    "traffic sign": 0.6272381728297023,
+    "vegetation": 0.8974832452653689,
+    "terrain": 0.5413954886926892,
+    "sky": 0.9279720104400824,
+    "person": 0.6738066179559984,
+    "rider": 0.5218654615981534,
+    "car": 0.9080012443382665,
+    "truck": 0.7397773581770162,
+    "bus": 0.7262463634811984,
+    "train": 0.5624782943460729,
+    "motorcycle": 0.5008598970956433,
+    "bicycle": 0.6663653426496559
+   },
+   "miou_by_position": {
+    "4": 0.6575006328551561,
+    "9": 0.6678208373083903,
+    "14": 0.6709326759650848,
+    "19": 0.6980008819983924,
+    "24": 0.6783944825198568,
+    "29": 0.6943416244430487
+   },
+   "latency": {
+    "mean_ms": 7.192575931549072,
+    "p95_ms": 7.3440834283828735,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.2797279357910156
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 7.192575931549072,
+     "delta_miou_at_equal_latency": -0.0013103418249920118,
+     "latency_saved_at_equal_miou": -0.11430717212132979,
+     "latency_saved_frontier": -0.11430717212132979
+    },
+    "p95": {
+     "latency_ms": 7.3440834283828735,
+     "delta_miou_at_equal_latency": -0.002239119777667442,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": -0.20090346560259054
+    }
+   },
+   "delta_vs_fullframe": 0.00039815398221476617,
+   "oracle": {
+    "miou": 0.6854024403764942,
+    "delta_vs_fullframe": 0.00598154651256777,
+    "share_kept": 0.06656371916162629
+   },
+   "delta_vs_uniform": 0.00039813778760600105
+  },
+  {
+   "name": "5p/c0.5/P/a0.25/s4/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.680017141255098,
+   "per_class_iou": {
+    "road": 0.9597200292344231,
+    "sidewalk": 0.7383654634816328,
+    "building": 0.894003134514899,
+    "wall": 0.5629846043171907,
+    "fence": 0.533577689215145,
+    "pole": 0.4120987645598902,
+    "traffic light": 0.5370848764410194,
+    "traffic sign": 0.6288670158281572,
+    "vegetation": 0.8974895619892657,
+    "terrain": 0.5470112915762411,
+    "sky": 0.9282462179315719,
+    "person": 0.6753132545764865,
+    "rider": 0.5240502724964682,
+    "car": 0.9074116225910628,
+    "truck": 0.7283722257132572,
+    "bus": 0.7150190000474308,
+    "train": 0.5727458176009214,
+    "motorcycle": 0.49257482354696996,
+    "bicycle": 0.6653900181848326
+   },
+   "miou_by_position": {
+    "4": 0.6612826720573667,
+    "9": 0.6707723778024012,
+    "14": 0.6680260841776006,
+    "19": 0.6981992850348707,
+    "24": 0.6786440262696865,
+    "29": 0.6936182960743478
+   },
+   "latency": {
+    "mean_ms": 7.192575931549072,
+    "p95_ms": 7.3440834283828735,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.2797279357910156
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 7.192575931549072,
+     "delta_miou_at_equal_latency": -0.0011122484160351886,
+     "latency_saved_at_equal_miou": -0.0970265687231553,
+     "latency_saved_frontier": -0.0970265687231553
+    },
+    "p95": {
+     "latency_ms": 7.3440834283828735,
+     "delta_miou_at_equal_latency": -0.002041026368710619,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": -0.18312967218189424
+    }
+   },
+   "delta_vs_fullframe": 0.0005962473911715893,
+   "oracle": {
+    "miou": 0.6852095808302908,
+    "delta_vs_fullframe": 0.005788686966364365,
+    "share_kept": 0.10300218247007191
+   },
+   "delta_vs_uniform": 0.0005962311965628242
+  },
+  {
+   "name": "5p/c0.25/uniform/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "uniform",
+    "alpha": 0.0,
+    "sigma": 0.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5285062385520799,
+   "per_class_iou": {
+    "road": 0.9223315375921937,
+    "sidewalk": 0.5764205387877737,
+    "building": 0.8326698016834257,
+    "wall": 0.4712126900653347,
+    "fence": 0.3388192558440324,
+    "pole": 0.20949184337924245,
+    "traffic light": 0.3322523798641241,
+    "traffic sign": 0.39824288203245933,
+    "vegetation": 0.8340913514249962,
+    "terrain": 0.45076968195640715,
+    "sky": 0.8610834213249337,
+    "person": 0.48513997859526536,
+    "rider": 0.3323337206371455,
+    "car": 0.8045263360642969,
+    "truck": 0.543836232346392,
+    "bus": 0.5132992559840034,
+    "train": 0.44360679741563463,
+    "motorcycle": 0.20281109211511086,
+    "bicycle": 0.48867973537674536
+   },
+   "miou_by_position": {
+    "4": 0.5110299123637997,
+    "9": 0.5079611360733247,
+    "14": 0.5164812765869146,
+    "19": 0.5327557647814809,
+    "24": 0.5356306671874346,
+    "29": 0.5480424057480467
+   },
+   "latency": {
+    "mean_ms": 4.028448104858398,
+    "p95_ms": 4.199092984199524,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.05819201469421387
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.028448104858398,
+     "delta_miou_at_equal_latency": -0.002303097512984742,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.199092984199524,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -6.721264100839619e-09,
+   "oracle": null,
+   "delta_vs_uniform": 0.0
+  },
+  {
+   "name": "5p/c0.375/uniform/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "uniform",
+    "alpha": 0.0,
+    "sigma": 0.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6173512766348136,
+   "per_class_iou": {
+    "road": 0.9456406207954905,
+    "sidewalk": 0.6706275682591949,
+    "building": 0.8692194579942464,
+    "wall": 0.5501319150941061,
+    "fence": 0.4605014481478665,
+    "pole": 0.2971337251026617,
+    "traffic light": 0.4496885883332096,
+    "traffic sign": 0.5255757027355449,
+    "vegetation": 0.8699606501739889,
+    "terrain": 0.49870606022154923,
+    "sky": 0.9015928497817487,
+    "person": 0.587882564749602,
+    "rider": 0.44865924503280796,
+    "car": 0.8668048920827817,
+    "truck": 0.7023762326234795,
+    "bus": 0.6263462581336354,
+    "train": 0.5369720344061594,
+    "motorcycle": 0.3413267407113249,
+    "bicycle": 0.5805277016820589
+   },
+   "miou_by_position": {
+    "4": 0.5899356058299454,
+    "9": 0.6023183433417114,
+    "14": 0.6201860576591615,
+    "19": 0.6232083840893672,
+    "24": 0.6248249814417614,
+    "29": 0.6285389679736875
+   },
+   "latency": {
+    "mean_ms": 5.24617600440979,
+    "p95_ms": 5.353379106521606,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.13351988792419434
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 5.24617600440979,
+     "delta_miou_at_equal_latency": 0.00036549673370500635,
+     "latency_saved_at_equal_miou": 0.005164701048400389,
+     "latency_saved_frontier": 0.005164701048400389
+    },
+    "p95": {
+     "latency_ms": 5.353379106521606,
+     "delta_miou_at_equal_latency": 0.016215506647501154,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -2.307095282594318e-07,
+   "oracle": null,
+   "delta_vs_uniform": 0.0
+  },
+  {
+   "name": "5p/c0.5/uniform/r2u1",
+   "model": "pidnet_s",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "uniform",
+    "alpha": 0.0,
+    "sigma": 0.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6794209100585352,
+   "per_class_iou": {
+    "road": 0.9579514923247708,
+    "sidewalk": 0.7290669773805282,
+    "building": 0.8938715808181527,
+    "wall": 0.5639666589368921,
+    "fence": 0.5266042231269897,
+    "pole": 0.41584531574608213,
+    "traffic light": 0.5387012257629884,
+    "traffic sign": 0.6333982040858117,
+    "vegetation": 0.896423460827607,
+    "terrain": 0.5458865478066276,
+    "sky": 0.9285564720647951,
+    "person": 0.675689642152295,
+    "rider": 0.5269657266260989,
+    "car": 0.9015774627936665,
+    "truck": 0.7050588132613432,
+    "bus": 0.7099622131715855,
+    "train": 0.5840924799182265,
+    "motorcycle": 0.5134864660380015,
+    "bicycle": 0.6618923282697088
+   },
+   "miou_by_position": {
+    "4": 0.6637156194653148,
+    "9": 0.6636681498621166,
+    "14": 0.677211668678407,
+    "19": 0.6966537472832705,
+    "24": 0.6740272122815473,
+    "29": 0.6909778479668239
+   },
+   "latency": {
+    "mean_ms": 7.192575931549072,
+    "p95_ms": 7.3440834283828735,
+    "priced_as": "r2u1/P/n50",
+    "delta_vs_paired_fullframe_ms": 0.2797279357910156
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 7.192575931549072,
+     "delta_miou_at_equal_latency": -0.0017084796125980128,
+     "latency_saved_at_equal_miou": -0.14903857101883666,
+     "latency_saved_frontier": -0.14903857101883666
+    },
+    "p95": {
+     "latency_ms": 7.3440834283828735,
+     "delta_miou_at_equal_latency": -0.002637257565273443,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": -0.23662610184347965
+    }
+   },
+   "delta_vs_fullframe": 1.61946087651188e-08,
+   "oracle": null,
+   "delta_vs_uniform": 0.0
+  },
+  {
+   "name": "5p/c0.25/P/a0.1/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5258126596536212,
+   "per_class_iou": {
+    "road": 0.9210550727644665,
+    "sidewalk": 0.5727856490677309,
+    "building": 0.8320659052327288,
+    "wall": 0.4664931295238791,
+    "fence": 0.3415200108237924,
+    "pole": 0.2075748411427296,
+    "traffic light": 0.3210269886902503,
+    "traffic sign": 0.39226180122884713,
+    "vegetation": 0.8342887076802493,
+    "terrain": 0.446822001542501,
+    "sky": 0.8605645758479125,
+    "person": 0.48706882785705446,
+    "rider": 0.3273177052509512,
+    "car": 0.8070741460887355,
+    "truck": 0.5441254305496921,
+    "bus": 0.48575102252459773,
+    "train": 0.46203093673069046,
+    "motorcycle": 0.18939720012223632,
+    "bicycle": 0.49121658074975827
+   },
+   "miou_by_position": {
+    "4": 0.4977909227646401,
+    "9": 0.5140008893220116,
+    "14": 0.5190689518503003,
+    "19": 0.5252978428177497,
+    "24": 0.5313775930493683,
+    "29": 0.5444248989617579
+   },
+   "latency": {
+    "mean_ms": 3.8232319355010986,
+    "p95_ms": 4.032817769050598,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.08257579803466797
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 3.8232319355010986,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.032817769050598,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0026935856197227714,
+   "oracle": {
+    "miou": 0.5356937379595732,
+    "delta_vs_fullframe": 0.007187492686229202,
+    "share_kept": -0.3747601197401588
+   },
+   "delta_vs_uniform": -0.0005923877057368854
+  },
+  {
+   "name": "5p/c0.25/P/a0.1/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5261384682592221,
+   "per_class_iou": {
+    "road": 0.9217999279694504,
+    "sidewalk": 0.5741288925705964,
+    "building": 0.8319300414880972,
+    "wall": 0.4709200441682083,
+    "fence": 0.34522289884229446,
+    "pole": 0.20719278386297857,
+    "traffic light": 0.3211191956988268,
+    "traffic sign": 0.39232257376977125,
+    "vegetation": 0.8340412350972878,
+    "terrain": 0.4463809169943935,
+    "sky": 0.8606001759992473,
+    "person": 0.4865281597429416,
+    "rider": 0.32725744299040077,
+    "car": 0.8071777857862154,
+    "truck": 0.5533680052239394,
+    "bus": 0.4732071692500707,
+    "train": 0.469030206443711,
+    "motorcycle": 0.1859936314858458,
+    "bicycle": 0.4884098095409419
+   },
+   "miou_by_position": {
+    "4": 0.4986678595867844,
+    "9": 0.5116412838755194,
+    "14": 0.5167601497785956,
+    "19": 0.5249144678136711,
+    "24": 0.5335177989835224,
+    "29": 0.5476062832735125
+   },
+   "latency": {
+    "mean_ms": 3.8232319355010986,
+    "p95_ms": 4.032817769050598,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.08257579803466797
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 3.8232319355010986,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.032817769050598,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.002367777014121941,
+   "oracle": {
+    "miou": 0.5371105985464005,
+    "delta_vs_fullframe": 0.00860435327305653,
+    "share_kept": -0.2751836121764482
+   },
+   "delta_vs_uniform": -0.0002665791001360551
+  },
+  {
+   "name": "5p/c0.25/P/a0.15/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5231246166732325,
+   "per_class_iou": {
+    "road": 0.9204794278963015,
+    "sidewalk": 0.5710941097577962,
+    "building": 0.8316536138638683,
+    "wall": 0.47179502948088287,
+    "fence": 0.3456321179584071,
+    "pole": 0.20632491143027304,
+    "traffic light": 0.3268077334082511,
+    "traffic sign": 0.3909275463656134,
+    "vegetation": 0.8346747666862602,
+    "terrain": 0.45222832784229144,
+    "sky": 0.8592231972996719,
+    "person": 0.4862757271055929,
+    "rider": 0.3265795148902827,
+    "car": 0.8081846913887711,
+    "truck": 0.5237242733222156,
+    "bus": 0.48021893553063055,
+    "train": 0.4346882977577938,
+    "motorcycle": 0.17548880172253623,
+    "bicycle": 0.4933666930839773
+   },
+   "miou_by_position": {
+    "4": 0.5016550107929892,
+    "9": 0.5080545858967481,
+    "14": 0.518836932183671,
+    "19": 0.53256079834737,
+    "24": 0.5217662095131148,
+    "29": 0.539144401425299
+   },
+   "latency": {
+    "mean_ms": 3.8232319355010986,
+    "p95_ms": 4.032817769050598,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.08257579803466797
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 3.8232319355010986,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.032817769050598,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.005381628600111488,
+   "oracle": {
+    "miou": 0.5381375769808263,
+    "delta_vs_fullframe": 0.009631331707482316,
+    "share_kept": -0.5587626678801488
+   },
+   "delta_vs_uniform": -0.0032804306861256016
+  },
+  {
+   "name": "5p/c0.25/P/a0.15/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5250730925302877,
+   "per_class_iou": {
+    "road": 0.9212858798778782,
+    "sidewalk": 0.5736327903342094,
+    "building": 0.8315696484738029,
+    "wall": 0.47091388798502926,
+    "fence": 0.343786986134279,
+    "pole": 0.20663540452629056,
+    "traffic light": 0.3246422684409037,
+    "traffic sign": 0.3899173825298832,
+    "vegetation": 0.8342740159671319,
+    "terrain": 0.44691901011329654,
+    "sky": 0.8594544373832455,
+    "person": 0.48765428248566395,
+    "rider": 0.3256467954152271,
+    "car": 0.8077125363844532,
+    "truck": 0.5343904393380905,
+    "bus": 0.4759903032063423,
+    "train": 0.4691058176132669,
+    "motorcycle": 0.18167644535086463,
+    "bicycle": 0.49118042651560656
+   },
+   "miou_by_position": {
+    "4": 0.502003494190937,
+    "9": 0.5112989184347532,
+    "14": 0.5156373374297889,
+    "19": 0.5317449023711642,
+    "24": 0.5285770020075558,
+    "29": 0.5426338021009351
+   },
+   "latency": {
+    "mean_ms": 3.8232319355010986,
+    "p95_ms": 4.032817769050598,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.08257579803466797
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 3.8232319355010986,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.032817769050598,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0034331527430563336,
+   "oracle": {
+    "miou": 0.537489893062825,
+    "delta_vs_fullframe": 0.00898364778948102,
+    "share_kept": -0.38215575938720825
+   },
+   "delta_vs_uniform": -0.0013319548290704475
+  },
+  {
+   "name": "5p/c0.25/P/a0.25/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.524790130991699,
+   "per_class_iou": {
+    "road": 0.919296148602674,
+    "sidewalk": 0.5699819499099377,
+    "building": 0.8314949235343658,
+    "wall": 0.4745694563483851,
+    "fence": 0.3481081608044177,
+    "pole": 0.2069957858238297,
+    "traffic light": 0.3115933631026307,
+    "traffic sign": 0.38868467325518746,
+    "vegetation": 0.835340416835044,
+    "terrain": 0.45081242325454546,
+    "sky": 0.8605274136606578,
+    "person": 0.4874250955038985,
+    "rider": 0.31788148493555496,
+    "car": 0.8092380429730142,
+    "truck": 0.5275836776151062,
+    "bus": 0.5053979323281104,
+    "train": 0.44012568057040147,
+    "motorcycle": 0.18832215263742474,
+    "bicycle": 0.49763370714709565
+   },
+   "miou_by_position": {
+    "4": 0.5060418862276015,
+    "9": 0.510577824605997,
+    "14": 0.5137054040507764,
+    "19": 0.5337484636607804,
+    "24": 0.5343288116967132,
+    "29": 0.5349287230800476
+   },
+   "latency": {
+    "mean_ms": 3.8232319355010986,
+    "p95_ms": 4.032817769050598,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.08257579803466797
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 3.8232319355010986,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.032817769050598,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0037161142816449777,
+   "oracle": {
+    "miou": 0.5409769410670742,
+    "delta_vs_fullframe": 0.012470695793730169,
+    "share_kept": -0.29798772603476625
+   },
+   "delta_vs_uniform": -0.0016149163676590916
+  },
+  {
+   "name": "5p/c0.25/P/a0.25/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5268904882427012,
+   "per_class_iou": {
+    "road": 0.9210951103702216,
+    "sidewalk": 0.5752311553668071,
+    "building": 0.8318378920104318,
+    "wall": 0.48386658378569175,
+    "fence": 0.35093690053656323,
+    "pole": 0.20680772730051525,
+    "traffic light": 0.31385683310151796,
+    "traffic sign": 0.3915333323339329,
+    "vegetation": 0.8353888066232488,
+    "terrain": 0.45454113387656697,
+    "sky": 0.8605073905376276,
+    "person": 0.4891305429689397,
+    "rider": 0.32694127239884674,
+    "car": 0.8104028139222399,
+    "truck": 0.5458248820027402,
+    "bus": 0.4825487913708585,
+    "train": 0.4476082533607083,
+    "motorcycle": 0.18664994070182672,
+    "bicycle": 0.49620991404203824
+   },
+   "miou_by_position": {
+    "4": 0.501152706511368,
+    "9": 0.520371304210316,
+    "14": 0.5175227704624659,
+    "19": 0.536675206316692,
+    "24": 0.530482266589682,
+    "29": 0.5398478479164057
+   },
+   "latency": {
+    "mean_ms": 3.8232319355010986,
+    "p95_ms": 4.032817769050598,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.08257579803466797
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 3.8232319355010986,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.032817769050598,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0016157570306427615,
+   "oracle": {
+    "miou": 0.540311110978999,
+    "delta_vs_fullframe": 0.011804865705654977,
+    "share_kept": -0.13687212298135276
+   },
+   "delta_vs_uniform": 0.0004854408833431245
+  },
+  {
+   "name": "5p/c0.375/P/a0.1/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6152035611160525,
+   "per_class_iou": {
+    "road": 0.9462651452639034,
+    "sidewalk": 0.671013969386196,
+    "building": 0.8700306193754914,
+    "wall": 0.5353176777164971,
+    "fence": 0.46154287612958633,
+    "pole": 0.2952881362796545,
+    "traffic light": 0.44339013087619716,
+    "traffic sign": 0.5224216759566652,
+    "vegetation": 0.872049727545978,
+    "terrain": 0.4914822726412759,
+    "sky": 0.9028262151737391,
+    "person": 0.5894445672954967,
+    "rider": 0.44122713619307713,
+    "car": 0.8713391498493596,
+    "truck": 0.7004837463994532,
+    "bus": 0.6390472917473029,
+    "train": 0.5289802696458945,
+    "motorcycle": 0.3254440160554939,
+    "bicycle": 0.5812730376737355
+   },
+   "miou_by_position": {
+    "4": 0.5902597275079118,
+    "9": 0.6076049821412524,
+    "14": 0.6157510699694387,
+    "19": 0.6157726717790585,
+    "24": 0.6198615793579254,
+    "29": 0.6294668774913036
+   },
+   "latency": {
+    "mean_ms": 4.956416130065918,
+    "p95_ms": 5.119905781745911,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.16131186485290527
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.956416130065918,
+     "delta_miou_at_equal_latency": 0.018723573639124025,
+     "latency_saved_at_equal_miou": 0.2645759906621956,
+     "latency_saved_frontier": 0.2645759906621956
+    },
+    "p95": {
+     "latency_ms": 5.119905781745911,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.002147946228289399,
+   "oracle": {
+    "miou": 0.6242392601782839,
+    "delta_vs_fullframe": 0.006887752833942051,
+    "share_kept": -0.3118500736124804
+   },
+   "delta_vs_uniform": 5.9137309720846964e-05
+  },
+  {
+   "name": "5p/c0.375/P/a0.1/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6150367385413285,
+   "per_class_iou": {
+    "road": 0.946306737331988,
+    "sidewalk": 0.6720736674765141,
+    "building": 0.8699092354255223,
+    "wall": 0.5356544385228802,
+    "fence": 0.46292936641238397,
+    "pole": 0.2962125757807784,
+    "traffic light": 0.44322327100137293,
+    "traffic sign": 0.5228766369816982,
+    "vegetation": 0.8718529923220427,
+    "terrain": 0.491390953372862,
+    "sky": 0.9025505535516557,
+    "person": 0.5884776953555746,
+    "rider": 0.44156132831445477,
+    "car": 0.87026310370493,
+    "truck": 0.6968370705314156,
+    "bus": 0.6377599674504973,
+    "train": 0.5391078491174908,
+    "motorcycle": 0.3161134355788914,
+    "bicycle": 0.5805971540522891
+   },
+   "miou_by_position": {
+    "4": 0.5814988894008987,
+    "9": 0.6047228332517943,
+    "14": 0.6135831316491548,
+    "19": 0.6198140903525552,
+    "24": 0.6243554391468517,
+    "29": 0.6297888980628297
+   },
+   "latency": {
+    "mean_ms": 4.956416130065918,
+    "p95_ms": 5.119905781745911,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.16131186485290527
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.956416130065918,
+     "delta_miou_at_equal_latency": 0.018556751064400023,
+     "latency_saved_at_equal_miou": 0.2622186816984735,
+     "latency_saved_frontier": 0.2622186816984735
+    },
+    "p95": {
+     "latency_ms": 5.119905781745911,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0023147688030134006,
+   "oracle": {
+    "miou": 0.6219985595572538,
+    "delta_vs_fullframe": 0.004647052212911951,
+    "share_kept": -0.49811551429995937
+   },
+   "delta_vs_uniform": -0.00010768526500315456
+  },
+  {
+   "name": "5p/c0.375/P/a0.15/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6158560709397269,
+   "per_class_iou": {
+    "road": 0.9452251624093568,
+    "sidewalk": 0.6678687766038371,
+    "building": 0.8701545160315445,
+    "wall": 0.5327084649121566,
+    "fence": 0.47209680949662525,
+    "pole": 0.294299908317124,
+    "traffic light": 0.4399992584208452,
+    "traffic sign": 0.5209792266274831,
+    "vegetation": 0.8726540879002248,
+    "terrain": 0.4897186237046806,
+    "sky": 0.9025776891920886,
+    "person": 0.5894781368078117,
+    "rider": 0.4382805909655351,
+    "car": 0.8714465738293878,
+    "truck": 0.6945211227235566,
+    "bus": 0.6491174926114648,
+    "train": 0.5583726068137304,
+    "motorcycle": 0.30769308312537835,
+    "bicycle": 0.5840732173619797
+   },
+   "miou_by_position": {
+    "4": 0.5878000650763976,
+    "9": 0.6001175906835732,
+    "14": 0.6161937738301725,
+    "19": 0.6222832467605571,
+    "24": 0.6254612449769216,
+    "29": 0.6286587562531206
+   },
+   "latency": {
+    "mean_ms": 4.956416130065918,
+    "p95_ms": 5.119905781745911,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.16131186485290527
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.956416130065918,
+     "delta_miou_at_equal_latency": 0.01937608346279851,
+     "latency_saved_at_equal_miou": 0.2737963690121248,
+     "latency_saved_frontier": 0.2737963690121248
+    },
+    "p95": {
+     "latency_ms": 5.119905781745911,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0014954364046149138,
+   "oracle": {
+    "miou": 0.6265348485116503,
+    "delta_vs_fullframe": 0.009183341167308456,
+    "share_kept": -0.16284230078900694
+   },
+   "delta_vs_uniform": 0.0007116471333953323
+  },
+  {
+   "name": "5p/c0.375/P/a0.15/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6145600386647755,
+   "per_class_iou": {
+    "road": 0.9459601462907764,
+    "sidewalk": 0.6714208814682481,
+    "building": 0.8699277563453838,
+    "wall": 0.5313702450221349,
+    "fence": 0.4651256207995632,
+    "pole": 0.29464069351077976,
+    "traffic light": 0.43872386514560674,
+    "traffic sign": 0.5212219723711395,
+    "vegetation": 0.8723947440128212,
+    "terrain": 0.4908829893431035,
+    "sky": 0.90260904510962,
+    "person": 0.589062638012201,
+    "rider": 0.4387597279395802,
+    "car": 0.8712326347560994,
+    "truck": 0.6991388840572436,
+    "bus": 0.6498637398468794,
+    "train": 0.5447276239155157,
+    "motorcycle": 0.29882849947193113,
+    "bicycle": 0.5807490272121076
+   },
+   "miou_by_position": {
+    "4": 0.5828439017882489,
+    "9": 0.6015250995745882,
+    "14": 0.6161292756642641,
+    "19": 0.6210912300595199,
+    "24": 0.6206801468670949,
+    "29": 0.6292581848495771
+   },
+   "latency": {
+    "mean_ms": 4.956416130065918,
+    "p95_ms": 5.119905781745911,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.16131186485290527
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.956416130065918,
+     "delta_miou_at_equal_latency": 0.018080051187847057,
+     "latency_saved_at_equal_miou": 0.25548260959394753,
+     "latency_saved_frontier": 0.25548260959394753
+    },
+    "p95": {
+     "latency_ms": 5.119905781745911,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.002791468679566367,
+   "oracle": {
+    "miou": 0.626166525930512,
+    "delta_vs_fullframe": 0.008815018586170176,
+    "share_kept": -0.31667189947232594
+   },
+   "delta_vs_uniform": -0.0005843851415561208
+  },
+  {
+   "name": "5p/c0.375/P/a0.25/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6134152793344845,
+   "per_class_iou": {
+    "road": 0.9439280187118329,
+    "sidewalk": 0.6658033985143345,
+    "building": 0.8696474425706491,
+    "wall": 0.5331719546963617,
+    "fence": 0.472403761247516,
+    "pole": 0.2939985462644637,
+    "traffic light": 0.4366633213728661,
+    "traffic sign": 0.5211130358373097,
+    "vegetation": 0.8726479914134813,
+    "terrain": 0.49211110989986906,
+    "sky": 0.9030417745898918,
+    "person": 0.5886371944674678,
+    "rider": 0.43631338448263557,
+    "car": 0.8705256467460029,
+    "truck": 0.6709287600305669,
+    "bus": 0.6564330148564153,
+    "train": 0.547074741649394,
+    "motorcycle": 0.29670704821863797,
+    "bicycle": 0.5837401617855087
+   },
+   "miou_by_position": {
+    "4": 0.5874524963782287,
+    "9": 0.5959181382666413,
+    "14": 0.6105327521329288,
+    "19": 0.6132239498049968,
+    "24": 0.6244557379946875,
+    "29": 0.631640312511983
+   },
+   "latency": {
+    "mean_ms": 4.956416130065918,
+    "p95_ms": 5.119905781745911,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.16131186485290527
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.956416130065918,
+     "delta_miou_at_equal_latency": 0.016935291857556045,
+     "latency_saved_at_equal_miou": 0.23930643298796728,
+     "latency_saved_frontier": 0.23930643298796728
+    },
+    "p95": {
+     "latency_ms": 5.119905781745911,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.003936228009857379,
+   "oracle": {
+    "miou": 0.6257773373998476,
+    "delta_vs_fullframe": 0.00842583005550579,
+    "share_kept": -0.4671620462230048
+   },
+   "delta_vs_uniform": -0.0017291444718471327
+  },
+  {
+   "name": "5p/c0.375/P/a0.25/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6138894704570619,
+   "per_class_iou": {
+    "road": 0.9457477909476629,
+    "sidewalk": 0.6706470569461953,
+    "building": 0.8697140655888215,
+    "wall": 0.5315177763001298,
+    "fence": 0.46950934269022454,
+    "pole": 0.2948157601777271,
+    "traffic light": 0.4403935706406861,
+    "traffic sign": 0.5230242703874689,
+    "vegetation": 0.8723270937797987,
+    "terrain": 0.48943633443903456,
+    "sky": 0.9033060610179032,
+    "person": 0.5895991849671546,
+    "rider": 0.43575447996601,
+    "car": 0.8706786778619723,
+    "truck": 0.6708254373215563,
+    "bus": 0.6503723659883837,
+    "train": 0.5553149576178533,
+    "motorcycle": 0.29830113781957623,
+    "bicycle": 0.5826145742260173
+   },
+   "miou_by_position": {
+    "4": 0.5861122977213057,
+    "9": 0.5984109053188119,
+    "14": 0.6106433197871407,
+    "19": 0.61736704275148,
+    "24": 0.6247984979839644,
+    "29": 0.6289645106255216
+   },
+   "latency": {
+    "mean_ms": 4.956416130065918,
+    "p95_ms": 5.119905781745911,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.16131186485290527
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.956416130065918,
+     "delta_miou_at_equal_latency": 0.01740948298013345,
+     "latency_saved_at_equal_miou": 0.24600705480500018,
+     "latency_saved_frontier": 0.24600705480500018
+    },
+    "p95": {
+     "latency_ms": 5.119905781745911,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.0034620368872799734,
+   "oracle": {
+    "miou": 0.6264373614899748,
+    "delta_vs_fullframe": 0.009085854145632899,
+    "share_kept": -0.3810359303361694
+   },
+   "delta_vs_uniform": -0.0012549533492697273
+  },
+  {
+   "name": "5p/c0.5/P/a0.1/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6827425090265887,
+   "per_class_iou": {
+    "road": 0.9591330126911228,
+    "sidewalk": 0.7325659670067662,
+    "building": 0.8941498857736433,
+    "wall": 0.5612519179165085,
+    "fence": 0.5296690688853283,
+    "pole": 0.41104740598656914,
+    "traffic light": 0.5303158378905211,
+    "traffic sign": 0.6290676244160013,
+    "vegetation": 0.8979041869404195,
+    "terrain": 0.5442382102678524,
+    "sky": 0.9288081911743652,
+    "person": 0.6758676393967878,
+    "rider": 0.5310555325026438,
+    "car": 0.9071176510946356,
+    "truck": 0.7165961242593357,
+    "bus": 0.7341388639900104,
+    "train": 0.6161640115204304,
+    "motorcycle": 0.509572073850145,
+    "bicycle": 0.6634444659421018
+   },
+   "miou_by_position": {
+    "4": 0.6594607298200005,
+    "9": 0.6657345355765991,
+    "14": 0.675339077101861,
+    "19": 0.6973323663309058,
+    "24": 0.6883063284653022,
+    "29": 0.6956270656795327
+   },
+   "latency": {
+    "mean_ms": 6.746992111206055,
+    "p95_ms": 6.894627261161804,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.13587164878845215
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 6.746992111206055,
+     "delta_miou_at_equal_latency": 0.013591884305493851,
+     "latency_saved_at_equal_miou": 0.5863036754979243,
+     "latency_saved_frontier": 0.5863036754979243
+    },
+    "p95": {
+     "latency_ms": 6.894627261161804,
+     "delta_miou_at_equal_latency": 0.022014486062697514,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.5108582238886603
+    }
+   },
+   "delta_vs_fullframe": 0.0033216151626622725,
+   "oracle": {
+    "miou": 0.6872487016669763,
+    "delta_vs_fullframe": 0.007827807803049813,
+    "share_kept": 0.42433529874968684
+   },
+   "delta_vs_uniform": 0.004487888404595908
+  },
+  {
+   "name": "5p/c0.5/P/a0.1/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.1,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6813659185793628,
+   "per_class_iou": {
+    "road": 0.9589214525916138,
+    "sidewalk": 0.7317432623016293,
+    "building": 0.8940219036032491,
+    "wall": 0.558504971459128,
+    "fence": 0.5302202685202477,
+    "pole": 0.4112440327891793,
+    "traffic light": 0.5306352613552734,
+    "traffic sign": 0.6294463787636191,
+    "vegetation": 0.8977032351359238,
+    "terrain": 0.5448923990771406,
+    "sky": 0.92894260523186,
+    "person": 0.6754967757697202,
+    "rider": 0.5294543157001437,
+    "car": 0.9052990021209938,
+    "truck": 0.7098229149089054,
+    "bus": 0.7326550606066845,
+    "train": 0.6120349041634361,
+    "motorcycle": 0.5025857693125921,
+    "bicycle": 0.6623279395965536
+   },
+   "miou_by_position": {
+    "4": 0.65961048117151,
+    "9": 0.6635132984838347,
+    "14": 0.675529955083661,
+    "19": 0.6942324460261708,
+    "24": 0.6855040142973863,
+    "29": 0.6948148534707188
+   },
+   "latency": {
+    "mean_ms": 6.746992111206055,
+    "p95_ms": 6.894627261161804,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.13587164878845215
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 6.746992111206055,
+     "delta_miou_at_equal_latency": 0.012215293858267917,
+     "latency_saved_at_equal_miou": 0.46621732994256604,
+     "latency_saved_frontier": 0.46621732994256604
+    },
+    "p95": {
+     "latency_ms": 6.894627261161804,
+     "delta_miou_at_equal_latency": 0.02063789561547158,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.38734460290174866
+    }
+   },
+   "delta_vs_fullframe": 0.0019450247154363387,
+   "oracle": {
+    "miou": 0.6848960847488081,
+    "delta_vs_fullframe": 0.005475190884881687,
+    "share_kept": 0.355243270295291
+   },
+   "delta_vs_uniform": 0.003111297957369974
+  },
+  {
+   "name": "5p/c0.5/P/a0.15/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6805716788340849,
+   "per_class_iou": {
+    "road": 0.9587999871642313,
+    "sidewalk": 0.7319913198198827,
+    "building": 0.8938299583627343,
+    "wall": 0.557866045406594,
+    "fence": 0.5221888019099542,
+    "pole": 0.41154484333268126,
+    "traffic light": 0.5306757725468146,
+    "traffic sign": 0.6281718130240871,
+    "vegetation": 0.8978083682111011,
+    "terrain": 0.5440461537316005,
+    "sky": 0.9285838872054709,
+    "person": 0.6759479826293333,
+    "rider": 0.5282639978786341,
+    "car": 0.9085118179215473,
+    "truck": 0.7525509140027146,
+    "bus": 0.7259407676092252,
+    "train": 0.5833767166616096,
+    "motorcycle": 0.4872418309663281,
+    "bicycle": 0.6635209194630695
+   },
+   "miou_by_position": {
+    "4": 0.6561914099580722,
+    "9": 0.673957988942188,
+    "14": 0.6698625479026193,
+    "19": 0.6916195140072766,
+    "24": 0.6856968315662668,
+    "29": 0.6933660533836983
+   },
+   "latency": {
+    "mean_ms": 6.746992111206055,
+    "p95_ms": 6.894627261161804,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.13587164878845215
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 6.746992111206055,
+     "delta_miou_at_equal_latency": 0.011421054112989992,
+     "latency_saved_at_equal_miou": 0.3969321269997108,
+     "latency_saved_frontier": 0.3969321269997108
+    },
+    "p95": {
+     "latency_ms": 6.894627261161804,
+     "delta_miou_at_equal_latency": 0.019843655870193655,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.3160819938456676
+    }
+   },
+   "delta_vs_fullframe": 0.0011507849701584139,
+   "oracle": {
+    "miou": 0.6892848911221148,
+    "delta_vs_fullframe": 0.009863997258188317,
+    "share_kept": 0.11666517538851934
+   },
+   "delta_vs_uniform": 0.002317058212092049
+  },
+  {
+   "name": "5p/c0.5/P/a0.15/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.682870396020041,
+   "per_class_iou": {
+    "road": 0.9596075074004774,
+    "sidewalk": 0.7351127540121247,
+    "building": 0.8938284588019045,
+    "wall": 0.5611611112593021,
+    "fence": 0.5249426526898952,
+    "pole": 0.4120202832043231,
+    "traffic light": 0.5317392661256803,
+    "traffic sign": 0.628345859175845,
+    "vegetation": 0.8976049886196961,
+    "terrain": 0.5479120139345743,
+    "sky": 0.928730160671166,
+    "person": 0.6771484042934666,
+    "rider": 0.5297515568270368,
+    "car": 0.9090525961965068,
+    "truck": 0.755989640859305,
+    "bus": 0.7291909041688237,
+    "train": 0.5952544323413738,
+    "motorcycle": 0.49464753759474883,
+    "bicycle": 0.662497396204528
+   },
+   "miou_by_position": {
+    "4": 0.6600722891505242,
+    "9": 0.6742247199503592,
+    "14": 0.6727018768281566,
+    "19": 0.6969101640530193,
+    "24": 0.6875478944453914,
+    "29": 0.6933155509720094
+   },
+   "latency": {
+    "mean_ms": 6.746992111206055,
+    "p95_ms": 6.894627261161804,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.13587164878845215
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 6.746992111206055,
+     "delta_miou_at_equal_latency": 0.013719771298946082,
+     "latency_saved_at_equal_miou": 0.5974598488671994,
+     "latency_saved_frontier": 0.5974598488671994
+    },
+    "p95": {
+     "latency_ms": 6.894627261161804,
+     "delta_miou_at_equal_latency": 0.022142373056149744,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.52233279547983
+    }
+   },
+   "delta_vs_fullframe": 0.0034495021561145034,
+   "oracle": {
+    "miou": 0.689384062116839,
+    "delta_vs_fullframe": 0.009963168252912546,
+    "share_kept": 0.3462254243378963
+   },
+   "delta_vs_uniform": 0.004615775398048139
+  },
+  {
+   "name": "5p/c0.5/P/a0.25/s1/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 1.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6778689368256338,
+   "per_class_iou": {
+    "road": 0.9590356376847515,
+    "sidewalk": 0.7350531511067269,
+    "building": 0.8934701158034709,
+    "wall": 0.5614674770025763,
+    "fence": 0.5262359574133241,
+    "pole": 0.40740374898363907,
+    "traffic light": 0.5304293388131321,
+    "traffic sign": 0.6257577580319482,
+    "vegetation": 0.8975889529634382,
+    "terrain": 0.5367613761034516,
+    "sky": 0.928064487767432,
+    "person": 0.6735457350223416,
+    "rider": 0.520989862337308,
+    "car": 0.9086309366600632,
+    "truck": 0.737699981416643,
+    "bus": 0.7245419580031277,
+    "train": 0.5637890440760467,
+    "motorcycle": 0.4844999299326668,
+    "bicycle": 0.6645443505649519
+   },
+   "miou_by_position": {
+    "4": 0.6561286089439419,
+    "9": 0.6646974967517195,
+    "14": 0.6692408723492155,
+    "19": 0.6941033466371701,
+    "24": 0.6770734389866623,
+    "29": 0.6937773556290681
+   },
+   "latency": {
+    "mean_ms": 6.746992111206055,
+    "p95_ms": 6.894627261161804,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.13587164878845215
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 6.746992111206055,
+     "delta_miou_at_equal_latency": 0.008718312104538883,
+     "latency_saved_at_equal_miou": 0.2517326161705462,
+     "latency_saved_frontier": 0.2517326161705462
+    },
+    "p95": {
+     "latency_ms": 6.894627261161804,
+     "delta_miou_at_equal_latency": 0.017140913861742546,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.16877038633256003
+    }
+   },
+   "delta_vs_fullframe": -0.001551957038292695,
+   "oracle": {
+    "miou": 0.6854024403764942,
+    "delta_vs_fullframe": 0.00598154651256777,
+    "share_kept": -0.25945748896742554
+   },
+   "delta_vs_uniform": -0.0003856837963590598
+  },
+  {
+   "name": "5p/c0.5/P/a0.25/s4/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 4.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6786418250676146,
+   "per_class_iou": {
+    "road": 0.9598442215134102,
+    "sidewalk": 0.7384727522963268,
+    "building": 0.8938107594629696,
+    "wall": 0.5631927048370328,
+    "fence": 0.5332647010541547,
+    "pole": 0.40903724149079074,
+    "traffic light": 0.5326748393059245,
+    "traffic sign": 0.6269084625242174,
+    "vegetation": 0.8976765654980288,
+    "terrain": 0.5450589089199902,
+    "sky": 0.9284100844199193,
+    "person": 0.6753873921333281,
+    "rider": 0.5231021263502782,
+    "car": 0.9086935374886271,
+    "truck": 0.727144756621054,
+    "bus": 0.7135878317094385,
+    "train": 0.5747420002373052,
+    "motorcycle": 0.4797627802413037,
+    "bicycle": 0.6634230101805774
+   },
+   "miou_by_position": {
+    "4": 0.6609090378940111,
+    "9": 0.668990555221514,
+    "14": 0.6690832719950537,
+    "19": 0.6945399208020296,
+    "24": 0.6767951870155569,
+    "29": 0.6926957902086948
+   },
+   "latency": {
+    "mean_ms": 6.746992111206055,
+    "p95_ms": 6.894627261161804,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.13587164878845215
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 6.746992111206055,
+     "delta_miou_at_equal_latency": 0.009491200346519735,
+     "latency_saved_at_equal_miou": 0.27404899769352475,
+     "latency_saved_frontier": 0.27404899769352475
+    },
+    "p95": {
+     "latency_ms": 6.894627261161804,
+     "delta_miou_at_equal_latency": 0.017913802103723397,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.1907117700138654
+    }
+   },
+   "delta_vs_fullframe": -0.0007790687963118437,
+   "oracle": {
+    "miou": 0.6852095808302908,
+    "delta_vs_fullframe": 0.005788686966364365,
+    "share_kept": -0.13458471685179837
+   },
+   "delta_vs_uniform": 0.00038720444562179157
+  },
+  {
+   "name": "5p/c0.25/uniform/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "uniform",
+    "alpha": 0.0,
+    "sigma": 0.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.5264050473593581,
+   "per_class_iou": {
+    "road": 0.9224739901673769,
+    "sidewalk": 0.5744958690958043,
+    "building": 0.8313398208328938,
+    "wall": 0.4659349421717182,
+    "fence": 0.33609672932794976,
+    "pole": 0.20788502867885794,
+    "traffic light": 0.325376287185047,
+    "traffic sign": 0.392031660048222,
+    "vegetation": 0.8333977470784963,
+    "terrain": 0.44397808177602593,
+    "sky": 0.8606536611458243,
+    "person": 0.48430506774725635,
+    "rider": 0.3292862278503223,
+    "car": 0.804078632060239,
+    "truck": 0.5560646146002154,
+    "bus": 0.4946054777489799,
+    "train": 0.47153038132156944,
+    "motorcycle": 0.18603271701878601,
+    "bicycle": 0.4821289639722194
+   },
+   "miou_by_position": {
+    "4": 0.5042681036742579,
+    "9": 0.5102689245815099,
+    "14": 0.5190437217738905,
+    "19": 0.5308076604647658,
+    "24": 0.5319434160916727,
+    "29": 0.5417604449204941
+   },
+   "latency": {
+    "mean_ms": 3.8232319355010986,
+    "p95_ms": 4.032817769050598,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.08257579803466797
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 3.8232319355010986,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    },
+    "p95": {
+     "latency_ms": 4.032817769050598,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.002101197913985886,
+   "oracle": null,
+   "delta_vs_uniform": 0.0
+  },
+  {
+   "name": "5p/c0.375/uniform/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "uniform",
+    "alpha": 0.0,
+    "sigma": 0.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6151444238063316,
+   "per_class_iou": {
+    "road": 0.9459411662500233,
+    "sidewalk": 0.6701499464652777,
+    "building": 0.8692486750113833,
+    "wall": 0.5416462403399807,
+    "fence": 0.4659590852869159,
+    "pole": 0.29500939266887655,
+    "traffic light": 0.4436601030166156,
+    "traffic sign": 0.5219047198702276,
+    "vegetation": 0.8706244088835972,
+    "terrain": 0.4943554556664806,
+    "sky": 0.9018498272511254,
+    "person": 0.5877720601801601,
+    "rider": 0.4458970882587492,
+    "car": 0.8677028038745557,
+    "truck": 0.7045234019937943,
+    "bus": 0.6204832928109718,
+    "train": 0.5365324477929857,
+    "motorcycle": 0.3270313860587702,
+    "bicycle": 0.5774525506398069
+   },
+   "miou_by_position": {
+    "4": 0.5887009993621449,
+    "9": 0.598914100467557,
+    "14": 0.6179038509117949,
+    "19": 0.6199629901395055,
+    "24": 0.6228548802202116,
+    "29": 0.6272004695861244
+   },
+   "latency": {
+    "mean_ms": 4.956416130065918,
+    "p95_ms": 5.119905781745911,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.16131186485290527
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 4.956416130065918,
+     "delta_miou_at_equal_latency": 0.018664436329403178,
+     "latency_saved_at_equal_miou": 0.26374034290573345,
+     "latency_saved_frontier": 0.26374034290573345
+    },
+    "p95": {
+     "latency_ms": 5.119905781745911,
+     "delta_miou_at_equal_latency": NaN,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": NaN
+    }
+   },
+   "delta_vs_fullframe": -0.002207083538010246,
+   "oracle": null,
+   "delta_vs_uniform": 0.0
+  },
+  {
+   "name": "5p/c0.5/uniform/r3u1",
+   "model": "pidnet_s",
+   "variant": "r3u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "uniform",
+    "alpha": 0.0,
+    "sigma": 0.0,
+    "resample": "r3",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "miou": 0.6782546206219928,
+   "per_class_iou": {
+    "road": 0.9580608464412541,
+    "sidewalk": 0.7289573324042199,
+    "building": 0.8939723349020926,
+    "wall": 0.5601790059925489,
+    "fence": 0.5265639914899826,
+    "pole": 0.41370047757930273,
+    "traffic light": 0.5352977389779446,
+    "traffic sign": 0.6314709186141433,
+    "vegetation": 0.8968242249932402,
+    "terrain": 0.5440388804340403,
+    "sky": 0.9288233243700793,
+    "person": 0.6761786716596351,
+    "rider": 0.5258240428956541,
+    "car": 0.9022932035511404,
+    "truck": 0.7047821868238495,
+    "bus": 0.7058142791025431,
+    "train": 0.5888076033746991,
+    "motorcycle": 0.5055852912804698,
+    "bicycle": 0.6596634369310252
+   },
+   "miou_by_position": {
+    "4": 0.662458228062486,
+    "9": 0.6617539178733787,
+    "14": 0.6750726526174422,
+    "19": 0.69326783052884,
+    "24": 0.6759136114569171,
+    "29": 0.69011180588189
+   },
+   "latency": {
+    "mean_ms": 6.746992111206055,
+    "p95_ms": 6.894627261161804,
+    "priced_as": "r3u1/P/n50",
+    "delta_vs_paired_fullframe_ms": -0.13587164878845215
+   },
+   "clips": 400,
+   "judges_e2e": {
+    "mean": {
+     "latency_ms": 6.746992111206055,
+     "delta_miou_at_equal_latency": 0.009103995900897943,
+     "latency_saved_at_equal_miou": 0.2628688533123098,
+     "latency_saved_frontier": 0.2628688533123098
+    },
+    "p95": {
+     "latency_ms": 6.894627261161804,
+     "delta_miou_at_equal_latency": 0.017526597658101606,
+     "latency_saved_at_equal_miou": NaN,
+     "latency_saved_frontier": 0.1797194934555879
+    }
+   },
+   "delta_vs_fullframe": -0.0011662732419336352,
+   "oracle": null,
+   "delta_vs_uniform": 0.0
+  }
+ ]
+}
