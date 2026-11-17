@@ -769,3 +769,69 @@ three effects.
 Also: `score2` wrote absolute laptop paths into its `gate_a` and `files`
 fields. The code now writes repository-relative paths, and the two committed
 files were changed in those fields only; no number changed.
+
+## 2026-11-17 — amendment: P refitted on the scored pixels, stage B again with the exact filter; gate B continues, BiSeNetV2 at 0.25 +0.94
+
+**The user's decisions** (in the thread, after seeing the inputs, P and the
+warp on real frames; dated amendment in the phase 2 spec, f1e7d4a):
+- keep the warp;
+- only `r2u1`, the full frame's own filter, may be a finalist;
+- price each configuration paired;
+- refit P on the pixels the score reads.
+
+The first P's stage B, re-read under these rules (`score2 --from-scores
+--pricing paired --rule-variants r2u1 --label amended`, CPU, ce0e9dd): gate
+B continues, PIDNet-S +0.17 at 0.5 and BiSeNetV2 +0.47 at 0.25.
+
+**The prior, refitted** (`prior --scored-only`; cluster jobs 1108538-45, P100,
+1.6 to 2.0 s per clip, repository at f1e7d4a; merged on the laptop, cd7a54e):
+E counts only where the label is not 255.
+- **Share of P's mass in the bottom 128 px** (the ego vehicle), old → new:
+  - PIDNet-S: 0.24 → 0.03 at 0.25, 0.29 → 0.03 at 0.375, 0.36 → 0.04 at 0.5;
+  - BiSeNetV2: 0.12 → 0.04 at 0.25, 0.14 → 0.04 at 0.375.
+- **Peak row:** the row profile now peaks at 432 px, the horizon, for every
+  model and scale. For PIDNet-S, and for BiSeNetV2 at 0.375, it was at the
+  hood (1008 px).
+- **Density rounds** needed: still at most 11.
+
+**Stage B with it** (`stream --prior scored`, `r2u1` only; jobs 1108558-65,
+P100, 2.5 to 2.7 s per clip for PIDNet-S, 2.0 to 2.1 s for BiSeNetV2,
+repository at cd7a54e; scored on the laptop, 74e4346):
+- **Pipeline check:** the uniform rows equal the full frame to 2.3e-7 at
+  every scale. They don't depend on P, and they are the same rows as in the
+  first run.
+- **Gate B (paired price, `r2u1`): continue for both models.**
+  - PIDNet-S: 3 configurations above the curve, best +0.09.
+  - BiSeNetV2: 9 configurations above the curve, best +0.94.
+
+Best warp per scale, against the full frame at the same scale (also the
+uniform row) and at equal latency, old P → new P (points):
+
+| | best new config | Δ same scale, old → new | Δ equal latency, old → new | share of oracle kept, new |
+|---|---|---|---|---|
+| PIDNet-S 0.25 | a0.25 s1 | +0.25 → +0.43 | −0.16 → +0.02 | 0.35 |
+| PIDNet-S 0.375 | a0.25 s4 | +0.14 → +0.36 | −0.32 → −0.10 | 0.40 |
+| PIDNet-S 0.5 | a0.1 s4 | +0.49 → +0.41 | +0.17 → +0.09 | 0.74 |
+| BiSeNetV2 0.25 | a0.25 s4 | +0.69 → +1.16 | +0.47 → +0.94 | 0.64 |
+| BiSeNetV2 0.375 | a0.1 s1 | +0.36 → +0.29 | +0.18 → +0.11 | 0.30 |
+
+- **The fix helps where the hood took most:** at 0.25 and 0.375 for
+  PIDNet-S, and at 0.25 for BiSeNetV2, where the warp now keeps 64 % of the
+  phase 1 oracle's gain at the same α and σ. At the scale each model gained
+  most from before (0.5 for PIDNet-S, 0.375 for BiSeNetV2), the new P is
+  0.07 to 0.08 points lower: no better, within what one P against another
+  can move.
+- **The cost of the warp step** is what separates the two columns. The
+  uniform `r2u1` rows, exactly the full frame, sit 0.18 to 0.46 points below
+  the curve at equal latency. A warp has to gain more than that to show
+  above it.
+- **Still in-sample:** P is fitted on these 400 clips. Val is its
+  out-of-sample reading.
+
+**Finalists** (paired, `r2u1`; `finalists_<model>_scored.json`):
+- PIDNet-S: c0.25 a0.25 s1, c0.375 a0.25 s4 and c0.5 a0.1 s4. The finalist
+  rule keeps the best under each full-frame scale's latency, so c0.375 is in
+  although it lies below the curve.
+- BiSeNetV2: c0.25 a0.25 s4 and c0.375 a0.1 s1.
+
+**Next: stage C (val)**, with the user's go.

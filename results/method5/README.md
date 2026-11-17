@@ -386,7 +386,28 @@ the bilinear resampling. But most of that is not the warp:
   0.17 ms off. Priced paired, the exact filter (`r2u1`) leaves +0.47 points
   for BiSeNetV2 at 0.25 and +0.17 for PIDNet-S at 0.5.
 
-Stage C waits for the user's decision. Details: [TRIES](TRIES.md).
+**Amended (2026-11-17, the user's decisions, before any val read; spec
+Amendments).** Only `r2u1` may be a finalist; configurations are priced
+paired; and P is refitted counting E only on scored pixels. The first P put
+24 to 36 % of its mass on the never-scored ego vehicle for PIDNet-S. Stage B
+was run again with the new P (`prior_scored_<model>.pt`;
+`score2_train_all_<model>_scored.json`, `gate_b_train_all_scored.json`,
+`finalists_<model>_scored.json`).
+
+**Gate B, amended: continue, for both models.**
+
+| | best warp | Δ vs full frame, same scale | Δ at equal latency (paired) |
+|---|---|---|---|
+| PIDNet-S | c0.5 a0.1 s4 | +0.41 | +0.09 |
+| BiSeNetV2 | c0.25 a0.25 s4 | +1.16 | +0.94 |
+
+- **BiSeNetV2 at 0.25** keeps 64 % of the phase 1 oracle's gain, with a
+  P a policy can use.
+- **PIDNet-S** gains about 0.4 points at every scale, but the warp step's
+  cost leaves it only just above the curve.
+- **All in-sample:** P is fitted on these clips.
+
+Stage C (val) is next. Details: [TRIES](TRIES.md).
 
 ## Files
 
@@ -399,7 +420,9 @@ Stage C waits for the user's decision. Details: [TRIES](TRIES.md).
   `src/warp/prior.py` and `method5 prior` / `prior-merge` (the static prior
   P); `src/warp/stream.py` and `method5 stream` / `merge --kind stream` /
   `score2` (stage B); results in `phase2/` (the three T4 sessions,
-  `gate_a.json`, and `prior_<model>.pt` / `.json`, the prior fitted on the
-  400 `train_all` clips).
+  `gate_a.json`, `prior_<model>.pt` / `.json`, the prior fitted on the
+  400 `train_all` clips, and `prior_scored_<model>.*`, fitted on their scored
+  pixels; stage B's scores, gate B and finalists, plain, `amended` and
+  `scored`).
 - Design: [spec](../../docs/superpowers/specs/2026-11-12-method5-warp-bound-design.md),
   [plan](../../docs/superpowers/plans/2026-11-12-method5-warp-bound.md).
