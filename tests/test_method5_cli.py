@@ -548,6 +548,11 @@ def test_val_is_read_only_with_finalists_that_passed_gate_b(tmp_path):
     fin.write_text(json.dumps({"gate_b": "continue", "finalists": [entry, dict(entry, variant="r3u1")]}))
     cfgs = method5.stream_configs(args, "pidnet_s")
     assert [c.name() for c in cfgs] == ["5p/c0.25/P/a0.25/s1/r2u1", "5p/c0.25/uniform/r2u1"]  # + the pipeline check
+    only = method5.parse_args(["stream", "--split", "val", "--models", "pidnet_s", "--variant", "r2u1",
+                               "--finalists", str(fin), "--uniform-only"])
+    assert [c.name() for c in method5.stream_configs(only, "pidnet_s")] == ["5p/c0.25/uniform/r2u1"]
+    with pytest.raises(SystemExit, match="--uniform-only"):
+        method5.stream_configs(method5.parse_args(["stream", "--variant", "r2u1", "--uniform-only"]), "pidnet_s")
 
 
 def test_merge_stream_refuses_doubles_and_cut_off_chunks(stage_b, tmp_path):
@@ -910,3 +915,26 @@ def test_a_provisional_val_reading_is_priced_by_stage_a_and_is_never_a_verdict(w
         j = v["fullframe"]["dummy"]["scales"].index(s)
         delta = gate["groups"][f"dummy/{s:g}"]["variants"]["r2u1/P/n50"]["delta_ms"]
         assert r["latency"]["mean_ms"] == pytest.approx(v["fullframe"]["dummy"]["median_ms"][j] + delta)
+
+
+def test_a_val_run_without_its_uniform_rows_is_completed_without_running_the_finalists_again(
+        work, stage_b, stage_c, tmp_path):
+    """The finalists alone in one file, the uniform rows alone (--uniform-only) in another: merged,
+    the same confusions and the same report as one run of both."""
+    d = stage_c["dir"]
+    fin = d / "fin" / "finalists_dummy.json"
+    run = [*_common(), *STREAM, "--priors", str(stage_b / "priors"), "--gate", str(stage_b / "gate_a.json"),
+           "--finalists", str(fin), "--out-dir", str(tmp_path), "--variant", "r2u1"]
+    assert method5.main(["stream", *run, "--tag", "all"]) == 0
+    first = _read(tmp_path / "stream_val_dummy_r2u1_all.jsonl.gz")
+    (tmp_path / "stream_val_dummy_r2u1_all.jsonl.gz").unlink()
+    finals = [r for r in first if "/uniform/" not in r["name"]]
+    with gzip.open(tmp_path / "stream_val_dummy_r2u1_all.jsonl.gz", "wt", encoding="utf-8") as fh:
+        fh.writelines(json.dumps(r) + "\n" for r in finals)  # a run made before the uniform rows were added
+    assert method5.main(["stream", *run, "--uniform-only", "--tag", "uniform"]) == 0
+    added = _read(tmp_path / "stream_val_dummy_r2u1_uniform.jsonl.gz")
+    assert added and all("/uniform/" in r["name"] for r in added)
+    assert method5.main(["merge", "--kind", "stream", *_common(), "--out-dir", str(tmp_path)]) == 0
+    key = lambda r: (r["name"], r["clip_id"])  # noqa: E731
+    merged = {key(r): r["conf"] for r in _read(tmp_path / "stream_val_dummy_r2u1.jsonl.gz")}
+    assert merged == {key(r): r["conf"] for r in first}

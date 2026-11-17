@@ -770,7 +770,8 @@ def _priced_as(cfg: Dict[str, Any], variant: str) -> str:
 def stream_configs(args: argparse.Namespace, model: str) -> List[Any]:
     """The stage B grid of ``model`` for one variant: scale x saliency x strength x smoothing, then
     the uniform row at each scale; or, with ``--finalists``, the model's finalists of that variant
-    and the uniform row at each of their scales (the pipeline check on val)."""
+    and the uniform row at each of their scales (the pipeline check on val); ``--uniform-only``: those
+    uniform rows alone (the full frame, already read on val by Method 2), the finalists not run."""
     from warp.policy import StepConfig
 
     resample, unwarp = _split_variant(args.variant)
@@ -782,7 +783,10 @@ def stream_configs(args: argparse.Namespace, model: str) -> List[Any]:
                   if f["model"] == model and f["variant"] == args.variant]
         uniform = [StepConfig(c, resample=resample, unwarp=unwarp, rounds=args.rounds)
                    for c in sorted({p.scale for p in picked})]
-        return picked + [u for u in uniform if u.name() not in {p.name() for p in picked}]
+        uniform = [u for u in uniform if u.name() not in {p.name() for p in picked}]
+        return uniform if getattr(args, "uniform_only", False) else picked + uniform
+    if getattr(args, "uniform_only", False):
+        raise SystemExit("--uniform-only takes the scales of --finalists")
     scales = _floats(args.scales) if args.scales else list(STAGE_B.get(model, COST_SCALES))
     warped = [StepConfig(c, k, a, s, resample, unwarp, args.rounds) for c, k, a, s in itertools.product(
         scales, _strs(args.saliencies), _floats(args.alphas), _floats(args.sigmas))]
@@ -1500,6 +1504,9 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                                                  "not read with --fixture unless given).")
     st.add_argument("--finalists", default=None, help="Run only these configurations (finalists_<model>.json); "
                                                       "required on val.")
+    st.add_argument("--uniform-only", action="store_true",
+                    help="With --finalists: only the uniform rows at their scales (the pipeline check), e.g. to "
+                         "complete a val run made without them; the finalists are not run again.")
     st.add_argument("--every-frame", action="store_true",
                     help="Run every frame even when every configuration is fixed (same confusions, 5 times slower).")
     st.set_defaults(fn=cmd_stream)
