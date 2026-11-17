@@ -112,6 +112,34 @@ The chunks land in `~/avrh_results/method5/prior/`; copy them back and run
 `python -m scripts.method5 prior-merge --split train_all --out-dir <that folder>`
 on the laptop, which writes `results/method5/phase2/prior_<model>.pt` and `.json`.
 
+### Method 5 phase 2, stage B: the closed loop
+
+[scripts/cluster/m5_stream.sh](../scripts/cluster/m5_stream.sh) runs the stage B
+grid of one model on one chunk, for each variant gate A kept (`r2u1` and
+`r3u1`), one file per variant. It needs the committed prior and
+`gate_a.json`, so `git pull` first. With P only, the runner reads the 6
+labelled frames of a clip and not all 30: a fixed warp does not depend on the
+frames before it, so the confusions are the same.
+
+First the pipeline check, 5 clips of chunk 0 per model (`CHECK=1`, tag
+`check5`):
+
+```bash
+for M in pidnet_s bisenetv2; do
+  sbatch --job-name=m5s_check_$M --output=$HOME/avrh_jobs/%x_%j.out \
+      --export=ALL,CHUNK=0,MODEL=$M,CHECK=1 scripts/cluster/m5_stream.sh
+done
+```
+
+Copy `~/avrh_results/method5/stream/stream_train_all_*_check5.jsonl.gz` to a
+folder of their own on the laptop, then `merge --kind stream --no-expect` and
+`score2 --no-expect --out-dir <that folder> --finalists-dir <that folder>`:
+every `r2u1` uniform row must be within 0.1 mIoU point of the full frame.
+Then the 400 clips, the same loop over `C in 0 1 2 3` without `CHECK`, with
+the time limit set to twice the check's time per clip. Copy the chunk files
+to `experiments/method5/phase2/train_all/`, then `merge --kind stream` and
+`score2` there.
+
 ## Bringing results back
 
 ```bash
