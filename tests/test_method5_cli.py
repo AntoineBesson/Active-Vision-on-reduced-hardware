@@ -547,7 +547,7 @@ def test_val_is_read_only_with_finalists_that_passed_gate_b(tmp_path):
         method5.stream_configs(args, "pidnet_s")
     fin.write_text(json.dumps({"gate_b": "continue", "finalists": [entry, dict(entry, variant="r3u1")]}))
     cfgs = method5.stream_configs(args, "pidnet_s")
-    assert [c.name() for c in cfgs] == ["5p/c0.25/P/a0.25/s1/r2u1"]
+    assert [c.name() for c in cfgs] == ["5p/c0.25/P/a0.25/s1/r2u1", "5p/c0.25/uniform/r2u1"]  # + the pipeline check
 
 
 def test_merge_stream_refuses_doubles_and_cut_off_chunks(stage_b, tmp_path):
@@ -771,3 +771,142 @@ def test_the_scored_prior_runs_scores_and_picks_finalists_apart(work, stage_b, t
     assert score["prior"] == picked["prior"] == gate["prior"] == "scored"
     assert picked["pricing"] == "paired" and picked["variants"] == ["r2u1"]
     assert not (out / "score2_val_dummy.json").exists()
+
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2, stage C: report (val, priced by the m5final sessions)
+# --------------------------------------------------------------------------- #
+def _fake_m5final(path: Path, finalists, ff_scales, session: str, gpu: str = "Tesla T4", quick: bool = False,
+                  drop: str = None) -> Path:
+    recs = [{"name": f"m5final/fullframe/dummy/{x:g}", "kind": "fullframe", "model": "dummy", "scale": x,
+             "level": "graph", "chunk": 0, "cuda_event": {"median_ms": 22 * x * x + 2, "p95_ms": (22 * x * x + 2) * 1.1}}
+            for x in ff_scales]
+    recs += [{"name": f"m5final/dummy/{f['name']}", "kind": "warp", "model": "dummy", "finalist": f["name"],
+              "scale": f["config"]["scale"], "level": "graph", "chunk": 0,
+              "cuda_event": {"median_ms": 22 * f["config"]["scale"] ** 2 + 2.05,
+                             "p95_ms": (22 * f["config"]["scale"] ** 2 + 2.05) * 1.1}}
+             for f in finalists if f["name"] != drop]
+    path.write_text(json.dumps({"session": session, "quick": quick, "environment": {"gpu": gpu},
+                                "records": {"m5final": recs}}))
+    return path
+
+
+@pytest.fixture(scope="module")
+def stage_c(work, stage_b, tmp_path_factory):
+    """The fixture's finalists streamed on its split (val), merged; three fake T4 m5final sessions."""
+    d = tmp_path_factory.mktemp("m5c")
+    data = json.loads((stage_b / "fin" / "finalists_dummy.json").read_text())
+    finalists = []  # the fixture's finalists, with the exact filter (the amendment: r2u1 only)
+    for f in data["finalists"]:
+        g = dict(f, variant="r2u1", name=f["name"].replace(f["variant"], "r2u1"), config=dict(f["config"], resample="r2"))
+        if g["name"] not in {x["name"] for x in finalists}:
+            finalists.append(g)
+    (d / "fin").mkdir()
+    fin = d / "fin" / "finalists_dummy.json"
+    fin.write_text(json.dumps(dict(data, finalists=finalists, variants=["r2u1"])))
+    run = [*_common(), *STREAM, "--priors", str(stage_b / "priors"), "--gate", str(stage_b / "gate_a.json"),
+           "--finalists", str(fin), "--out-dir", str(d / "v")]
+    for v in sorted({f["variant"] for f in finalists}):
+        assert method5.main(["stream", *run, "--variant", v]) == 0
+    assert method5.main(["merge", "--kind", "stream", *_common(), "--out-dir", str(d / "v")]) == 0
+    ff = np.load(next((work / "ff").glob("fullframe_dummy_*.npz")))
+    scales = [float(x) for x in ff["scales"]]
+    for k in (1, 2, 3):
+        _fake_m5final(d / f"m5f-s{k}.json", finalists, scales, f"m5f-s{k}")
+    return {"dir": d, "finalists": finalists, "scales": scales}
+
+
+def _report_args(work: Path, stage_b: Path, c: Dict, sessions: str = "m5f-s*.json", out: str = "verdict.json"):
+    d = c["dir"]
+    return ["report", *_common(), "--prior", "plain", "--out-dir", str(d / "v"), "--sessions", str(d / sessions),
+            "--fullframe", str(work / "ff"), "--latency", str(work / "lat.json"), "--finalists-dir",
+            str(d / "fin"), "--bootstrap", "40", "--out", str(d / out)]
+
+
+def test_the_val_run_streams_the_finalists_and_the_uniform_rows_of_their_scales(stage_c):
+    rows = [r for f in stage_c["dir"].glob("v/stream_val_dummy_*.jsonl.gz") if f.name.count("_") == 3
+            for r in _read(f)]
+    names = {r["name"] for r in rows}
+    want = {f["name"] for f in stage_c["finalists"]}
+    assert want <= names and names - want and all("/uniform/" in n for n in names - want)
+    assert {float(r["config"]["scale"]) for r in rows if "/uniform/" in r["name"]} == {
+        float(f["config"]["scale"]) for f in stage_c["finalists"]}
+
+
+def test_report_reads_the_finalists_priced_by_the_m5final_sessions(work, stage_b, stage_c):
+    assert method5.main(_report_args(work, stage_b, stage_c)) == 0
+    v = json.loads((stage_c["dir"] / "verdict.json").read_text())
+    assert v["verdict"] in ("positive", "negative") and v["state"] == v["verdict"].upper()
+    assert v["clips"] == {"dummy": 3} and len(v["sessions"]) == 3
+    assert v["pipeline_check"]["dummy"] and all(x["ok"] and x["checked"] for x in v["pipeline_check"]["dummy"].values())
+    assert {r["name"] for r in v["finalists"]} == {f["name"] for f in stage_c["finalists"]}
+    ff = v["fullframe"]["dummy"]
+    assert ff["median_ms"] == [22 * x * x + 2 for x in ff["scales"]]  # the m5final prices, not the tables'
+    for r in v["finalists"]:
+        s = r["config"]["scale"]
+        assert r["latency"]["mean_ms"] == pytest.approx(22 * s * s + 2.05) and r["latency"]["sessions"] == 3
+        lo, hi = r["bootstrap"]["mean"]["delta_miou"]
+        assert lo <= hi
+    assert v["verdict"] == ("positive" if method5.pass_rule(v["finalists"])["positive"] else "negative")
+
+
+def test_report_does_not_read_a_verdict_without_three_full_t4_sessions(work, stage_b, stage_c):
+    d = stage_c["dir"]
+    _fake_m5final(d / "two-s1.json", stage_c["finalists"], stage_c["scales"], "two-s1")
+    _fake_m5final(d / "two-s2.json", stage_c["finalists"], stage_c["scales"], "two-s2")
+    assert method5.main(_report_args(work, stage_b, stage_c, "two-s*.json", "v2.json")) == 0
+    v = json.loads((d / "v2.json").read_text())
+    assert v["verdict"] is None and "2 sessions" in v["state"]
+    _fake_m5final(d / "two-s3.json", stage_c["finalists"], stage_c["scales"], "two-s3", quick=True)
+    assert method5.main(_report_args(work, stage_b, stage_c, "two-s*.json", "v3.json")) == 0
+    assert "not a full T4 run" in json.loads((d / "v3.json").read_text())["state"]
+
+
+def test_report_refuses_a_finalist_without_a_timing_or_val_confusions(work, stage_b, stage_c, tmp_path):
+    d = stage_c["dir"]
+    first = stage_c["finalists"][0]["name"]
+    for k in (1, 2, 3):
+        _fake_m5final(d / f"gap-s{k}.json", stage_c["finalists"], stage_c["scales"], f"gap-s{k}", drop=first)
+    with pytest.raises(SystemExit, match="no timing"):
+        method5.main(_report_args(work, stage_b, stage_c, "gap-s*.json"))
+    # val files without the first finalist
+    v = tmp_path / "v"
+    v.mkdir()
+    for f in (d / "v").glob("stream_val_dummy_*.jsonl.gz"):
+        if f.name.count("_") == 3:
+            lines = [r for r in _read(f) if r["name"] != first]
+            with gzip.open(v / f.name, "wt", encoding="utf-8") as fh:
+                fh.writelines(json.dumps(r) + "\n" for r in lines)
+    args = _report_args(work, stage_b, stage_c)
+    args[args.index("--out-dir") + 1] = str(v)
+    with pytest.raises(SystemExit, match="no val confusion"):
+        method5.main(args)
+    with pytest.raises(SystemExit, match="once"):
+        method5.main(["report", "--split", "train_all", "--models", "pidnet_s"])
+
+
+def test_the_pass_rule_needs_the_interval_above_zero():
+    def r(model, d, lo):
+        return {"model": model, "name": f"{model}/{d}/{lo}", "judges": {"mean": {"delta_miou_at_equal_latency": d}},
+                "bootstrap": {"mean": {"delta_miou": (lo, 0.05)}}}
+
+    assert not method5.pass_rule([r("a", 0.01, -0.001)])["positive"]  # above 0, interval crossing 0
+    assert not method5.pass_rule([r("a", float("nan"), 0.01), r("b", -0.01, -0.02)])["positive"]
+    rule = method5.pass_rule([r("a", 0.01, -0.001), r("b", 0.004, 0.0005)])
+    assert rule["positive"] and rule["models"]["b"]["passing"] == ["b/0.004/0.0005"] and not rule["models"]["a"]["passes"]
+
+
+def test_a_provisional_val_reading_is_priced_by_stage_a_and_is_never_a_verdict(work, stage_b, stage_c):
+    args = _report_args(work, stage_b, stage_c, out="prov.json") + ["--prices", "stage-a", "--gate",
+                                                                    str(stage_b / "gate_a.json"), "--e2e",
+                                                                    str(work / "final-s*.json")]
+    assert method5.main(args) == 0
+    v = json.loads((stage_c["dir"] / "prov.json").read_text())
+    assert v["verdict"] is None and "provisional" in v["state"] and v["prices"] == "stage-a" and v["sessions"] == []
+    gate = json.loads((stage_b / "gate_a.json").read_text())
+    for r in v["finalists"]:
+        s = r["config"]["scale"]
+        j = v["fullframe"]["dummy"]["scales"].index(s)
+        delta = gate["groups"][f"dummy/{s:g}"]["variants"]["r2u1/P/n50"]["delta_ms"]
+        assert r["latency"]["mean_ms"] == pytest.approx(v["fullframe"]["dummy"]["median_ms"][j] + delta)

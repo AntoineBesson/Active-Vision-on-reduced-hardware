@@ -46,6 +46,14 @@ docs/superpowers/specs/2026-11-16-method5-phase2-design.md, stage A):
                every chunk, so that gate A reads paired differences
                (``python -m scripts.method5 cost``).
 
+Method 5 phase 2, stage C part (``--parts m5final``, graph level only):
+
+* ``m5final``   per model, the full frame at the five scales of the curve and
+               one frame of each stage B finalist (``finalists_<model>_scored.json``,
+               ``warp.policy.WarpStep`` with its fitted prior), all in the same
+               interleaved rounds: the prices the val report reads
+               (``python -m scripts.method5 report``) replace stage A's.
+
 Every part runs at two runtime levels, the same for all methods within a
 level: ``eager`` (cuDNN autotuning on) and ``graph`` (the whole call captured
 in a CUDA graph, which removes per-kernel launch overhead). GFLOPs are counted
@@ -122,9 +130,12 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument("--levels", default="eager,graph", help="Comma list of runtime levels: eager, graph.")
     p.add_argument("--parts", default="area,batch,overhead,e2e",
                    help="Comma list of parts: area, batch, overhead, e2e, final (needs --finalists); "
-                        "method 3: batchk, reuse, reuse_e2e; method 5 phase 2: warp.")
+                        "method 3: batchk, reuse, reuse_e2e; method 5 phase 2: warp, m5final.")
     p.add_argument("--finalists", default=str(REPO_ROOT / "results" / "method2" / "finalists.json"),
                    help="Method 2 finalists to time with the full-frame curve (part 'final').")
+    p.add_argument("--m5-finalists", default=str(M5_FINALISTS),
+                   help="Method 5 finalists per model, with {model} (part 'm5final').")
+    p.add_argument("--m5-prior", default=str(M5_PRIOR), help="Method 5 static prior per model, with {model}.")
     return p.parse_args(argv)
 
 
@@ -505,6 +516,66 @@ def warp_cases(models: Dict[str, torch.nn.Module], s: Dict[str, Any],
     return groups
 
 
+# --------------------------------------------------------------------------- #
+# Method 5 phase 2, stage C (part "m5final")
+# --------------------------------------------------------------------------- #
+M5_FINALISTS = REPO_ROOT / "results" / "method5" / "phase2" / "finalists_{model}_scored.json"
+M5_PRIOR = REPO_ROOT / "results" / "method5" / "phase2" / "prior_scored_{model}.pt"
+M5_FF_SCALES = (1.0, 0.75, 0.5, 0.375, 0.25)  # the full-frame curve; scale 1 first: a group's reference
+
+
+def m5final_specs(finalists: str, models=MODELS, scales=M5_FF_SCALES, quick: bool = False) -> List[List[Dict[str, Any]]]:
+    """The cases of the ``m5final`` part, without their functions: one group per model, the full
+    frame at each scale of the curve, then each of the model's finalists (``finalists`` with
+    ``{model}``: a ``finalists_<model>*.json`` of ``method5 score2``, gate B ``continue``).
+    ``quick``: scales 1 and 0.25 and the first finalist (a smoke test)."""
+    if quick:
+        scales = [x for x in scales if x in (1.0, 0.25)]
+    groups = []
+    for model in models:
+        path = Path(str(finalists).format(model=model))
+        data = json.loads(path.read_text())
+        if data.get("gate_b") != "continue":
+            raise SystemExit(f"{path}: gate B is {data.get('gate_b')!r}, not 'continue': no stage C timing")
+        fins = [f for f in data["finalists"] if f["model"] == model]
+        if not fins:
+            raise SystemExit(f"{path}: no finalist of {model}")
+        cases = [{"name": f"m5final/fullframe/{model}/{x:g}", "kind": "fullframe", "model": model, "scale": float(x)}
+                 for x in scales]
+        cases += [{"name": f"m5final/{model}/{f['name']}", "kind": "warp", "model": model, "finalist": f["name"],
+                   "scale": float(f["config"]["scale"]), "config": dict(f["config"]), "prior": data.get("prior")}
+                  for f in (fins[:1] if quick else fins)]
+        groups.append(cases)
+    return groups
+
+
+def m5final_cases(models: Dict[str, torch.nn.Module], finalists: str, prior: str,
+                  quick: bool = False) -> List[List[Dict[str, Any]]]:
+    """:func:`m5final_specs` with their functions: the full frame (:func:`fullframe_fn`) and the
+    finalist's ``WarpStep`` in half precision from its initial state (its fitted prior), as the
+    method runs a frame. A fixed warp's grid and operands are made on the first call (warmup)."""
+    from warp.policy import StepConfig, WarpStep, load_prior
+
+    x = frame_of((1, 3, *FRAME))
+    groups = []
+    for specs in m5final_specs(finalists, quick=quick):
+        cases = []
+        for c in specs:
+            net = models[c["model"]]
+            if c["kind"] == "fullframe":
+                fn = fullframe_fn(net, c["scale"])
+            else:
+                cfg = StepConfig(**c["config"])
+                p = (load_prior(str(prior).format(model=c["model"]), c["model"], cfg.scale).cuda()
+                     if cfg.saliency == "P" else None)
+                step = WarpStep(net, cfg, p, precision="fp16")
+                state = step.initial_state(FRAME, torch.device("cuda"))
+                fn = (lambda st, s0: lambda frame: st(frame, s0))(step, state)
+            cases.append({**c, "gflops": gflops(fn, x), "fn": fn, "x": x})
+        groups.append(cases)
+    return groups
+
+
 def time_groups(groups: List[List[Dict[str, Any]]], level: str, s: Dict[str, Any], tel: Optional[GpuTelemetry],
                 memory_fraction: float = 0.6, capture: Optional[Callable[[Dict[str, Any]], Callable[[], Any]]] = None,
                 benchmark: Optional[Callable[[Dict[str, Callable[[], Any]]], Dict[str, Dict[str, Any]]]] = None,
@@ -623,13 +694,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                     "final": lambda: final_cases(models, Path(args.finalists)),
                     "batchk": lambda: batchk_cases(models, s), "reuse": lambda: reuse_cases(s),
                     "reuse_e2e": lambda: reuse_e2e_cases(models, s),
-                    "warp": lambda: warp_cases(models, s, args.quick)}
+                    "warp": lambda: warp_cases(models, s, args.quick),
+                    "m5final": lambda: m5final_cases(models, args.m5_finalists, args.m5_prior, args.quick)}
         for part in parts:
             cases = builders[part]()
-            if part == "warp":  # graph level only: the method is timed as it would run
-                print(f"[latency_floor] warp / graph: {sum(len(g) for g in cases)} configurations in "
+            if part in ("warp", "m5final"):  # graph level only: the method is timed as it would run
+                print(f"[latency_floor] {part} / graph: {sum(len(g) for g in cases)} configurations in "
                       f"{len(cases)} groups", flush=True)
-                records.setdefault("warp", []).extend(time_groups(cases, "graph", s, tel))
+                records.setdefault(part, []).extend(time_groups(cases, "graph", s, tel))
                 del cases
                 continue
             # batchk extends the batch table; the reuse ops cannot be captured in a CUDA graph

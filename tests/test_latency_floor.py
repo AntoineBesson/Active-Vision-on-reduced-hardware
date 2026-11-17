@@ -73,3 +73,30 @@ def test_reuse_parts_are_listed():
             "reuse/fusion", "reuse/post/stride8/1", "reuse/post/stride1/0.25",
             "reuse/glimpse_post/stride1/256/k66", "reuse/glimpse_post/stride8/512/k15"} <= names
     assert all(sp["part"] == "reuse" for sp in reuse_specs(QUICK))
+
+
+def test_m5final_times_each_models_finalists_with_the_full_frame_curve(tmp_path):
+    import json
+
+    from scripts.latency_floor import M5_FF_SCALES, m5final_specs
+
+    cfg = {"scale": 0.25, "saliency": "P", "alpha": 0.25, "sigma": 4.0, "resample": "r2", "unwarp": "u1", "rounds": 50,
+           "taps": None}
+    for model, n in (("pidnet_s", 2), ("bisenetv2", 1)):
+        fins = [{"model": model, "name": f"5p/c0.25/P/a0.25/s4/r2u1/{i}", "variant": "r2u1",
+                 "config": dict(cfg, scale=0.25 + 0.125 * i)} for i in range(n)]
+        (tmp_path / f"finalists_{model}_scored.json").write_text(json.dumps(
+            {"gate_b": "continue", "prior": "scored", "finalists": fins}))
+    groups = m5final_specs(str(tmp_path / "finalists_{model}_scored.json"))
+    assert [g[0]["model"] for g in groups] == ["pidnet_s", "bisenetv2"]
+    for g, n in zip(groups, (2, 1)):
+        assert g[0]["kind"] == "fullframe" and g[0]["scale"] == 1.0  # the reference of a group's chunks
+        assert [c["scale"] for c in g if c["kind"] == "fullframe"] == list(M5_FF_SCALES)
+        warps = [c for c in g if c["kind"] == "warp"]
+        assert len(warps) == n and all(c["prior"] == "scored" and c["config"]["resample"] == "r2" for c in warps)
+        assert [c["scale"] for c in warps] == [0.25 + 0.125 * i for i in range(n)]
+    quick = m5final_specs(str(tmp_path / "finalists_{model}_scored.json"), quick=True)
+    assert all(len([c for c in g if c["kind"] == "warp"]) == 1 and len(g) == 3 for g in quick)
+    (tmp_path / "finalists_pidnet_s_scored.json").write_text(json.dumps({"gate_b": "stop", "finalists": []}))
+    with pytest.raises(SystemExit, match="gate B"):
+        m5final_specs(str(tmp_path / "finalists_{model}_scored.json"))

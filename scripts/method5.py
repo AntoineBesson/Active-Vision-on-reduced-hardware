@@ -769,7 +769,8 @@ def _priced_as(cfg: Dict[str, Any], variant: str) -> str:
 
 def stream_configs(args: argparse.Namespace, model: str) -> List[Any]:
     """The stage B grid of ``model`` for one variant: scale x saliency x strength x smoothing, then
-    the uniform row at each scale; or, with ``--finalists``, the model's finalists of that variant."""
+    the uniform row at each scale; or, with ``--finalists``, the model's finalists of that variant
+    and the uniform row at each of their scales (the pipeline check on val)."""
     from warp.policy import StepConfig
 
     resample, unwarp = _split_variant(args.variant)
@@ -777,8 +778,11 @@ def stream_configs(args: argparse.Namespace, model: str) -> List[Any]:
         data = json.loads(Path(args.finalists).read_text())
         if data.get("gate_b") != "continue" and not args.fixture:
             raise SystemExit(f"{args.finalists}: gate B is {data.get('gate_b')!r}, not 'continue': val is not read")
-        picked = [f for f in data["finalists"] if f["model"] == model and f["variant"] == args.variant]
-        return [StepConfig(**f["config"]) for f in picked]
+        picked = [StepConfig(**f["config"]) for f in data["finalists"]
+                  if f["model"] == model and f["variant"] == args.variant]
+        uniform = [StepConfig(c, resample=resample, unwarp=unwarp, rounds=args.rounds)
+                   for c in sorted({p.scale for p in picked})]
+        return picked + [u for u in uniform if u.name() not in {p.name() for p in picked}]
     scales = _floats(args.scales) if args.scales else list(STAGE_B.get(model, COST_SCALES))
     warped = [StepConfig(c, k, a, s, resample, unwarp, args.rounds) for c, k, a, s in itertools.product(
         scales, _strs(args.saliencies), _floats(args.alphas), _floats(args.sigmas))]
@@ -1202,6 +1206,208 @@ def cmd_score2(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Phase 2, stage C: the finalists on val (report)
+# --------------------------------------------------------------------------- #
+M5_SESSIONS = "results/method5/phase2/latency_floor_m5f-s*.json"
+
+
+def _session_paths(spec: str) -> List[str]:
+    return sorted(p for part in spec.split(",") for p in glob.glob(part if Path(part).is_absolute()
+                                                                   else str(REPO_ROOT / part)))
+
+
+def final_prices(sessions: Sequence[Dict[str, Any]], model: str) -> Dict[str, Any]:
+    """The ``m5final`` prices of ``model``: per full-frame scale and per finalist, the median over the
+    sessions of the session median (p95 the same way), the one latency quantity of the spec."""
+    per: Dict[Tuple[str, Any], List[Tuple[float, float]]] = {}
+    for sess in sessions:
+        seen: Dict[Tuple[str, Any], List[Tuple[float, float]]] = {}
+        for r in sess["records"].get("m5final", []):
+            if r.get("level") != "graph" or r["model"] != model:
+                continue
+            key = ("fullframe", float(r["scale"])) if r["kind"] == "fullframe" else ("warp", r["finalist"])
+            seen.setdefault(key, []).append((r["cuda_event"]["median_ms"], r["cuda_event"]["p95_ms"]))
+        for key, v in seen.items():  # a reference timed in several chunks of a session: their median
+            per.setdefault(key, []).append((statistics.median(x for x, _ in v), statistics.median(y for _, y in v)))
+    out: Dict[str, Any] = {"fullframe": {}, "finalists": {}}
+    for (kind, k), v in per.items():
+        out["fullframe" if kind == "fullframe" else "finalists"][k] = {
+            "median_ms": statistics.median(x for x, _ in v), "p95_ms": statistics.median(y for _, y in v),
+            "sessions": len(v)}
+    return out
+
+
+def pass_rule(results: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """The spec's rule on val: positive if, for at least one backbone, a finalist has ΔmIoU above 0
+    against the measured full-frame curve at equal mean latency and the lower end of its
+    clip-bootstrap 95% interval above 0; negative otherwise. A finalist with no reading (its
+    latency outside the curve) does not pass."""
+    models: Dict[str, Any] = {}
+    for r in results:
+        d = r["judges"]["mean"]["delta_miou_at_equal_latency"]
+        lo = r["bootstrap"]["mean"]["delta_miou"][0]
+        ok = d is not None and not math.isnan(d) and d > 0 and lo is not None and not math.isnan(lo) and lo > 0
+        m = models.setdefault(r["model"], {"passes": False, "passing": []})
+        if ok:
+            m["passes"] = True
+            m["passing"].append(r["name"])
+    return {"positive": any(m["passes"] for m in models.values()), "models": models}
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    """Stage C: the finalists once on val (merged ``stream --split val --finalists`` files), priced
+    by the ``m5final`` T4 sessions (finalists and the full frame timed in the same rounds), with
+    clip-bootstrap 95% intervals; the pipeline check of the uniform rows; the spec's pass rule.
+    Writes ``results/method5/phase2/verdict_val[_<label>].json``. ``--prices stage-a``: a provisional
+    reading before the m5final sessions, priced paired (the final sessions' full frame plus the
+    stage A overhead), never a verdict (``..._provisional.json``)."""
+    if args.split != "val" and not args.fixture:
+        raise SystemExit("report reads the finalists on val, once; train is read by score2")
+    import numpy as np
+
+    from eval.tradeoff import FullFrameCurve, clip_bootstrap, miou_of
+
+    provisional = args.prices == "stage-a"
+    problems: List[str] = []
+    paths: List[str] = []
+    sessions: List[Dict[str, Any]] = []
+    gate = None
+    if provisional:
+        gate = _read_json(Path(args.gate))
+        problems.append("provisional: priced by stage A paired with the final sessions; the m5final sessions decide")
+    else:
+        paths = _session_paths(args.sessions)
+        if not paths:
+            raise SystemExit(f"no m5final session matches {args.sessions}: run latency_floor --parts m5final on the "
+                             "T4, or read a provisional --prices stage-a")
+        sessions = [_read_json(Path(p)) for p in paths]
+    info = [{"session": x["session"], "gpu": x.get("environment", {}).get("gpu"), "quick": bool(x.get("quick")),
+             "started": x.get("started")} for x in sessions]
+    if not provisional and len(sessions) < GATE_SESSIONS:
+        problems.append(f"{len(sessions)} sessions (the spec needs {GATE_SESSIONS})")
+    if any(x["quick"] or "T4" not in str(x["gpu"]) for x in info):
+        problems.append("a session is not a full T4 run")
+    tables = latency_tables(args.latency, args.fixture)
+    dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split) if not args.no_expect else None
+    names = list(dataset.class_names) if dataset is not None else [str(c) for c in range(19)]
+    expected = {dataset.clip_id(i) for i in range(len(dataset))} if dataset is not None else None
+    label = args.label or (None if args.prior == "plain" else args.prior)
+    suffix = f"_{label}" if label else ""
+    fin_dir = Path(args.finalists_dir) if args.finalists_dir else PHASE2
+    out_dir = _stream_dir(args)
+    results: List[Dict[str, Any]] = []
+    refs: Dict[str, Any] = {}
+    checks: Dict[str, Any] = {}
+    complete = True
+    for model in _strs(args.models):
+        fpath = fin_dir / f"finalists_{model}{suffix}.json"
+        fdata = json.loads(fpath.read_text())
+        if fdata.get("gate_b") != "continue" and not args.fixture:
+            raise SystemExit(f"{fpath}: gate B is {fdata.get('gate_b')!r}: val is not read")
+        if fdata.get("prior", "plain") != args.prior:
+            raise SystemExit(f"{fpath} holds the {fdata.get('prior', 'plain')} prior's finalists, not {args.prior}")
+        fins = [f for f in fdata["finalists"] if f["model"] == model]
+        lines: Dict[str, Dict[str, Any]] = {}
+        for v in sorted({f["variant"] for f in fins}):
+            path = out_dir / f"stream_{args.split}_{model}_{v}.jsonl.gz"
+            if not path.is_file():
+                raise SystemExit(f"missing {path}: run `stream --split {args.split} --finalists`, then "
+                                 "`merge --kind stream`")
+            for r in read_lines(path):
+                if r.get("prior", "plain") != args.prior:
+                    raise SystemExit(f"{path.name} was run with the {r.get('prior', 'plain')} prior, not {args.prior}")
+                lines.setdefault(r["name"], {})[r["clip_id"]] = r
+        clip_ids = sorted(set().union(*lines.values())) if lines else []
+        if expected is not None and set(clip_ids) != expected:
+            complete = False
+        ref = refs[model] = fullframe_ref(Path(args.fullframe), model, args.split, tables, clip_ids)
+        e2e = None
+        if provisional:
+            e2e = e2e_curves(args.e2e, model, ref)
+            if e2e is None:
+                raise SystemExit(f"no latency_floor final session in {args.e2e} covers {model}'s scales")
+            prices: Dict[str, Any] = {"finalists": {}}
+            ff_med, ff_p95 = list(e2e["median_ms"]), list(e2e["p95_ms"])
+        else:
+            prices = final_prices(sessions, model)
+            missing = [x for x in ref["scales"] if x not in prices["fullframe"]]
+            if missing:
+                raise SystemExit(f"the m5final sessions have no full frame of {model} at scales {missing}")
+            ff_med = [prices["fullframe"][x]["median_ms"] for x in ref["scales"]]
+            ff_p95 = [prices["fullframe"][x]["p95_ms"] for x in ref["scales"]]
+        ref.update(median_ms=ff_med, p95_ms=ff_p95, curves={"mean": FullFrameCurve(ff_med, ref["miou"]),
+                                                            "p95": FullFrameCurve(ff_p95, ref["miou"])})
+
+        def per_clip(name: str) -> Any:
+            have = lines.get(name, {})
+            if set(have) != set(clip_ids):
+                raise SystemExit(f"{model} {name}: no val confusion for clips "
+                                 f"{sorted(set(clip_ids) - set(have))[:5]}")
+            return np.stack([np.asarray(have[c]["conf"], dtype=np.int64).sum(0) for c in clip_ids])
+
+        checks[model] = {}
+        for name in sorted(n for n in lines if "/uniform/" in n):
+            scale = float(next(iter(lines[name].values()))["config"]["scale"])
+            got = miou_of(per_clip(name).sum(0))
+            base = ref["miou"][ref["scales"].index(scale)] if scale in ref["scales"] else None
+            gap = None if base is None else got - base
+            checked = _split_variant(next(iter(lines[name].values()))["variant"])[0] in CHECKED_RESAMPLES
+            checks[model][name] = {"scale": scale, "miou": got, "fullframe_miou": base, "gap": gap,
+                                   "checked": checked, "tolerance": CHECK_TOLERANCE,
+                                   "ok": (gap is not None and abs(gap) <= CHECK_TOLERANCE + 1e-12) if checked else None}
+        for f in fins:
+            conf = per_clip(f["name"])
+            miou = miou_of(conf.sum(0))
+            if provisional:
+                c = {"name": f["name"], "config": f["config"], "variant": f["variant"], "miou": miou}
+                price_config(c, gate, e2e, model)
+                prices["finalists"][f["name"]] = {"median_ms": c["latency_paired"]["mean_ms"],
+                                                  "p95_ms": c["latency_paired"]["p95_ms"], "sessions": None}
+            price = prices["finalists"].get(f["name"])
+            if price is None:
+                raise SystemExit(f"the m5final sessions have no timing of {model} {f['name']}")
+            mean_ms, p95_ms = price["median_ms"], price["p95_ms"]
+            scale = float(f["config"]["scale"])
+            j = ref["scales"].index(scale) if scale in ref["scales"] else None
+            boot = {"mean": clip_bootstrap(conf, ref["clips"], ff_med, mean_ms, n=args.bootstrap, seed=0),
+                    "p95": clip_bootstrap(conf, ref["clips"], ff_p95, p95_ms, n=args.bootstrap, seed=0)}
+            results.append({
+                "model": model, "name": f["name"], "variant": f["variant"], "config": f["config"],
+                "reasons": f.get("reasons"), "train": f.get("train"), "miou": miou,
+                "per_class_iou": dict(zip(names, _iou(conf.sum(0)))),
+                "latency": {"mean_ms": mean_ms, "p95_ms": p95_ms, "sessions": price["sessions"]},
+                "judges": judge_readings(miou, mean_ms, p95_ms, ref),
+                "delta_vs_fullframe": None if j is None else miou - ref["miou"][j],
+                "bootstrap": boot})
+            d = results[-1]["judges"]["mean"]["delta_miou_at_equal_latency"]
+            lo, hi = boot["mean"]["delta_miou"]
+            print(f"[method5 report] {model} {f['name']}: mIoU {miou:.4f} at {mean_ms:.2f} ms, "
+                  f"{d * 100:+.2f} pts at equal latency [{lo * 100:+.2f}, {hi * 100:+.2f}]", flush=True)
+    rule = pass_rule(results)
+    if any(x["ok"] is False for c in checks.values() for x in c.values()) or not all(
+            any(x["checked"] for x in c.values()) for c in checks.values()):
+        problems.append("the pipeline check failed (an r1/r2 uniform row is not the full frame, or none was run)")
+    if not complete:
+        problems.append("val clips are missing")
+    verdict = None if problems else ("positive" if rule["positive"] else "negative")
+    state = ("NOT READ (" + "; ".join(problems) + ")") if problems else verdict.upper()
+    out = Path(args.out) if args.out else PHASE2 / (f"verdict_{args.split}{suffix}"
+                                                    + ("_provisional" if provisional else "") + ".json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({
+        "split": args.split, "prior": args.prior, "prices": args.prices, "verdict": verdict, "state": state,
+        "rule": "positive if, for at least one backbone, a finalist chosen on train has ΔmIoU above 0 against the "
+                "measured full-frame curve at equal mean latency on val, and the lower end of its clip-bootstrap 95% "
+                "interval is also above 0 (spec, stage C; prices: the m5final sessions)",
+        "pass_rule": rule, "sessions": info, "session_files": [_rel(Path(p)) for p in paths],
+        "clips": {m: len(r["clips"][0]) for m, r in refs.items()}, "bootstrap_resamples": args.bootstrap,
+        "pipeline_check": checks, "fullframe": {m: _public(r) for m, r in refs.items()},
+        "finalists": results}, indent=1, allow_nan=True) + "\n")
+    print(f"[method5 report] stage C: {state} -> {out}")
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     from warp.bound import RESAMPLE, RESAMPLES
 
@@ -1325,6 +1531,31 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                     help="The prior the stream files were run with (checked); scored: default folder "
                          "<split>_scored and label scored.")
     s2.set_defaults(fn=cmd_score2)
+
+    rp = sub.add_parser("report", help="Phase 2, stage C: the finalists once on val, priced by the m5final T4 "
+                                       "sessions, with clip-bootstrap intervals; the pass rule.")
+    common(rp)
+    rp.set_defaults(split="val")
+    rp.add_argument("--prior", default="scored", choices=PRIORS,
+                    help="The prior of the finalists and of the val files (default scored: the amendment).")
+    rp.add_argument("--sessions", default=M5_SESSIONS, help="Latency-floor sessions of the m5final part (glob, "
+                                                            "comma-separated).")
+    rp.add_argument("--fullframe", default=str(REPO_ROOT / "experiments" / "method2" / "fullframe"))
+    rp.add_argument("--latency", default=DEFAULT_LATENCY, help="Latency-floor JSONs (needed to load the full "
+                                                               "frame's confusions; its prices are replaced).")
+    rp.add_argument("--finalists-dir", default=None, help="Folder of finalists_<model>[_<label>].json "
+                                                          "(default results/method5/phase2).")
+    rp.add_argument("--label", default=None, help="Suffix of the finalists and verdict files (default: the prior's "
+                                                  "name when it is not plain).")
+    rp.add_argument("--prices", default="m5final", choices=("m5final", "stage-a"),
+                    help="m5final: the stage C T4 sessions (the verdict); stage-a: a provisional reading, priced "
+                         "paired from gate_a.json and the final sessions, never a verdict.")
+    rp.add_argument("--gate", default=str(PHASE2 / "gate_a.json"), help="gate_a.json (--prices stage-a).")
+    rp.add_argument("--e2e", default=DEFAULT_E2E, help="Latency-floor `final` sessions (--prices stage-a).")
+    rp.add_argument("--bootstrap", type=int, default=1000)
+    rp.add_argument("--out", default=None)
+    rp.add_argument("--no-expect", action="store_true", help="Do not load the dataset: the verdict is not read.")
+    rp.set_defaults(fn=cmd_report)
 
     c = sub.add_parser("cost", help="Phase 2, stage A: the warp step's overhead over the full frame on a T4, paired "
                                     "per session, against the phase 1 budget (gate A).")
