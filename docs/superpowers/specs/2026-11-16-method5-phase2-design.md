@@ -2,9 +2,9 @@
 
 Status: **draft, 2026-11-16. Nothing is built or run.** The user asked for
 this spec on 2026-11-16, after phase 1 passed, and settled its open points
-the same evening ([decisions](#the-users-decisions-2026-11-16)). Acceptance
-waits for the scale 1 magnification extension, which is running: if it
-gains, the scales of stage B change. The design is Claude's proposal; points
+the same evening ([decisions](#the-users-decisions-2026-11-16)). The scale 1
+magnification extension, run before acceptance, did not change the scales.
+Acceptance waits for the user's word on the last point (gate A straddle). The design is Claude's proposal; points
 marked *(my call)* are Claude's choices. Once the user accepts it, nothing
 here changes after the first stage B run, except in a dated "Amendments"
 section at the end, as for phase 1.
@@ -237,8 +237,7 @@ decision 2).
 - No training, neither of the backbone nor of a policy. A learned or RL
   policy comes only if this passes.
 - No free 2-D warp (research point 1), unless gate A leaves room (decision 3).
-- No scale 1 unless the magnification extension, now running, gains
-  (decision 4).
+- No scale 1: the magnification extension did not gain (decision 4).
 - No embedded card. Only the latency tables would change.
 
 ## Anti-goals
@@ -294,9 +293,13 @@ scored.
    result before the run.
 3. **Free 2-D warp: as drafted.** Bound it with an oracle only if gate A
    leaves room under the budget.
-4. **Scale 1 with magnification: run now, before acceptance.** It is the only
-   version that can move the operating point a T4 actually uses. If it gains,
-   the scales of stage B change. Submitted on 2026-11-16 (8 cluster jobs).
+4. **Scale 1 with magnification: run before acceptance.** It is the only
+   version that can move the operating point a T4 actually uses; if it
+   gained, the scales of stage B would change. **Read on 2026-11-16: no gain
+   worth reading** (PIDNet-S +0.36 points at best, BiSeNetV2 nothing above
+   0, [results](../../../results/method5/README.md#post-hoc-extension-scale-1-with-magnification)).
+   +0.36 is below what 50 val clips can resolve (the reason of the BiSeNetV2
+   0.5 row above), so the scales stay as drafted.
 5. **Both models.** With saliencies from the previous frame, the budgets on
    the measured curve are about 0.4 to 0.7 ms for PIDNet-S at scale 0.5 and
    about 0.65 to 0.75 ms for BiSeNetV2 at 0.375: each model has one scale
