@@ -999,6 +999,13 @@ def _oracle_mious(spec: str, model: str) -> Dict[str, float]:
     return out
 
 
+def _rel(path: Any) -> str:
+    """A path as written in a result file: relative to the repository and with forward slashes
+    when it is inside it, so that a file scored on Windows reads the same everywhere."""
+    p = Path(path).resolve()
+    return p.relative_to(REPO_ROOT).as_posix() if p.is_relative_to(REPO_ROOT) else p.as_posix()
+
+
 def cmd_score2(args: argparse.Namespace) -> int:
     """Stage B's reading of the merged stream files: per configuration (:func:`score_stream`),
     gate B per model and overall (:func:`gate_b`), and the finalists (:func:`finalists_of`)."""
@@ -1032,9 +1039,10 @@ def cmd_score2(args: argparse.Namespace) -> int:
         checks = {s["variant"]: s["pipeline_check"] for s in scored}
         complete = expected is not None and clip_sets[0] == expected
         g = gates[model] = gate_b(configs, checks, complete, len(clip_sets[0]))
-        payload = {"split": args.split, "model": model, "gate_a": str(args.gate), "fullframe": _public(ref),
+        payload = {"split": args.split, "model": model, "gate_a": _rel(args.gate), "fullframe": _public(ref),
                    "fullframe_e2e": {k: v for k, v in e2e.items() if k != "curves"}, "gate_b": g,
-                   "pipeline_check": checks, "files": [s["file"] for s in scored], "positions": scored[0]["positions"],
+                   "pipeline_check": checks, "files": [_rel(s["file"]) for s in scored],
+                   "positions": scored[0]["positions"],
                    "configs": configs}
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / f"score2_{args.split}_{model}.json").write_text(json.dumps(payload, indent=1, allow_nan=True) + "\n")

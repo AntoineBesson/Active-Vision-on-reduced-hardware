@@ -1,7 +1,7 @@
 {
  "split": "train_all",
  "model": "bisenetv2",
- "gate_a": "C:\\Users\\trash\\Active-Vision-on-reduced-hardware\\results\\method5\\phase2\\gate_a.json",
+ "gate_a": "results/method5/phase2/gate_a.json",
  "fullframe": {
   "scales": [
    1.0,
@@ -142,8 +142,8 @@
   }
  },
  "files": [
-  "C:\\Users\\trash\\Active-Vision-on-reduced-hardware\\experiments\\method5\\phase2\\train_all\\stream_train_all_bisenetv2_r2u1.jsonl.gz",
-  "C:\\Users\\trash\\Active-Vision-on-reduced-hardware\\experiments\\method5\\phase2\\train_all\\stream_train_all_bisenetv2_r3u1.jsonl.gz"
+  "experiments/method5/phase2/train_all/stream_train_all_bisenetv2_r2u1.jsonl.gz",
+  "experiments/method5/phase2/train_all/stream_train_all_bisenetv2_r3u1.jsonl.gz"
  ],
  "positions": [
   4,

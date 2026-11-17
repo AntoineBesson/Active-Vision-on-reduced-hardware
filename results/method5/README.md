@@ -363,6 +363,31 @@ phase 1 budget:
   B and S from the network's own low-resolution output), timed by the same
   gate. Not built; what it would be is in [TRIES](TRIES.md).
 
+## Phase 2, stage B: the static prior P on train, in the closed loop
+
+The 400 `train_all` clips, P only, both resamplings gate A kept (`r2u1`: the
+baseline's antialiased filter; `r3u1`: bilinear, not antialiased), scored
+against the measured end-to-end full-frame curve (`method5 score2`,
+`phase2/score2_train_all_<model>.json`, `gate_b_train_all.json`,
+`finalists_<model>.json`).
+
+**Gate B, as the spec reads it: continue, for both models**, best +1.94
+points at equal latency (PIDNet-S) and +1.78 (BiSeNetV2), both at 0.375 with
+the bilinear resampling. But most of that is not the warp:
+
+- **The warp's own gain** (P against the uniform row of the same variant,
+  which costs the same) is +0.05 to +0.49 points for PIDNet-S and +0.30 to
+  +0.80 for BiSeNetV2, in-sample.
+- **The bilinear resize alone** (the `r3u1` uniform row, no warp) is already
+  +1.87 / +1.49 points above the curve at 0.375: it is cheaper than the full
+  frame's antialiased resize. A full frame could use it too.
+- **The pricing** compares stage A's sessions with the `final` sessions,
+  whose full frame ran 1 to 3 % slower: every configuration gets 0.03 to
+  0.17 ms off. Priced paired, the exact filter (`r2u1`) leaves +0.47 points
+  for BiSeNetV2 at 0.25 and +0.17 for PIDNet-S at 0.5.
+
+Stage C waits for the user's decision. Details: [TRIES](TRIES.md).
+
 ## Files
 
 - Code: `src/warp/grid.py` (densities, forward and inverse maps, warp, unwarp),

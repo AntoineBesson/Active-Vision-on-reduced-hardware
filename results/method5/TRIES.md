@@ -659,3 +659,113 @@ scale; P is the share of pixels where they differ, per 16-px cell, over the
   resolution goes to pixels that are not scored. This is the spec's P (the
   mean of phase 1's E, which counts every pixel, as the phase 1 oracle did),
   so it is not changed; it is noted to read stage B.
+
+## 2026-11-17 — phase 2, stage B on the 400 train_all clips: gate B says continue, but most of the gain at equal latency is not the warp's
+
+Code: plan Tasks 5 and 6 (`ce0a680`, `e2410ca`, `70f9248`). Grid as gate A
+and the user left it: P only, α 0.1 / 0.15 / 0.25, σ 1 / 4, the uniform row
+at each scale, variants `r2u1` (the baseline's antialiased filter as two
+matrix products, `grid_sample` unwarp) and `r3u1` (bilinear `grid_sample`,
+not antialiased). PIDNet-S 18 + 3 rows per variant, BiSeNetV2 12 + 2. A fixed
+warp does not depend on earlier frames, so the runner read the 6 labelled
+frames of each clip, not all 30 (same confusions, tested).
+
+Runs approved by the user ("stage B go"; "if it passes commit the scores at
+the end"), Tesla P100, cluster checkout `f02647f`:
+
+- **Pipeline check:** jobs 1108154 (PIDNet-S) and 1108155 (BiSeNetV2), the
+  first 5 clips of chunk 0. It passed.
+- **400 clips:** jobs 1108173 to 1108180, 30-minute limit. All ended with
+  `JOB_OK` on the first try, 7:09 to 9:12 per job, 1.9 to 2.6 s per clip and
+  variant.
+- Merged and scored on the laptop; scores, gate B and finalists committed in
+  `dcbff92`.
+
+**Pipeline check (400 clips):** every `r2u1` uniform row equals the full frame
+(|gap| ≤ 2.3e-7 mIoU). The `r3u1` uniform rows, reported only: PIDNet-S
+−0.21 / −0.22 / −0.12 points at 0.25 / 0.375 / 0.5, BiSeNetV2 +0.13 / +0.27
+at 0.25 / 0.375.
+
+**Gate B, as the spec reads it: continue, for both models.** 21 of PIDNet-S's
+36 warped configurations and 11 of BiSeNetV2's 24 lie above the measured
+full-frame curve at equal median latency. The best of each model is
+`c0.375/P/a0.15/s1/r3u1`: +1.94 points for PIDNet-S and +1.78 for
+BiSeNetV2.
+
+**What that number is made of.** Three effects, read from the committed
+scores and `gate_a.json`:
+
+1. **The warp's own gain is small.** The warp is P minus the uniform row of
+   the same variant and scale, which costs exactly the same:
+
+   | | `r2u1` best warp | `r3u1` best warp | phase 1 oracle, same α and σ |
+   |---|---|---|---|
+   | PIDNet-S 0.25 | +0.25 (a0.25 s4) | +0.05 | +1.18 |
+   | PIDNet-S 0.375 | +0.14 (a0.15 s1) | +0.07 | +0.92 |
+   | PIDNet-S 0.5 | +0.49 (a0.15 s4) | +0.46 | +1.00 |
+   | BiSeNetV2 0.25 | +0.69 (a0.15 s4) | +0.80 | +0.87 |
+   | BiSeNetV2 0.375 | +0.36 (a0.25 s4) | +0.30 | +0.73 |
+
+   This is in-sample: P was fitted on these clips.
+
+2. **Most of the rest is a cheaper resize, not the warp.** The `r3u1` uniform
+   row, with no warp at all, already lies above the curve: +1.87 points for
+   PIDNet-S at 0.375 and +1.49 for BiSeNetV2. That row is a full frame
+   resized with a bilinear `grid_sample` instead of the antialiased
+   `F.interpolate`, 0.08 to 0.20 ms cheaper in stage A. A full-frame baseline
+   could make the same swap.
+
+3. **The pricing gives every configuration a discount.** The spec prices
+   each configuration at W(c) from the stage A sessions and compares it with
+   the full frame of the `final` sessions. But in the stage A sessions, the
+   full frame itself ran 0.03 to 0.17 ms (1 to 3 %) faster than in the
+   `final` sessions, at every scale:
+
+   | | 0.25 | 0.375 | 0.5 |
+   |---|---|---|---|
+   | PIDNet-S, stage A / final | 3.967 / 3.996 | 5.113 / 5.251 | 6.913 / 7.044 |
+   | BiSeNetV2, stage A / final | 4.162 / 4.270 | 6.446 / 6.615 | |
+
+   That difference comes off every configuration's price.
+
+**Priced paired instead.** Each configuration costs the `final` full frame at
+its scale plus its paired stage A overhead. On this pricing, the `r2u1`
+uniform rows, which output exactly the full frame, sit 0.18 to 0.46 points
+below the curve: that is the cost of the matrix resampling. ΔmIoU at equal
+latency (points):
+
+| | `r2u1` uniform | `r2u1` best warp | `r3u1` uniform | `r3u1` best warp |
+|---|---|---|---|---|
+| PIDNet-S 0.25 | −0.41 | −0.16 | no reading | no reading |
+| PIDNet-S 0.375 | −0.46 | −0.32 | +0.92 | +0.99 |
+| PIDNet-S 0.5 | −0.32 | +0.17 | +0.35 | +0.82 |
+| BiSeNetV2 0.25 | −0.21 | +0.47 | no reading | no reading |
+| BiSeNetV2 0.375 | −0.18 | +0.18 | +0.93 | +1.23 |
+
+- **No reading** means the configuration costs less than the full frame at
+  0.25, the cheapest point of the curve. This is the case for every `r3u1`
+  configuration at 0.25. On the spec's pricing, the `r2u1` configurations of
+  BiSeNetV2 at 0.25 have no reading either.
+- **What survives with the exact filter and a paired price:**
+  - BiSeNetV2 at 0.25, +0.47 (a0.15 s4), with 10 configurations above the
+    curve;
+  - PIDNet-S at 0.5, +0.17 (a0.15 s4), with 3 configurations above.
+
+**Other readings:**
+- **Share of the oracle's gain kept,** best `r2u1` warp per scale:
+  - PIDNet-S: 0.21 / 0.15 / 0.49;
+  - BiSeNetV2: 0.79 / 0.49.
+- **mIoU by labelled position** rises along the clip for every row, the
+  uniform ones included. This comes from the clips' content: a fixed warp
+  cannot drift.
+- **Finalists, as the spec picks them:**
+  - PIDNet-S, 6: c0.25 a0.25 s4, c0.375 a0.15 s1 and c0.5 a0.15 s4, each in
+    both variants;
+  - BiSeNetV2, 2, both `r3u1`: c0.25 a0.15 s4 and c0.375 a0.15 s1.
+
+**Stage C (val) is not started.** The user decides first how it reads these
+three effects.
+
+Also: `score2` wrote absolute laptop paths into its `gate_a` and `files`
+fields. The code now writes repository-relative paths, and the two committed
+files were changed in those fields only; no number changed.
