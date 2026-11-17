@@ -24,15 +24,25 @@ only, the spec's first reading) and the full frame's measured end-to-end latency
 
 Train only: the bound is a go/no-go check, val is never read here. ``--fixture`` runs on the
 synthetic fixture with the dummy backbone (a smoke test, not results).
+
+Phase 2 (spec docs/superpowers/specs/2026-11-16-method5-phase2-design.md):
+
+    python -m scripts.method5 cost --sessions "results/method5/phase2/latency_floor_m5w-s*.json"   # gate A
+
+``cost`` reads the latency-floor sessions of the ``warp`` part (Colab T4): per model, scale and
+variant of the warp step, the overhead over the full frame paired within each session, against
+the phase 1 budget at that scale, and gate A's verdict (``results/method5/phase2/gate_a.json``).
 """
 
 from __future__ import annotations
 
 import argparse
+import glob
 import gzip
 import itertools
 import json
 import math
+import statistics
 import sys
 import time
 import zlib
@@ -410,6 +420,169 @@ def cmd_score(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Phase 2, stage A: the cost of the warp step on a T4 (gate A)
+# --------------------------------------------------------------------------- #
+PHASE2 = REPO_ROOT / "results" / "method5" / "phase2"
+STAGE_B = {"pidnet_s": (0.25, 0.375, 0.5), "bisenetv2": (0.25, 0.375)}  # spec decisions 4 and 5
+GATE_SESSIONS = 3  # the spec: three separate Colab T4 sessions
+COST_SCALES = (0.25, 0.375, 0.5)
+
+
+def _read_json(path: Path) -> Any:
+    with (gzip.open(path, "rt") if path.suffix == ".gz" else open(path)) as f:
+        return json.load(f)
+
+
+def _score_file(scores: Path, model: str) -> Path:
+    for name in (f"score_train_all_{model}.json.gz", f"score_train_all_{model}.json"):
+        if (scores / name).is_file():
+            return scores / name
+    raise SystemExit(f"no phase 1 score of {model} in {scores}")
+
+
+def stage_a_budgets(scores: Path, e2e: str, scales: Sequence[float] = COST_SCALES) -> Dict[str, Dict[str, Any]]:
+    """Per ``model/scale``: phase 1's budget, the time a real policy may spend per frame. The
+    registered grid's best ``now`` configuration at that scale (``scores``: its committed score
+    files, alpha 0.25 / 0.5 / 0.75) read on the measured end-to-end full-frame curve
+    (``latency_floor_final`` sessions, :func:`scripts.method4.e2e_curves`): the latency at which
+    the curve reaches its mIoU (frontier), minus the full frame's at the same scale."""
+    out: Dict[str, Dict[str, Any]] = {}
+    for model in STAGE_B:
+        data = _read_json(_score_file(scores, model))
+        curves = e2e_curves(e2e, model, data["fullframe"])
+        if curves is None:
+            raise SystemExit(f"no latency_floor final session in {e2e} covers {model}'s scales")
+        for c in scales:
+            cands = [x for x in data["configs"] if x["config"].get("alpha", 0.0) > 0
+                     and x["config"].get("timing") == RULE_TIMING and float(x["config"]["scale"]) == c]
+            if not cands:
+                raise SystemExit(f"no phase 1 configuration of {model} at scale {c:g}")
+            best = max(cands, key=lambda x: x["miou"])
+            ff_ms = curves["median_ms"][curves["scales"].index(c)]
+            out[f"{model}/{c:g}"] = {
+                "model": model, "scale": c, "best": best["name"], "best_miou": best["miou"],
+                "fullframe_miou": data["fullframe"]["miou"][data["fullframe"]["scales"].index(c)],
+                "fullframe_e2e_ms": ff_ms,
+                "budget_ms": curves["curves"]["mean"].latency_at(best["miou"], frontier=True) - ff_ms,
+                "in_stage_b": c in STAGE_B[model]}
+    return out
+
+
+def variant_of(r: Dict[str, Any]) -> str:
+    """A variant of the warp step, as gate A reads it: resampling, unwarp, saliency, rounds."""
+    return f"{r['resample']}{r['unwarp']}/{r['saliency']}/n{r['rounds']}"
+
+
+def _status(lo: float, hi: float, budget: float) -> str:
+    if hi <= budget:
+        return "fits"
+    return "straddles" if lo <= budget else "over"
+
+
+def gate_a(sessions: Sequence[Dict[str, Any]], budgets: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """The spec's gate A on latency-floor sessions of the ``warp`` part.
+
+    Per session, each W case is paired with the full frame of its own chunk (same model and
+    scale, timed in the same interleaved rounds): Δs = median W - median FF. Per variant: Δ, the
+    median of the Δs, their range, and ``fits`` (largest Δs within the budget), ``straddles``
+    (smallest within, largest over) or ``over`` (smallest over). A (model, scale) takes the best
+    status of its variants and keeps the variants that fit or straddle. Verdict: ``stop`` when
+    every (model, scale) of stage B is ``over``, else ``continue``; not read (None) without
+    :data:`GATE_SESSIONS` complete T4 sessions."""
+    rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    info = []
+    for sess in sessions:
+        recs = [r for r in sess["records"].get("warp", []) if r.get("level") == "graph"]
+        ff = {(r["model"], float(r["scale"]), r["chunk"]): r for r in recs if r["kind"] == "fullframe"}
+        for r in recs:
+            if r["kind"] != "warp":
+                continue
+            f = ff.get((r["model"], float(r["scale"]), r["chunk"]))
+            if f is None:
+                raise ValueError(f"session {sess['session']}: {r['name']} has no full frame in its chunk {r['chunk']}")
+            w, b = r["cuda_event"], f["cuda_event"]
+            rows.setdefault((f"{r['model']}/{float(r['scale']):g}", variant_of(r)), []).append(
+                {"session": sess["session"], "chunk": r["chunk"], "w_ms": w["median_ms"], "ff_ms": b["median_ms"],
+                 "w_p95_ms": w["p95_ms"], "ff_p95_ms": b["p95_ms"], "delta_ms": w["median_ms"] - b["median_ms"]})
+        env = sess.get("environment", {})
+        info.append({"session": sess["session"], "gpu": env.get("gpu"), "quick": bool(sess.get("quick")),
+                     "started": sess.get("started"), "t4": "T4" in str(env.get("gpu")),
+                     "sm_clock_mhz": sess.get("session_telemetry", {}).get("sm_clock_mhz")})
+    n = len(sessions)
+    variants: Dict[str, Dict[str, Any]] = {}
+    for (group, variant), per in sorted(rows.items()):
+        if group not in budgets:
+            raise ValueError(f"no phase 1 budget for {group}")
+        deltas = [p["delta_ms"] for p in per]
+        lo, hi, budget = min(deltas), max(deltas), budgets[group]["budget_ms"]
+        full = len(per) == n
+        variants.setdefault(group, {})[variant] = {
+            "delta_ms": statistics.median(deltas), "delta_range_ms": [lo, hi], "sessions": len(per),
+            "w_ms": statistics.median(p["w_ms"] for p in per), "ff_ms": statistics.median(p["ff_ms"] for p in per),
+            "w_p95_ms": statistics.median(p["w_p95_ms"] for p in per),
+            "ff_p95_ms": statistics.median(p["ff_p95_ms"] for p in per),
+            "status": _status(lo, hi, budget) if full else None, "per_session": per}
+    groups: Dict[str, Dict[str, Any]] = {}
+    for group, b in budgets.items():
+        vs = variants.get(group, {})
+        read = {k: v for k, v in vs.items() if v["status"] is not None}
+        cheapest = min(read, key=lambda k: read[k]["delta_ms"]) if read else None
+        statuses = {v["status"] for v in read.values()}
+        status = next((s for s in ("fits", "straddles", "over") if s in statuses), None)
+        groups[group] = {**b, "status": status, "cheapest": cheapest,
+                         "cheapest_delta_ms": None if cheapest is None else read[cheapest]["delta_ms"],
+                         "kept": sorted(k for k, v in read.items() if v["status"] in ("fits", "straddles")),
+                         "variants": vs}
+    stage_b = [g for g, v in groups.items() if v["in_stage_b"]]
+    problems = []
+    if n < GATE_SESSIONS:
+        problems.append(f"{n} sessions (the spec needs {GATE_SESSIONS})")
+    if any(not s["t4"] or s["quick"] for s in info):
+        problems.append("a session is not a full T4 run")
+    if any(groups[g]["status"] is None or any(v["status"] is None for v in groups[g]["variants"].values())
+           for g in stage_b):
+        problems.append("a variant is missing from a session")
+    if problems:
+        verdict, state, goes_on = None, "not read (" + "; ".join(problems) + ")", []
+    elif all(groups[g]["status"] == "over" for g in stage_b):
+        verdict, state, goes_on = "stop", "STOP: even the cheapest variant is over the budget everywhere", []
+    else:
+        verdict = "continue"
+        goes_on = [{"group": g, "status": groups[g]["status"], "variants": groups[g]["kept"],
+                    "note": "not decided by the timing (the sessions straddle the budget)"
+                    if groups[g]["status"] == "straddles" else None}
+                   for g in stage_b if groups[g]["status"] != "over"]
+        state = "CONTINUE with " + ", ".join(f"{x['group']} ({x['status']})" for x in goes_on)
+    return {"rule": "gate A (spec, stage A): Δs = median W - median FF per session, paired within its chunk; stop "
+                    "when the smallest Δs of every variant is over the phase 1 budget at every model and scale of "
+                    "stage B; a straddle goes on, not decided by the timing",
+            "sessions": info, "verdict": verdict, "state": state, "goes_on": goes_on, "groups": groups}
+
+
+def cmd_cost(args: argparse.Namespace) -> int:
+    paths = sorted(p for part in args.sessions.split(",")
+                   for p in glob.glob(part if Path(part).is_absolute() else str(REPO_ROOT / part)))
+    if not paths:
+        raise SystemExit(f"no session matches {args.sessions}")
+    sessions = [_read_json(Path(p)) for p in paths]
+    out = gate_a(sessions, stage_a_budgets(Path(args.scores), args.e2e))
+    out["files"] = [str(Path(p).relative_to(REPO_ROOT)) if Path(p).is_relative_to(REPO_ROOT) else p for p in paths]
+    dest = Path(args.out)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(out, indent=1) + "\n")
+    for group, g in out["groups"].items():
+        tag = "" if g["in_stage_b"] else "  (not in stage B)"
+        print(f"[method5 cost] {group}: budget {g['budget_ms']:.3f} ms, status {g['status']}, cheapest {g['cheapest']}"
+              + ("" if g["cheapest_delta_ms"] is None else f" (Δ {g['cheapest_delta_ms']:+.3f} ms)") + tag)
+        for name, v in sorted(g["variants"].items(), key=lambda kv: kv[1]["delta_ms"]):
+            lo, hi = v["delta_range_ms"]
+            print(f"    {name:18s} Δ {v['delta_ms']:+.3f} ms [{lo:+.3f}, {hi:+.3f}]  W {v['w_ms']:.2f}  "
+                  f"FF {v['ff_ms']:.2f}  {v['status']}")
+    print(f"[method5 cost] gate A: {out['state']} -> {dest}")
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     from warp.bound import RESAMPLE, RESAMPLES
 
@@ -458,6 +631,16 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     s.add_argument("--no-expect", action="store_true",
                    help="Do not load the dataset (clip list, class names): the verdict is then not read.")
     s.set_defaults(fn=cmd_score)
+
+    c = sub.add_parser("cost", help="Phase 2, stage A: the warp step's overhead over the full frame on a T4, paired "
+                                    "per session, against the phase 1 budget (gate A).")
+    c.add_argument("--sessions", default=str((PHASE2 / "latency_floor_m5w-s*.json").relative_to(REPO_ROOT)),
+                   help="Latency-floor sessions of the `warp` part (glob, comma-separated).")
+    c.add_argument("--scores", default=str(REPO_ROOT / "results" / "method5"),
+                   help="Folder of the phase 1 registered scores (the budget).")
+    c.add_argument("--e2e", default=DEFAULT_E2E, help="Latency-floor `final` sessions: the measured full-frame curve.")
+    c.add_argument("--out", default=str(PHASE2 / "gate_a.json"))
+    c.set_defaults(fn=cmd_cost)
     return p.parse_args(argv)
 
 

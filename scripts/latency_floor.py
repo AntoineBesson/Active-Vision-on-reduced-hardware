@@ -34,6 +34,18 @@ eager for the other two):
 * ``reuse_e2e`` a few whole Method 3 frames with real backbones, to check that
                the parts add up.
 
+Method 5 phase 2 part (``--parts warp``, graph level only; spec
+docs/superpowers/specs/2026-11-16-method5-phase2-design.md, stage A):
+
+* ``warp``      per model and scale 0.25 / 0.375 / 0.5, the full frame of the
+               ``final`` part and one frame of the warp method
+               (``warp.policy.WarpStep``) for every resampling (r1, r2, r3) x
+               unwarp (u1, u2) x saliency (B, S, U, P) with 50 density rounds,
+               and B and U with 10 rounds on r2/u2. Each (model, scale) group is
+               timed in its own chunks of interleaved rounds, the full frame in
+               every chunk, so that gate A reads paired differences
+               (``python -m scripts.method5 cost``).
+
 Every part runs at two runtime levels, the same for all methods within a
 level: ``eager`` (cuDNN autotuning on) and ``graph`` (the whole call captured
 in a CUDA graph, which removes per-kernel launch overhead). GFLOPs are counted
@@ -91,13 +103,14 @@ FULL = dict(
     homographies=["orb", "iclk"],
     reuse_e2e=[("pidnet_s", 384, 2, None), ("pidnet_s", 384, 8, None), ("bisenetv2", 384, 4, None),
                ("pidnet_s", 256, 12, 0.25)],  # (model, glimpse size, k, 3b context scale)
+    warp_scales=[0.25, 0.375, 0.5],
     rounds=5, iters=40, warmup=20,
 )
 QUICK = dict(
     full_scales=[0.25, 1.0], squares=[256, 512], batch_sizes=[384], ks=[1, 4], max_batch_pixels=8 * 768 * 768,
     ctx_scales=[0.25], glimpses=[384], overhead_ks=[4], selections=["topk", "greedy"],
     e2e=[(0.25, 384, 4)], batchk_sizes=[384], reuse_scales=[0.25, 1.0], homographies=["orb", "iclk"],
-    reuse_e2e=[("pidnet_s", 384, 2, None)], rounds=2, iters=10, warmup=5,
+    reuse_e2e=[("pidnet_s", 384, 2, None)], warp_scales=[0.25], rounds=2, iters=10, warmup=5,
 )
 
 
@@ -109,7 +122,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument("--levels", default="eager,graph", help="Comma list of runtime levels: eager, graph.")
     p.add_argument("--parts", default="area,batch,overhead,e2e",
                    help="Comma list of parts: area, batch, overhead, e2e, final (needs --finalists); "
-                        "method 3: batchk, reuse, reuse_e2e.")
+                        "method 3: batchk, reuse, reuse_e2e; method 5 phase 2: warp.")
     p.add_argument("--finalists", default=str(REPO_ROOT / "results" / "method2" / "finalists.json"),
                    help="Method 2 finalists to time with the full-frame curve (part 'final').")
     return p.parse_args(argv)
@@ -399,8 +412,6 @@ def final_cases(models: Dict[str, torch.nn.Module], finalists: Path) -> List[Dic
     Both sides run end to end from a full-resolution frame (resize, network,
     upsampling to the frame, argmax), so the comparison is like for like.
     """
-    from models.utils import upsample_logits
-
     cases = []
     x = frame_of((1, 3, *FRAME))
     for c in final_configs(finalists):
@@ -410,17 +421,139 @@ def final_cases(models: Dict[str, torch.nn.Module], finalists: Path) -> List[Dic
                       "train_miou": c["finalist"].get("miou"), "predicted_median_ms": c["finalist"].get("latency_ms"),
                       "gflops": gflops(seg, x), "fn": seg, "x": x})
     for model, scale in fullframe_points():
-        net = models[model]
-
-        def full(frame, net=net, scale=scale):
-            small = downsample(frame, scale)
-            logits = net(small)
-            return upsample_logits(logits, FRAME, net.output_stride, net.align_corners,
-                                   input_size=tuple(small.shape[-2:])).argmax(1)
-
+        full = fullframe_fn(models[model], scale)
         cases.append({"name": f"final/fullframe/{model}/{scale:g}", "kind": "fullframe", "model": model,
                       "scale": scale, "gflops": gflops(full, x), "fn": full, "x": x})
     return cases
+
+
+def fullframe_fn(net: torch.nn.Module, scale: float) -> Callable[[torch.Tensor], torch.Tensor]:
+    """The full frame end to end at ``scale``: antialiased resize, network, upsampling of the
+    logits to the frame (half precision throughout), argmax."""
+    from models.utils import upsample_logits
+
+    def full(frame: torch.Tensor) -> torch.Tensor:
+        small = downsample(frame, scale)
+        logits = net(small)
+        return upsample_logits(logits, FRAME, net.output_stride, net.align_corners,
+                               input_size=tuple(small.shape[-2:])).argmax(1)
+
+    return full
+
+
+# --------------------------------------------------------------------------- #
+# Method 5 phase 2, stage A (part "warp")
+# --------------------------------------------------------------------------- #
+WARP_ALPHA = 0.25  # the cost does not depend on alpha
+WARP_SIGMA = 4.0  # the larger smoothing kernel of the grid
+WARP_ROUNDS = 50  # density rounds: phase 1's worst case
+WARP_FEW_ROUNDS = 10  # and a cheaper count, to see what the density step costs
+
+
+def warp_specs(scales: List[float], quick: bool = False) -> List[List[Dict[str, Any]]]:
+    """The cases of the ``warp`` part, without their functions: one group per (model, scale),
+    the full frame first, then each W variant (resample, unwarp, saliency, rounds). ``quick``:
+    two variants per group (a smoke test)."""
+    from warp.policy import POLICY_KINDS, RESAMPLES, UNWARPS, StepConfig
+
+    variants = ([(r, u, k, WARP_ROUNDS) for r in RESAMPLES for u in UNWARPS for k in POLICY_KINDS]
+                + [("r2", "u2", k, WARP_FEW_ROUNDS) for k in ("B", "U")])
+    if quick:
+        variants = [("r2", "u2", "B", WARP_ROUNDS), ("r3", "u1", "P", WARP_ROUNDS)]
+    groups = []
+    for model in MODELS:
+        for scale in scales:
+            group = f"{model}/{scale:g}"
+            cases = [{"name": f"warp/fullframe/{group}", "kind": "fullframe", "model": model, "scale": float(scale),
+                      "group": group}]
+            for r, u, k, n in variants:
+                cfg = StepConfig(float(scale), k, WARP_ALPHA, WARP_SIGMA, r, u, rounds=n)
+                cases.append({"name": f"warp/{model}/{cfg.name()}", "kind": "warp", "model": model,
+                              "scale": float(scale), "group": group, "resample": r, "unwarp": u, "saliency": k,
+                              "rounds": n, "alpha": WARP_ALPHA, "sigma": WARP_SIGMA, "taps": cfg.tap_count()})
+            groups.append(cases)
+    return groups
+
+
+def warp_cases(models: Dict[str, torch.nn.Module], s: Dict[str, Any],
+               quick: bool = False) -> List[List[Dict[str, Any]]]:
+    """:func:`warp_specs` with their functions: the full frame (:func:`fullframe_fn`) and
+    ``WarpStep(frame, state)`` in half precision, with a fixed random state and prior (the
+    cost depends on shapes, not values: the density runs a fixed number of rounds)."""
+    from warp.oracle import SAL_CELL
+    from warp.policy import StepConfig, WarpStep
+
+    x = frame_of((1, 3, *FRAME))
+    g = torch.Generator(device="cpu").manual_seed(1)
+    cells = (FRAME[0] // SAL_CELL, FRAME[1] // SAL_CELL)
+    state = (torch.rand(cells, generator=g) ** 4).cuda()
+    prior = (torch.rand(cells, generator=g) ** 4).cuda()
+    groups = []
+    for specs in warp_specs(s["warp_scales"], quick):
+        cases = []
+        for c in specs:
+            net = models[c["model"]]
+            if c["kind"] == "fullframe":
+                fn = fullframe_fn(net, c["scale"])
+            else:
+                cfg = StepConfig(c["scale"], c["saliency"], c["alpha"], c["sigma"], c["resample"], c["unwarp"],
+                                 rounds=c["rounds"])
+                step = WarpStep(net, cfg, prior if c["saliency"] == "P" else None, precision="fp16")
+                fn = (lambda st: lambda frame: st(frame, state))(step)
+            cases.append({**c, "gflops": gflops(fn, x), "fn": fn, "x": x})
+        groups.append(cases)
+    return groups
+
+
+def time_groups(groups: List[List[Dict[str, Any]]], level: str, s: Dict[str, Any], tel: Optional[GpuTelemetry],
+                memory_fraction: float = 0.6, capture: Optional[Callable[[Dict[str, Any]], Callable[[], Any]]] = None,
+                benchmark: Optional[Callable[[Dict[str, Callable[[], Any]]], Dict[str, Dict[str, Any]]]] = None,
+                memory_full: Optional[Callable[[], bool]] = None,
+                release: Optional[Callable[[], None]] = None) -> List[Dict[str, Any]]:
+    """:func:`time_part` for groups whose first case is the reference of the others: a chunk of
+    interleaved rounds never mixes groups, and a group that does not fit in ``memory_fraction``
+    of the GPU is split with its reference repeated in each part, so that every case is timed in
+    the same rounds as its reference (gate A reads paired differences). ``capture``,
+    ``benchmark``, ``memory_full`` and ``release`` replace the GPU calls (tests)."""
+    if capture is None:
+        if level == "graph":
+            capture = lambda c: cuda_graph(c["fn"], c["x"])  # noqa: E731
+        else:
+            capture = lambda c: (lambda fn, x: lambda: fn(x))(c["fn"], c["x"])  # noqa: E731
+    if benchmark is None:
+        benchmark = lambda calls: interleaved_benchmark(calls, rounds=s["rounds"], iters_per_round=s["iters"],  # noqa: E731
+                                                        warmup=s["warmup"], telemetry=tel)
+    if memory_full is None:
+        total = torch.cuda.get_device_properties(0).total_memory
+        memory_full = lambda: level == "graph" and torch.cuda.memory_reserved() > memory_fraction * total  # noqa: E731
+    if release is None:
+        def release() -> None:
+            torch.cuda.synchronize()
+            torch.cuda.empty_cache()
+    out: List[Dict[str, Any]] = []
+    chunk_id = 0
+    for group in groups:
+        ref, rest, i = group[0], group[1:], 0
+        while True:
+            chunk, calls = [ref], {ref["name"]: capture(ref)}
+            while i < len(rest):
+                c = rest[i]
+                calls[c["name"]] = capture(c)
+                chunk.append(c)
+                i += 1
+                if i < len(rest) and memory_full():
+                    break
+            res = benchmark(calls)
+            for c in chunk:
+                rec = {k: v for k, v in c.items() if k not in ("fn", "x")}
+                rec.update({"level": level, "chunk": chunk_id, **res[c["name"]]})
+                out.append(rec)
+            del calls, res
+            release()
+            chunk_id += 1
+            if i >= len(rest):
+                break
+    return out
 
 
 def compare_final(records: Dict[str, List[Dict[str, Any]]]) -> None:
@@ -489,9 +622,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                     "overhead": lambda: overhead_cases(s), "e2e": lambda: e2e_cases(models, s),
                     "final": lambda: final_cases(models, Path(args.finalists)),
                     "batchk": lambda: batchk_cases(models, s), "reuse": lambda: reuse_cases(s),
-                    "reuse_e2e": lambda: reuse_e2e_cases(models, s)}
+                    "reuse_e2e": lambda: reuse_e2e_cases(models, s),
+                    "warp": lambda: warp_cases(models, s, args.quick)}
         for part in parts:
             cases = builders[part]()
+            if part == "warp":  # graph level only: the method is timed as it would run
+                print(f"[latency_floor] warp / graph: {sum(len(g) for g in cases)} configurations in "
+                      f"{len(cases)} groups", flush=True)
+                records.setdefault("warp", []).extend(time_groups(cases, "graph", s, tel))
+                del cases
+                continue
             # batchk extends the batch table; the reuse ops cannot be captured in a CUDA graph
             key, part_levels = {"batchk": ("batch", ["graph"]), "reuse": ("reuse", ["eager"]),
                                 "reuse_e2e": ("reuse_e2e", ["eager"])}.get(part, (part, levels))
