@@ -212,12 +212,15 @@ def _axis_filter(density: torch.Tensor, n_src: int, n_out: int,
     return idx.clamp(max=n_src - 1).long(), w / w.sum(1, keepdim=True)
 
 
-def axis_matrix(density: torch.Tensor, n_src: int, n_out: int, taps: Optional[int] = None) -> torch.Tensor:
-    """(n_out, n_src) float64 matrix of :func:`_axis_filter`'s weights: row j holds output pixel
-    j's taps, so that resampling an axis is one matrix product (phase 2, variant r2)."""
+def axis_matrix(density: torch.Tensor, n_src: int, n_out: int, taps: Optional[int] = None,
+                dtype: torch.dtype = torch.float64) -> torch.Tensor:
+    """(n_out, n_src) matrix of :func:`_axis_filter`'s weights: row j holds output pixel j's taps,
+    so that resampling an axis is one matrix product (phase 2, variant r2). Made directly in
+    ``dtype``: a row's taps are distinct pixels except the clamped ones past the border, whose
+    weight is 0, so each entry is one weight rounded once, as a float64 matrix cast after."""
     idx, w = _axis_filter(density, n_src, n_out, taps)
-    m = torch.zeros(n_out, n_src, dtype=torch.float64, device=w.device)
-    return m.scatter_add_(1, idx, w)
+    m = torch.zeros(n_out, n_src, dtype=dtype, device=w.device)
+    return m.scatter_add_(1, idx, w.to(dtype))
 
 
 def _filter_axis(x: torch.Tensor, idx: torch.Tensor, w: torch.Tensor, axis: int) -> torch.Tensor:
@@ -243,8 +246,8 @@ def warp_frame(frame: torch.Tensor, grid: WarpGrid, out_size: Tuple[int, int], s
     dev = frame.device
     if antialias:
         if method == "matmul":
-            my = axis_matrix(grid.dy.to(dev), frame.shape[-2], h, taps).to(frame.dtype)
-            mx = axis_matrix(grid.dx.to(dev), frame.shape[-1], w, taps).to(frame.dtype)
+            my = axis_matrix(grid.dy.to(dev), frame.shape[-2], h, taps, frame.dtype)
+            mx = axis_matrix(grid.dx.to(dev), frame.shape[-1], w, taps, frame.dtype)
             return torch.matmul(torch.matmul(my, frame), mx.t())
         if method != "gather":
             raise ValueError(f"method must be 'gather' or 'matmul', got {method!r}")
@@ -334,5 +337,5 @@ def unwarp_logits_separable(logits: torch.Tensor, grid: WarpGrid, frame_size: Tu
     x0, x1, wx = _lerp_axis(gx, wl, align_corners)
     wy = wy.to(logits.dtype).view(1, 1, -1, 1)
     wx = wx.to(logits.dtype).view(1, 1, 1, -1)
-    rows = logits.index_select(-2, y0) * (1 - wy) + logits.index_select(-2, y1) * wy
-    return rows.index_select(-1, x0) * (1 - wx) + rows.index_select(-1, x1) * wx
+    rows = torch.lerp(logits.index_select(-2, y0), logits.index_select(-2, y1), wy)
+    return torch.lerp(rows.index_select(-1, x0), rows.index_select(-1, x1), wx)
