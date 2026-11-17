@@ -30,6 +30,9 @@ Phase 2 (spec docs/superpowers/specs/2026-11-16-method5-phase2-design.md):
     python -m scripts.method5 cost --sessions "results/method5/phase2/latency_floor_m5w-s*.json"   # gate A
     python -m scripts.method5 prior --split train_all --models pidnet_s --chunk 0/4    # static prior P, per clip
     python -m scripts.method5 prior-merge --split train_all                           # -> phase2/prior_<model>.pt
+    python -m scripts.method5 stream --split train_all --models pidnet_s --variant r2u1 --chunk 0/4   # stage B
+    python -m scripts.method5 merge --kind stream --split train_all                  # one file per variant
+    python -m scripts.method5 score2 --split train_all                               # gate B, finalists
 
 ``cost`` reads the latency-floor sessions of the ``warp`` part (Colab T4): per model, scale and
 variant of the warp step, the overhead over the full frame paired within each session, against
@@ -152,47 +155,67 @@ def cmd_bound(args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------- #
 # merge
 # --------------------------------------------------------------------------- #
+_PLURAL = {"resample": "resamplings", "variant": "variants"}
+
+
+def _merge_one(files: Sequence[Path], merged: Path, field: str, label: str) -> set:
+    """``files`` -> ``merged``; the clips written. Refuses a (config, clip) seen twice, a clip
+    without every config of the others and files whose rows differ in ``field`` (``resample``
+    for bound files, ``variant`` for stream files)."""
+    seen: Dict[Tuple[str, str], str] = {}
+    per_clip: Counter = Counter()
+    kinds = set()
+
+    def rows():  # one line in memory at a time
+        for f in files:
+            for r in read_lines(f):
+                key = (r["name"], r["clip_id"])
+                if key in seen:
+                    raise SystemExit(f"duplicate line {key} in {f.name} and {seen[key]}: a chunk merged twice?")
+                seen[key] = f.name
+                per_clip[r["clip_id"]] += 1
+                kinds.add(r.get(field))
+                yield r
+
+    n = _write_lines(merged, rows())
+    if len(set(per_clip.values())) > 1 or len(kinds) > 1:
+        merged.unlink()
+        what = (f"clips with different numbers of configs ({sorted(set(per_clip.values()))}): a cut-off chunk? "
+                "Run it again" if len(set(per_clip.values())) > 1 else
+                f"files written with different {_PLURAL[field]} {sorted(map(str, kinds))}")
+        raise SystemExit(f"[{label}] {merged.name}: {what}")
+    print(f"[{label}] {len(files)} files, {n} lines, {len(per_clip)} clips -> {merged}")
+    return set(per_clip)
+
+
 def cmd_merge(args: argparse.Namespace) -> int:
-    """Chunk files -> ``bound_<split>_<model>.jsonl.gz``. Refuses a (config, clip) seen twice, a
-    clip without every config of the others and files written with different resamplings; lists
-    the clips missing against the dataset's."""
+    """Chunk files -> ``bound_<split>_<model>.jsonl.gz`` (``--kind bound``) or, per variant,
+    ``stream_<split>_<model>_<variant>.jsonl.gz`` (``--kind stream``; folder
+    experiments/method5/phase2/<split> by default). Refuses a (config, clip) seen twice, a clip
+    without every config of the others and files written with different resamplings or variants;
+    lists the clips missing against the dataset's."""
     expected = None
     if not args.no_expect:
         dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split)
         expected = {dataset.clip_id(i) for i in range(len(dataset))}
-    out_dir = _out_dir(args)
+    stream = getattr(args, "kind", "bound") == "stream"
+    out_dir = _stream_dir(args) if stream else _out_dir(args)
     for model in _strs(args.models):
-        merged = out_dir / f"bound_{args.split}_{model}.jsonl.gz"
-        files = sorted(f for f in out_dir.glob(f"bound_{args.split}_{model}_*.jsonl.gz") if f != merged)
-        if not files:
+        if stream:
+            jobs = [(out_dir / f"stream_{args.split}_{model}_{v}.jsonl.gz", fs, "variant")
+                    for v, fs in _variant_files(out_dir, args.split, model).items()]
+        else:
+            merged = out_dir / f"bound_{args.split}_{model}.jsonl.gz"
+            fs = sorted(f for f in out_dir.glob(f"bound_{args.split}_{model}_*.jsonl.gz") if f != merged)
+            jobs = [(merged, fs, "resample")] if fs else []
+        if not jobs:
             print(f"[method5 merge] {model}: no chunk file in {out_dir}")
             continue
-        seen: Dict[Tuple[str, str], str] = {}
-        per_clip: Counter = Counter()
-        resamples = set()
-
-        def rows():  # one line in memory at a time
-            for f in files:
-                for r in read_lines(f):
-                    key = (r["name"], r["clip_id"])
-                    if key in seen:
-                        raise SystemExit(f"duplicate line {key} in {f.name} and {seen[key]}: a chunk merged twice?")
-                    seen[key] = f.name
-                    per_clip[r["clip_id"]] += 1
-                    resamples.add(r.get("resample"))
-                    yield r
-
-        n = _write_lines(merged, rows())
-        if len(set(per_clip.values())) > 1 or len(resamples) > 1:
-            merged.unlink()
-            what = (f"clips with different numbers of configs ({sorted(set(per_clip.values()))}): a cut-off chunk? "
-                    "Run `bound` again on it" if len(set(per_clip.values())) > 1 else
-                    f"files written with different resamplings {sorted(map(str, resamples))}")
-            raise SystemExit(f"[method5 merge] {model}: {what}")
-        print(f"[method5 merge] {model}: {len(files)} files, {n} lines, {len(per_clip)} clips -> {merged}")
-        missing = sorted((expected or set()) - set(per_clip))
-        if missing:
-            print(f"[method5 merge] {model}: missing clips {missing}")
+        for merged, fs, field in jobs:
+            clips = _merge_one(fs, merged, field, f"method5 merge {model}")
+            missing = sorted((expected or set()) - clips)
+            if missing:
+                print(f"[method5 merge] {model}: missing clips {missing}")
     return 0
 
 
@@ -699,6 +722,348 @@ def cmd_cost(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Phase 2, stage B: the closed loop (stream, merge --kind stream, score2)
+# --------------------------------------------------------------------------- #
+STREAM_VARIANTS = ("r1u1", "r1u2", "r2u1", "r2u2", "r3u1", "r3u2")
+CHECKED_RESAMPLES = ("r1", "r2")  # the baseline's own filter: the pipeline check holds them to it; r3 is reported
+
+
+def _split_variant(variant: str) -> Tuple[str, str]:
+    if variant not in STREAM_VARIANTS:
+        raise SystemExit(f"--variant must be one of {STREAM_VARIANTS}, got {variant!r}")
+    return variant[:2], variant[2:]
+
+
+def _priced_as(cfg: Dict[str, Any], variant: str) -> str:
+    """The stage A variant that prices a configuration. A uniform row is a fixed warp like P's
+    (same resampling and unwarp with operands made once), so it is priced as P."""
+    sal = "P" if cfg["saliency"] == "uniform" else cfg["saliency"]
+    return f"{variant}/{sal}/n{int(cfg['rounds'])}"
+
+
+def stream_configs(args: argparse.Namespace, model: str) -> List[Any]:
+    """The stage B grid of ``model`` for one variant: scale x saliency x strength x smoothing, then
+    the uniform row at each scale; or, with ``--finalists``, the model's finalists of that variant."""
+    from warp.policy import StepConfig
+
+    resample, unwarp = _split_variant(args.variant)
+    if args.finalists:
+        data = json.loads(Path(args.finalists).read_text())
+        if data.get("gate_b") != "continue" and not args.fixture:
+            raise SystemExit(f"{args.finalists}: gate B is {data.get('gate_b')!r}, not 'continue': val is not read")
+        picked = [f for f in data["finalists"] if f["model"] == model and f["variant"] == args.variant]
+        return [StepConfig(**f["config"]) for f in picked]
+    scales = _floats(args.scales) if args.scales else list(STAGE_B.get(model, COST_SCALES))
+    warped = [StepConfig(c, k, a, s, resample, unwarp, args.rounds) for c, k, a, s in itertools.product(
+        scales, _strs(args.saliencies), _floats(args.alphas), _floats(args.sigmas))]
+    return warped + [StepConfig(c, resample=resample, unwarp=unwarp, rounds=args.rounds) for c in scales]
+
+
+def _check_gate_a(gate: Dict[str, Any], model: str, cfgs: Sequence[Any], variant: str) -> None:
+    """Refuses a configuration whose variant gate A did not keep at its model and scale."""
+    if gate.get("verdict") != "continue":
+        raise SystemExit(f"gate A is {gate.get('verdict')!r}: stage B does not run")
+    for c in cfgs:
+        group = gate["groups"].get(f"{model}/{c.scale:g}")
+        want = _priced_as(asdict(c), variant)
+        if group is None or want not in group.get("kept", []):
+            raise SystemExit(f"{c.name()}: gate A did not keep {want} for {model} at scale {c.scale:g}")
+
+
+def _first_field(path: Path, field: str) -> Optional[Any]:
+    try:
+        with gzip.open(path, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    return json.loads(line).get(field)
+    except (EOFError, OSError, zlib.error, json.JSONDecodeError):
+        pass
+    return None
+
+
+def _stream_dir(args: argparse.Namespace) -> Path:
+    return Path(args.out_dir) if args.out_dir else EXP2 / args.split
+
+
+def cmd_stream(args: argparse.Namespace) -> int:
+    """Per clip, every configuration of the grid (or the finalists) in its own closed loop
+    (:func:`warp.stream.stream_clip`), one confusion per labelled position, appended to
+    ``stream_<split>_<model>_<variant>_<tag>.jsonl.gz`` (resumable)."""
+    if args.split == "val" and not (args.finalists or args.fixture):
+        raise SystemExit("val is read once, with the finalists chosen on train: stream --split val needs --finalists")
+    import torch
+
+    from models.registry import build_backbone
+    from warp.policy import load_prior
+    from warp.stream import build_steps, stream_clip
+
+    device = resolve_device(args.device)
+    dataset, clips = _dataset_and_clips(args)
+    gate = None if args.fixture and not args.gate else _read_json(Path(args.gate or PHASE2 / "gate_a.json"))
+    for model in _strs(args.models):
+        cfgs = stream_configs(args, model)
+        if not cfgs:
+            print(f"[method5 stream] {model}: no configuration of variant {args.variant}")
+            continue
+        if gate is not None:
+            _check_gate_a(gate, model, cfgs, args.variant)
+        prior_file = Path(args.priors) / f"prior_{model}.pt"
+        priors = {c.scale: load_prior(prior_file, model, c.scale) for c in cfgs if c.saliency == "P"}
+        path = _stream_dir(args) / f"stream_{args.split}_{model}_{args.variant}_{_tag(args)}.jsonl.gz"
+        if path.exists():
+            written = _first_field(path, "variant")
+            if written is not None and written != args.variant:
+                raise SystemExit(f"{path} was written with variant {written}: use another --tag or delete it")
+        done = resume(path, {c.name() for c in cfgs}, label="method5 stream")
+        todo = [i for i in clips if dataset.clip_id(i) not in done]
+        every = True if args.every_frame else None
+        print(f"[method5 stream] {model} {args.variant}: {len(cfgs)} configs, {len(todo)} clips to run, "
+              f"{len(clips) - len(todo)} already in {path.name}", flush=True)
+        if not todo:
+            continue
+        backbone = build_backbone(model_config(model, args.fixture)["backbone"],
+                                  context={"palette": dataset.palette}).to(device).eval()
+        steps = build_steps(backbone, cfgs, {s: p.to(torch.float32) for s, p in priors.items()}, cell=args.cell)
+        t0 = time.time()
+        for n, i in enumerate(todo):
+            clip_id = dataset.clip_id(i)
+            positions, out = stream_clip(dataset, i, backbone, steps, device, batch=args.batch,
+                                         allow_any_frame_size=args.fixture, every_frame=every)
+            base = {"split": args.split, "model": model, "clip_id": clip_id, "variant": args.variant,
+                    "frames": len(positions), "positions": positions, "cell": args.cell}
+            _append(path, [{**base, "name": c.name(), "config": asdict(c), "conf": out[c.name()].tolist()}
+                           for c in cfgs])
+            dt = time.time() - t0
+            print(f"[method5 stream] {model} {args.variant} clip {n + 1}/{len(todo)} {clip_id} ({dt:.0f} s, "
+                  f"{dt / (n + 1):.1f} s/clip)", flush=True)
+        print(f"[method5 stream] {model} {args.variant}: {len(clips)} clips in {path}")
+    return 0
+
+
+def _variant_files(out_dir: Path, split: str, model: str) -> Dict[str, List[Path]]:
+    """Chunk files of the stream runs per variant (``stream_<split>_<model>_<variant>_<tag>``)."""
+    prefix = f"stream_{split}_{model}_"
+    out: Dict[str, List[Path]] = {}
+    for f in sorted(out_dir.glob(f"{prefix}*.jsonl.gz")):
+        rest = f.name[len(prefix):-len(".jsonl.gz")]
+        variant, _, tag = rest.partition("_")
+        if variant in STREAM_VARIANTS and tag:
+            out.setdefault(variant, []).append(f)
+    return out
+
+
+def score_stream(path: Path, model: str, variant: str, gate: Dict[str, Any], ref: Dict[str, Any],
+                 e2e: Dict[str, Any], oracle: Dict[str, float], class_names: Sequence[str]) -> Dict[str, Any]:
+    """Every configuration of one merged stream file: mIoU, per-class IoU, mIoU per labelled
+    position, the measured price of its variant (stage A's W, median and p95 over the sessions),
+    both judges against the measured end-to-end full-frame curve, the full frame and the uniform
+    row at the same scale, and the share of the phase 1 oracle's gain kept."""
+    import numpy as np
+
+    from eval.tradeoff import miou_of
+
+    totals: Dict[str, Any] = {}
+    clips_of: Dict[str, set] = {}
+    cfg_of: Dict[str, Dict[str, Any]] = {}
+    positions = set()
+    for r in read_lines(path):
+        if r.get("variant") != variant:
+            raise SystemExit(f"{path}: a row of variant {r.get('variant')} in the {variant} file")
+        conf = np.asarray(r["conf"], dtype=np.int64)
+        totals[r["name"]] = conf if r["name"] not in totals else totals[r["name"]] + conf
+        clips_of.setdefault(r["name"], set()).add(r["clip_id"])
+        cfg_of.setdefault(r["name"], r["config"])
+        positions.add(tuple(r["positions"]))
+    clip_ids = set().union(*clips_of.values()) if clips_of else set()
+    short = [n for n, c in clips_of.items() if c != clip_ids]
+    if short:
+        raise SystemExit(f"{path}: configs {short[:3]} lack clips: merge again from complete chunks")
+    if len(positions) > 1:
+        raise SystemExit(f"{path}: clips with different labelled positions {sorted(positions)[:3]}")
+    pos = list(positions.pop()) if positions else []
+    baseline = dict(zip(ref["scales"], ref["miou"]))
+    configs = []
+    for name, total in totals.items():
+        cfg = cfg_of[name]
+        scale = float(cfg["scale"])
+        group = gate["groups"].get(f"{model}/{scale:g}", {})
+        price = group.get("variants", {}).get(_priced_as(cfg, variant))
+        if price is None:
+            raise SystemExit(f"{name}: no stage A timing of {_priced_as(cfg, variant)} for {model} at {scale:g}")
+        miou = miou_of(total.sum(0))
+        mean_ms, p95_ms = float(price["w_ms"]), float(price["w_p95_ms"])
+        judges = judge_readings(miou, mean_ms, p95_ms, e2e)
+        for judge, ms in (("mean", mean_ms), ("p95", p95_ms)):
+            judges[judge]["latency_saved_frontier"] = e2e["curves"][judge].latency_at(miou, frontier=True) - ms
+        base = baseline.get(scale)
+        orc = oracle.get(f"5o/c{scale:g}/E/a{float(cfg['alpha']):g}/s{float(cfg['sigma']):g}/now")
+        delta = None if base is None else miou - base
+        orc_delta = None if orc is None or base is None else orc - base
+        configs.append({
+            "name": name, "model": model, "variant": variant, "config": cfg, "miou": miou,
+            "per_class_iou": {n: (None if math.isnan(v) else float(v)) for n, v in zip(class_names, _iou(total.sum(0)))},
+            "miou_by_position": {str(t): miou_of(total[j]) for j, t in enumerate(pos)},
+            "latency": {"mean_ms": mean_ms, "p95_ms": p95_ms, "priced_as": _priced_as(cfg, variant),
+                        "delta_vs_paired_fullframe_ms": price.get("delta_ms")},
+            "clips": len(clip_ids), "judges_e2e": judges, "delta_vs_fullframe": delta,
+            "oracle": None if orc is None else {"miou": orc, "delta_vs_fullframe": orc_delta,
+                                                "share_kept": (delta / orc_delta) if delta is not None and orc_delta
+                                                and orc_delta > 0 else None}})
+    uniform = {float(c["config"]["scale"]): c for c in configs if c["config"]["saliency"] == "uniform"}
+    for c in configs:
+        u = uniform.get(float(c["config"]["scale"]))
+        c["delta_vs_uniform"] = None if u is None else c["miou"] - u["miou"]
+    check = {}
+    for s, u in sorted(uniform.items()):
+        base = baseline.get(s)
+        gap = None if base is None else u["miou"] - base
+        checked = variant[:2] in CHECKED_RESAMPLES
+        check[f"{s:g}"] = {"scale": s, "uniform_miou": u["miou"], "baseline_miou": base, "gap": gap,
+                           "checked": checked, "tolerance": CHECK_TOLERANCE,
+                           "ok": (gap is not None and abs(gap) <= CHECK_TOLERANCE + 1e-12) if checked else None}
+    return {"variant": variant, "file": str(path), "clips": sorted(clip_ids), "positions": pos,
+            "pipeline_check": check, "configs": configs}
+
+
+def gate_b(configs: Sequence[Dict[str, Any]], checks: Dict[str, Dict[str, Any]], complete: bool,
+           clips: int) -> Dict[str, Any]:
+    """The spec's gate B for one model: ``continue`` when a warped configuration lies above the
+    measured full-frame curve at equal median latency (mean judge) on every clip of the split,
+    ``stop`` otherwise; not read (None) on a partial set or when a checked pipeline check fails.
+    The best configuration is reported with its uniform row's own reading, so that a gain that a
+    cheaper resampling alone would give (r3) is visible."""
+    failed = sorted(f"{v}/c{k}" for v, ch in checks.items() for k, x in ch.items() if x["checked"] and not x["ok"])
+    warped = [c for c in configs if c["config"]["saliency"] != "uniform"
+              and not math.isnan(c["judges_e2e"]["mean"]["delta_miou_at_equal_latency"])]
+    best = max(warped, key=lambda c: c["judges_e2e"]["mean"]["delta_miou_at_equal_latency"], default=None)
+    above = [c["name"] for c in warped if c["judges_e2e"]["mean"]["delta_miou_at_equal_latency"] > 0]
+    if not complete:
+        verdict, state = None, f"not read (partial: {clips} clips)"
+    elif failed:
+        verdict, state = None, f"not read (pipeline check failed at {', '.join(failed)})"
+    else:
+        verdict = "continue" if above else "stop"
+        state = (f"CONTINUE: {len(above)} configurations above the measured full-frame curve" if above else
+                 "STOP: no configuration above the measured full-frame curve at equal latency")
+    shown = None
+    if best is not None:
+        uni = next((c for c in configs if c["config"]["saliency"] == "uniform" and c["variant"] == best["variant"]
+                    and c["config"]["scale"] == best["config"]["scale"]), None)
+        shown = {"name": best["name"], "miou": best["miou"], "latency_ms": best["latency"]["mean_ms"],
+                 "delta_miou_at_equal_latency": best["judges_e2e"]["mean"]["delta_miou_at_equal_latency"],
+                 "delta_vs_fullframe": best["delta_vs_fullframe"], "delta_vs_uniform": best["delta_vs_uniform"],
+                 "uniform_delta_miou_at_equal_latency": None if uni is None else
+                 uni["judges_e2e"]["mean"]["delta_miou_at_equal_latency"]}
+    return {"rule": "gate B (spec, stage B): continue when, for at least one model, a configuration lies above the "
+                    "measured full-frame curve at equal mean latency on train (all clips; pipeline check of r1/r2 "
+                    "passed)", "clips": clips, "complete": complete, "verdict": verdict, "state": state,
+            "above": above, "best": shown}
+
+
+def finalists_of(configs: Sequence[Dict[str, Any]], e2e: Dict[str, Any], model: str) -> List[Dict[str, Any]]:
+    """As Methods 2 and 3, per judge (mean: median latency, p95): the Pareto front over (latency,
+    mIoU) of the warped configurations, and the best mIoU within each full-frame scale's measured
+    latency; the union. The uniform rows are references, not finalists."""
+    picked: Dict[str, Dict[str, Any]] = {}
+    cands = [c for c in configs if c["config"]["saliency"] != "uniform"]
+    for judge, key, ff_ms in (("mean", "mean_ms", e2e["median_ms"]), ("p95", "p95_ms", e2e["p95_ms"])):
+        def add(c: Dict[str, Any], reason: str) -> None:
+            entry = picked.setdefault(c["name"], {
+                "model": model, "name": c["name"], "variant": c["variant"], "config": c["config"],
+                "train": {"miou": c["miou"], "mean_ms": c["latency"]["mean_ms"], "p95_ms": c["latency"]["p95_ms"]},
+                "reasons": []})
+            entry["reasons"].append(reason)
+
+        best = float("-inf")
+        for c in sorted(cands, key=lambda c: (c["latency"][key], -c["miou"])):
+            if c["miou"] > best:
+                best = c["miou"]
+                add(c, f"pareto_{judge}")
+        for scale, lat in zip(e2e["scales"], ff_ms):
+            within = [c for c in cands if c["latency"][key] <= lat]
+            if within:
+                add(max(within, key=lambda c: c["miou"]), f"best_within_fullframe_s{scale:g}_{judge}")
+    return list(picked.values())
+
+
+def _oracle_mious(spec: str, model: str) -> Dict[str, float]:
+    """Phase 1 configuration name -> mIoU on train_all, from the registered and extension scores."""
+    out: Dict[str, float] = {}
+    for folder in spec.split(","):
+        d = Path(folder) if Path(folder).is_absolute() else REPO_ROOT / folder
+        for name in (f"score_train_all_{model}.json.gz", f"score_train_all_{model}.json"):
+            if (d / name).is_file():
+                for c in _read_json(d / name)["configs"]:
+                    out.setdefault(c["name"], c["miou"])
+                break
+    return out
+
+
+def cmd_score2(args: argparse.Namespace) -> int:
+    """Stage B's reading of the merged stream files: per configuration (:func:`score_stream`),
+    gate B per model and overall (:func:`gate_b`), and the finalists (:func:`finalists_of`)."""
+    tables = latency_tables(args.latency, args.fixture)
+    out_dir = _stream_dir(args)
+    gate = _read_json(Path(args.gate))
+    dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split) if not args.no_expect else None
+    names = list(dataset.class_names) if dataset is not None else [str(c) for c in range(19)]
+    expected = {dataset.clip_id(i) for i in range(len(dataset))} if dataset is not None else None
+    fin_dir = Path(args.finalists_dir) if args.finalists_dir else PHASE2
+    gates: Dict[str, Any] = {}
+    for model in _strs(args.models):
+        variants = sorted({f.name[len(f"stream_{args.split}_{model}_"):-len(".jsonl.gz")]
+                           for f in out_dir.glob(f"stream_{args.split}_{model}_*.jsonl.gz")} & set(STREAM_VARIANTS))
+        if not variants:
+            raise SystemExit(f"no merged stream file of {model} in {out_dir}: run `merge --kind stream`")
+        clip_sets = []
+        scored = []
+        for v in variants:
+            path = out_dir / f"stream_{args.split}_{model}_{v}.jsonl.gz"
+            clips = sorted({r["clip_id"] for r in read_lines(path)})
+            ref = fullframe_ref(Path(args.fullframe), model, args.split, tables, clips)
+            e2e = e2e_curves(args.e2e, model, ref)
+            if e2e is None:
+                raise SystemExit(f"no latency_floor final session in {args.e2e} covers {model}'s scales")
+            scored.append(score_stream(path, model, v, gate, ref, e2e, _oracle_mious(args.oracle_scores, model), names))
+            clip_sets.append(set(clips))
+        if any(s != clip_sets[0] for s in clip_sets):
+            raise SystemExit(f"{model}: the variants' files hold different clips")
+        configs = [c for s in scored for c in s["configs"]]
+        checks = {s["variant"]: s["pipeline_check"] for s in scored}
+        complete = expected is not None and clip_sets[0] == expected
+        g = gates[model] = gate_b(configs, checks, complete, len(clip_sets[0]))
+        payload = {"split": args.split, "model": model, "gate_a": str(args.gate), "fullframe": _public(ref),
+                   "fullframe_e2e": {k: v for k, v in e2e.items() if k != "curves"}, "gate_b": g,
+                   "pipeline_check": checks, "files": [s["file"] for s in scored], "positions": scored[0]["positions"],
+                   "configs": configs}
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / f"score2_{args.split}_{model}.json").write_text(json.dumps(payload, indent=1, allow_nan=True) + "\n")
+        fin = finalists_of(configs, e2e, model)
+        fin_dir.mkdir(parents=True, exist_ok=True)
+        (fin_dir / f"finalists_{model}.json").write_text(json.dumps(
+            {"split": args.split, "model": model, "gate_b": g["verdict"],
+             "rule": "per judge (mean: median latency, p95): the Pareto front over (latency, mIoU) of the warped "
+                     "configurations and the best mIoU within each full-frame scale's measured latency; the union",
+             "finalists": fin}, indent=1) + "\n")
+        b = g["best"]
+        shown = "no readable warped config" if b is None else (
+            f"best {b['name']}: {b['delta_miou_at_equal_latency'] * 100:+.2f} pts at equal latency "
+            f"({b['latency_ms']:.2f} ms), {b['delta_vs_fullframe'] * 100:+.2f} vs the full frame at its scale")
+        checks_shown = "; ".join(f"{v} " + ", ".join(
+            f"c{k} {'ok' if x['ok'] else ('reported' if not x['checked'] else 'NOT ok')}"
+            + ("" if x["gap"] is None else f" ({x['gap'] * 100:+.2f})") for k, x in ch.items()) for v, ch in checks.items())
+        print(f"[method5 score2] {model}: {len(configs)} configs over {len(clip_sets[0])} clips; pipeline check: "
+              f"{checks_shown}; {shown}; gate B {g['state']}; {len(fin)} finalists")
+    if gates and all(g["complete"] for g in gates.values()):
+        states = [g["verdict"] for g in gates.values()]
+        verdict = None if any(v is None for v in states) else ("continue" if "continue" in states else "stop")
+        (out_dir / f"gate_b_{args.split}.json").write_text(json.dumps(
+            {"split": args.split, "verdict": verdict, "models": gates}, indent=1, allow_nan=True) + "\n")
+        print(f"[method5 score2] gate B: {verdict or 'NOT READ'} (models: {', '.join(gates)})")
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     from warp.bound import RESAMPLE, RESAMPLES
 
@@ -735,6 +1100,9 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     m = sub.add_parser("merge", help="Chunk files -> one bound file per model.")
     common(m)
     m.add_argument("--no-expect", action="store_true", help="Do not compare against the dataset's clips.")
+    m.add_argument("--kind", default="bound", choices=("bound", "stream"),
+                   help="bound: phase 1 files; stream: phase 2 stage B files, one merged file per variant "
+                        "(default folder experiments/method5/phase2/<split>).")
     m.set_defaults(fn=cmd_merge)
 
     s = sub.add_parser("score", help="Per config: mIoU, latency, both judges, both references; the pipeline check "
@@ -760,6 +1128,43 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     pm.add_argument("--dest", default=None, help="Folder of the prior files (default results/method5/phase2).")
     pm.add_argument("--no-expect", action="store_true", help="Do not compare against the dataset's clips.")
     pm.set_defaults(fn=cmd_prior_merge)
+
+    st = sub.add_parser("stream", help="Phase 2, stage B: every configuration in its own closed loop over each clip, "
+                                       "one confusion per labelled position (resumable).")
+    common(st)
+    st.add_argument("--variant", required=True, choices=STREAM_VARIANTS,
+                    help="Resampling and unwarp, as gate A kept them (one variant per file).")
+    st.add_argument("--scales", default=None, help="Default: the stage B scales of the model (spec).")
+    st.add_argument("--saliencies", default="P",
+                    help="Default P: gate A kept only the static prior (2026-11-17); B, S, U are refused by gate A.")
+    st.add_argument("--alphas", default="0.1,0.15,0.25", help="Warp strengths (the uniform row is always run).")
+    st.add_argument("--sigmas", default="1,4", help="Saliency smoothing, in cells.")
+    st.add_argument("--rounds", type=int, default=50, help="Density rounds (gate A timed 50).")
+    st.add_argument("--cell", type=int, default=16, help="Saliency cell, px (16: a 64 x 128 grid).")
+    st.add_argument("--batch", type=int, default=4, help="Warped images of one scale per forward pass.")
+    st.add_argument("--priors", default=str(PHASE2), help="Folder of prior_<model>.pt (prior-merge).")
+    st.add_argument("--gate", default=None, help="gate_a.json (default results/method5/phase2/gate_a.json; "
+                                                 "not read with --fixture unless given).")
+    st.add_argument("--finalists", default=None, help="Run only these configurations (finalists_<model>.json); "
+                                                      "required on val.")
+    st.add_argument("--every-frame", action="store_true",
+                    help="Run every frame even when every configuration is fixed (same confusions, 5 times slower).")
+    st.set_defaults(fn=cmd_stream)
+
+    s2 = sub.add_parser("score2", help="Phase 2, stage B: per configuration mIoU and measured price, the pipeline "
+                                       "check, gate B and the finalists.")
+    common(s2)
+    s2.add_argument("--gate", default=str(PHASE2 / "gate_a.json"), help="gate_a.json: the measured price W(c).")
+    s2.add_argument("--fullframe", default=str(REPO_ROOT / "experiments" / "method2" / "fullframe"))
+    s2.add_argument("--latency", default=DEFAULT_LATENCY, help="Latency-floor JSONs (glob, comma-separated).")
+    s2.add_argument("--e2e", default=DEFAULT_E2E, help="Latency-floor `final` sessions: the measured full-frame curve.")
+    s2.add_argument("--oracle-scores", default="results/method5,results/method5/ext",
+                    help="Folders of the phase 1 scores (the oracle's gain, alpha 0.25 and 0.1/0.15).")
+    s2.add_argument("--finalists-dir", default=None, help="Where finalists_<model>.json go (default "
+                                                          "results/method5/phase2).")
+    s2.add_argument("--no-expect", action="store_true",
+                    help="Do not load the dataset (clip list, class names): gate B is then not read.")
+    s2.set_defaults(fn=cmd_score2)
 
     c = sub.add_parser("cost", help="Phase 2, stage A: the warp step's overhead over the full frame on a T4, paired "
                                     "per session, against the phase 1 budget (gate A).")

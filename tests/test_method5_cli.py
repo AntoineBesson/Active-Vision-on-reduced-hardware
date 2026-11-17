@@ -386,3 +386,211 @@ def test_prior_cli_chunks_merge_to_the_whole_and_refuse_doubles(tmp_path, capsys
 def test_prior_is_fitted_on_train_all_only():
     with pytest.raises(SystemExit):
         method5.main(["prior", "--split", "val", "--models", "pidnet_s"])
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2, stage B: stream -> merge --kind stream -> score2
+# --------------------------------------------------------------------------- #
+STREAM = ["--cell", "8", "--scales", "0.5,0.25", "--alphas", "0.1,0.25", "--sigmas", "1", "--batch", "3"]
+STREAM_CONFIGS = 2 * 2 + 2  # (0.5, 0.25) x (0.1, 0.25) P + the uniform row at each scale
+
+
+def _fake_gate(path: Path, variants=("r2u1", "r3u1"), verdict="continue") -> Path:
+    groups = {}
+    for s in (0.5, 0.25):
+        vs = {}
+        for i, v in enumerate(variants):
+            ff = 22 * s * s + 2
+            w = ff + (0.05 if v.startswith("r2") else -0.05) * (i + 1)
+            vs[f"{v}/P/n50"] = {"delta_ms": w - ff, "w_ms": w, "w_p95_ms": w * 1.2, "ff_ms": ff, "status": "fits"}
+        groups[f"dummy/{s:g}"] = {"model": "dummy", "scale": s, "kept": sorted(vs), "variants": vs}
+    path.write_text(json.dumps({"verdict": verdict, "groups": groups}))
+    return path
+
+
+@pytest.fixture(scope="module")
+def stage_b(work, tmp_path_factory):
+    """The prior fitted on the fixture, both variants streamed in two chunks, merged and scored."""
+    d = tmp_path_factory.mktemp("m5b")
+    assert method5.main(["prior", *_common(), "--cell", "8", "--scales", "0.5,0.25", "--out-dir", str(d / "pc")]) == 0
+    assert method5.main(["prior-merge", *_common(), "--out-dir", str(d / "pc"), "--dest", str(d / "priors")]) == 0
+    _fake_gate(d / "gate_a.json")
+    run = [*_common(), *STREAM, "--priors", str(d / "priors"), "--gate", str(d / "gate_a.json"), "--out-dir",
+           str(d / "s")]
+    for v in ("r2u1", "r3u1"):
+        for chunk in ("0/2", "1/2"):
+            assert method5.main(["stream", *run, "--variant", v, "--chunk", chunk]) == 0
+    assert method5.main(["merge", "--kind", "stream", *_common(), "--out-dir", str(d / "s")]) == 0
+    assert method5.main(_score2_args(work, d, d / "s")) == 0
+    return d
+
+
+def _score2_args(work: Path, d: Path, out: Path):
+    return ["score2", *_common(), "--out-dir", str(out), "--gate", str(d / "gate_a.json"), "--fullframe",
+            str(work / "ff"), "--latency", str(work / "lat.json"), "--e2e", str(work / "final-s*.json"),
+            "--oracle-scores", str(work / "out"), "--finalists-dir", str(d / "fin")]
+
+
+def test_the_default_stage_b_grid_is_p_only_after_gate_a():
+    for model, n in (("pidnet_s", 3 * 3 * 2 + 3), ("bisenetv2", 2 * 3 * 2 + 2)):
+        cfgs = method5.stream_configs(method5.parse_args(["stream", "--variant", "r3u1"]), model)
+        assert len(cfgs) == len({c.name() for c in cfgs}) == n
+        assert {c.saliency for c in cfgs} == {"P", "uniform"} and {c.alpha for c in cfgs} == {0.0, 0.1, 0.15, 0.25}
+        assert {(c.resample, c.unwarp) for c in cfgs} == {("r3", "u1")} and {c.sigma for c in cfgs if c.alpha} == {1, 4}
+        assert sorted({c.scale for c in cfgs}) == sorted(method5.STAGE_B[model])
+
+
+def test_stream_writes_one_row_per_config_and_clip_with_its_positions(stage_b):
+    for v in ("r2u1", "r3u1"):
+        rows = _read(stage_b / "s" / f"stream_val_dummy_{v}.jsonl.gz")
+        assert len(rows) == 3 * STREAM_CONFIGS and {r["variant"] for r in rows} == {v}
+        assert {r["clip_id"] for r in rows} == {"0001", "0002", "0003"}
+        assert all(r["positions"] == [4, 9] and np.asarray(r["conf"]).shape == (2, 19, 19) for r in rows)
+        assert {r["config"]["saliency"] for r in rows} == {"P", "uniform"}
+
+
+def test_stream_resumes_and_refuses_another_variant(stage_b, tmp_path):
+    run = [*_common(), *STREAM, "--priors", str(stage_b / "priors"), "--gate", str(stage_b / "gate_a.json")]
+    out = ["--out-dir", str(stage_b / "s")]
+    before = _read(stage_b / "s" / "stream_val_dummy_r2u1_c0of2.jsonl.gz")
+    assert method5.main(["stream", *run, *out, "--variant", "r2u1", "--chunk", "0/2"]) == 0
+    assert _read(stage_b / "s" / "stream_val_dummy_r2u1_c0of2.jsonl.gz") == before
+    src = stage_b / "s" / "stream_val_dummy_r2u1_c0of2.jsonl.gz"
+    (tmp_path / "stream_val_dummy_r3u1_c0of2.jsonl.gz").write_bytes(src.read_bytes())
+    with pytest.raises(SystemExit, match="variant r2u1"):
+        method5.main(["stream", *run, "--out-dir", str(tmp_path), "--variant", "r3u1", "--chunk", "0/2"])
+
+
+def test_stream_refuses_a_variant_or_saliency_gate_a_did_not_keep(stage_b, tmp_path):
+    run = [*_common(), *STREAM, "--priors", str(stage_b / "priors"), "--out-dir", str(tmp_path)]
+    with pytest.raises(SystemExit, match="did not keep r2u2/P/n50"):
+        method5.main(["stream", *run, "--gate", str(stage_b / "gate_a.json"), "--variant", "r2u2"])
+    with pytest.raises(SystemExit, match="did not keep r2u1/B/n50"):
+        method5.main(["stream", *run, "--gate", str(stage_b / "gate_a.json"), "--variant", "r2u1", "--saliencies", "B"])
+    with pytest.raises(SystemExit, match="gate A is 'stop'"):
+        method5.main(["stream", *run, "--gate", str(_fake_gate(tmp_path / "g.json", verdict="stop")),
+                      "--variant", "r2u1"])
+
+
+def test_val_is_read_only_with_finalists_that_passed_gate_b(tmp_path):
+    with pytest.raises(SystemExit, match="--finalists"):
+        method5.main(["stream", "--split", "val", "--models", "pidnet_s", "--variant", "r2u1"])
+    fin = tmp_path / "finalists_pidnet_s.json"
+    cfg = {"scale": 0.25, "saliency": "P", "alpha": 0.25, "sigma": 1.0, "resample": "r2", "unwarp": "u1", "rounds": 50,
+           "taps": None}
+    entry = {"model": "pidnet_s", "name": "x", "variant": "r2u1", "config": cfg}
+    fin.write_text(json.dumps({"gate_b": "stop", "finalists": [entry]}))
+    args = method5.parse_args(["stream", "--split", "val", "--models", "pidnet_s", "--variant", "r2u1",
+                               "--finalists", str(fin)])
+    with pytest.raises(SystemExit, match="gate B is 'stop'"):
+        method5.stream_configs(args, "pidnet_s")
+    fin.write_text(json.dumps({"gate_b": "continue", "finalists": [entry, dict(entry, variant="r3u1")]}))
+    cfgs = method5.stream_configs(args, "pidnet_s")
+    assert [c.name() for c in cfgs] == ["5p/c0.25/P/a0.25/s1/r2u1"]
+
+
+def test_merge_stream_refuses_doubles_and_cut_off_chunks(stage_b, tmp_path):
+    src = sorted((stage_b / "s").glob("stream_val_dummy_r2u1_c*.jsonl.gz"))
+    assert len(src) == 2
+    for p in src:
+        (tmp_path / p.name).write_bytes(p.read_bytes())
+    (tmp_path / "stream_val_dummy_r2u1_again.jsonl.gz").write_bytes(src[0].read_bytes())
+    with pytest.raises(SystemExit, match="duplicate"):
+        method5.main(["merge", "--kind", "stream", *_common(), "--out-dir", str(tmp_path)])
+    (tmp_path / "stream_val_dummy_r2u1_again.jsonl.gz").unlink()
+    rows = _read(src[0])
+    with gzip.open(tmp_path / src[0].name, "wt", encoding="utf-8") as fh:
+        fh.writelines(json.dumps(r) + "\n" for r in rows[:-1])
+    with pytest.raises(SystemExit, match="different numbers"):
+        method5.main(["merge", "--kind", "stream", *_common(), "--out-dir", str(tmp_path)])
+
+
+def test_score2_prices_checks_and_reads_gate_b(stage_b):
+    score = json.loads((stage_b / "s" / "score2_val_dummy.json").read_text())
+    gate = json.loads((stage_b / "gate_a.json").read_text())
+    assert len(score["configs"]) == 2 * STREAM_CONFIGS and score["positions"] == [4, 9]
+    for c in score["configs"]:
+        price = gate["groups"][f"dummy/{c['config']['scale']:g}"]["variants"][f"{c['variant']}/P/n50"]
+        assert c["latency"]["mean_ms"] == price["w_ms"] and c["latency"]["p95_ms"] == price["w_p95_ms"]
+        assert set(c["miou_by_position"]) == {"4", "9"} and len(c["per_class_iou"]) == 19
+        assert c["delta_vs_fullframe"] is not None and "mean" in c["judges_e2e"]
+    # the pipeline check holds r2 to the baseline and reports r3
+    for s in ("0.5", "0.25"):
+        r2, r3 = score["pipeline_check"]["r2u1"][s], score["pipeline_check"]["r3u1"][s]
+        assert r2["checked"] and r2["ok"] and abs(r2["gap"]) <= method5.CHECK_TOLERANCE
+        assert not r3["checked"] and r3["ok"] is None and r3["gap"] is not None
+    g = score["gate_b"]
+    assert g["complete"] and g["verdict"] in ("continue", "stop") and g["best"] is not None
+    summary = json.loads((stage_b / "s" / "gate_b_val.json").read_text())
+    assert summary["verdict"] == g["verdict"]
+    fin = json.loads((stage_b / "fin" / "finalists_dummy.json").read_text())
+    assert fin["gate_b"] == g["verdict"] and fin["finalists"]
+    assert all(f["config"]["saliency"] != "uniform" and f["reasons"] for f in fin["finalists"])
+
+
+def test_score2_on_a_partial_set_reads_no_gate(stage_b, work, tmp_path):
+    for v in ("r2u1", "r3u1"):
+        src = stage_b / "s" / f"stream_val_dummy_{v}_c0of2.jsonl.gz"
+        (tmp_path / src.name).write_bytes(src.read_bytes())
+    assert method5.main(["merge", "--kind", "stream", *_common(), "--out-dir", str(tmp_path)]) == 0
+    assert method5.main(_score2_args(work, stage_b, tmp_path)[:-2] + ["--finalists-dir", str(tmp_path / "fin")]) == 0
+    g = json.loads((tmp_path / "score2_val_dummy.json").read_text())["gate_b"]
+    assert not g["complete"] and g["verdict"] is None and "partial" in g["state"]
+    assert not (tmp_path / "gate_b_val.json").exists()
+
+
+def _c2(name, sal, scale, miou, ms, delta, variant="r2u1", p95=None):
+    return {"name": name, "variant": variant, "config": {"saliency": sal, "scale": scale}, "miou": miou,
+            "latency": {"mean_ms": ms, "p95_ms": ms * 1.2 if p95 is None else p95},
+            "judges_e2e": {"mean": {"delta_miou_at_equal_latency": delta}}, "delta_vs_fullframe": 0.0,
+            "delta_vs_uniform": 0.0}
+
+
+def test_gate_b_on_hand_made_scores():
+    ok = {"r2u1": {"0.25": {"checked": True, "ok": True}}, "r3u1": {"0.25": {"checked": False, "ok": None}}}
+    above = [_c2("u", "uniform", 0.25, 0.5, 4.0, 0.002), _c2("a", "P", 0.25, 0.52, 4.0, 0.003),
+             _c2("b", "P", 0.25, 0.49, 4.0, -0.01)]
+    g = method5.gate_b(above, ok, True, 400)
+    assert g["verdict"] == "continue" and g["above"] == ["a"] and g["best"]["name"] == "a"
+    assert g["best"]["uniform_delta_miou_at_equal_latency"] == 0.002  # the cheaper resampling alone, shown
+    # a uniform row above the curve is a reference: it does not open the gate
+    assert method5.gate_b(above[:1] + above[2:], ok, True, 400)["verdict"] == "stop"
+    bad = {**ok, "r2u1": {"0.25": {"checked": True, "ok": False}}}
+    assert method5.gate_b(above, bad, True, 400)["verdict"] is None
+    r3bad = {**ok, "r3u1": {"0.25": {"checked": False, "ok": None}}}
+    assert method5.gate_b(above, r3bad, True, 400)["verdict"] == "continue"
+    assert method5.gate_b(above, ok, False, 100)["verdict"] is None
+
+
+def test_finalists_on_hand_made_scores():
+    cfgs = [_c2("u", "uniform", 0.25, 0.60, 1.0, 0.0),  # a reference, never a finalist
+            _c2("a", "P", 0.25, 0.50, 2.0, 0.0), _c2("b", "P", 0.25, 0.55, 3.0, 0.0),
+            _c2("c", "P", 0.25, 0.54, 3.5, 0.0), _c2("d", "P", 0.5, 0.65, 6.0, 0.0, p95=20.0)]
+    e2e = {"scales": [0.25, 0.5, 1.0], "median_ms": [2.5, 6.5, 30.0], "p95_ms": [3.0, 8.0, 36.0]}
+    fin = {f["name"]: f["reasons"] for f in method5.finalists_of(cfgs, e2e, "m")}
+    assert set(fin) == {"a", "b", "d"}
+    assert "pareto_mean" in fin["a"] and "best_within_fullframe_s0.25_mean" in fin["a"]
+    assert "best_within_fullframe_s0.5_mean" in fin["d"] and "best_within_fullframe_s1_p95" in fin["d"]
+    assert "best_within_fullframe_s0.5_p95" in fin["b"]
+
+
+def test_score2_reads_the_share_of_the_oracles_gain_kept(stage_b, work, tmp_path):
+    """Against the phase 1 oracle (E, now) at the same scale, alpha and sigma, from the registered or
+    the extension scores."""
+    score = json.loads((stage_b / "s" / "score2_val_dummy.json").read_text())
+    base = dict(zip(score["fullframe"]["scales"], score["fullframe"]["miou"]))[0.5]
+    (tmp_path / "ext").mkdir()
+    (tmp_path / "ext" / "score_train_all_dummy.json").write_text(json.dumps(
+        {"configs": [{"name": "5o/c0.5/E/a0.25/s1/now", "miou": base + 0.04}]}))
+    args = _score2_args(work, stage_b, tmp_path / "out")
+    args[args.index("--oracle-scores") + 1] = f"{tmp_path / 'none'},{tmp_path / 'ext'}"
+    for v in ("r2u1", "r3u1"):
+        (tmp_path / "out").mkdir(exist_ok=True)
+        src = stage_b / "s" / f"stream_val_dummy_{v}.jsonl.gz"
+        (tmp_path / "out" / src.name).write_bytes(src.read_bytes())
+    assert method5.main(args) == 0
+    configs = {c["name"]: c for c in json.loads((tmp_path / "out" / "score2_val_dummy.json").read_text())["configs"]}
+    c = configs["5p/c0.5/P/a0.25/s1/r2u1"]
+    assert c["oracle"]["delta_vs_fullframe"] == pytest.approx(0.04)
+    assert c["oracle"]["share_kept"] == pytest.approx(c["delta_vs_fullframe"] / 0.04)
+    assert configs["5p/c0.5/P/a0.1/s1/r2u1"]["oracle"] is None  # no oracle at alpha 0.1 in that file
