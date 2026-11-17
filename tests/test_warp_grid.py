@@ -221,3 +221,113 @@ def test_d_max_lets_the_warp_magnify_at_scale_one():
     assert out.shape == frame.shape and torch.isfinite(out).all() and not torch.allclose(out, frame)
     assert out.min() >= frame.min() - 1e-6 and out.max() <= frame.max() + 1e-6  # interpolation only
     assert torch.allclose(warp_frame(frame, make_grid(sal, 0.0, 1.0, d_max=2.0), (32, 64), antialias=True), frame)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2: graph-safe variants and the fast resampling / unwarping (r2, u2)
+# --------------------------------------------------------------------------- #
+GRID_SCALES = (0.25, 0.375, 0.5)
+PHASE2_ALPHAS = (0.1, 0.15, 0.25, 0.5, 0.75)
+
+
+def test_fixed_rounds_match_the_loop():
+    """With phase 1's worst case of rounds, the graph-safe density equals the early-stopping loop."""
+    gen = torch.Generator().manual_seed(3)
+    hot = torch.zeros(128)
+    hot[40] = 1.0
+    profiles = [hot, torch.zeros(64)] + [torch.rand(128 if i % 2 else 64, generator=gen) ** 4 for i in range(400)]
+    for scale in GRID_SCALES:
+        for alpha in PHASE2_ALPHAS:
+            for p in profiles:
+                ref = axis_density(p, alpha, scale)
+                out = axis_density(p, alpha, scale, rounds=50)
+                assert (out - ref).abs().max() < 1e-6
+    assert torch.equal(axis_density(hot, 0.0, 0.25, rounds=50), torch.ones(128))
+    with pytest.raises(ValueError):
+        axis_density(hot, 0.25, 0.25, rounds=0)
+
+
+def test_make_grid_passes_the_rounds():
+    sal = torch.rand(8, 16, generator=torch.Generator().manual_seed(4))
+    a, b = make_grid(sal, 0.25, 0.25), make_grid(sal, 0.25, 0.25, rounds=50)
+    assert (a.dy - b.dy).abs().max() < 1e-6 and (a.dx - b.dx).abs().max() < 1e-6
+
+
+@pytest.mark.parametrize("scale", GRID_SCALES)
+def test_filter_taps_never_cut_the_triangle(scale):
+    from warp.grid import _axis_filter, filter_taps
+
+    assert filter_taps(0.25) == 19 and filter_taps(0.375) == 13 and filter_taps(0.5) == 11
+    for p in (torch.tensor([1.0, 0.0, 0.0, 0.0]), torch.tensor([0.0, 0.0, 0.0, 1.0]), torch.rand(16)):
+        d = axis_density(p, 0.75, scale)
+        n_out = int(round(256 * scale))
+        idx, w = _axis_filter(d, 256, n_out)
+        idx_f, w_f = _axis_filter(d, 256, n_out, taps=filter_taps(scale))
+        assert idx_f.shape[1] >= idx.shape[1]
+        dense = torch.zeros(n_out, 256, dtype=torch.float64).scatter_add_(1, idx, w)
+        dense_f = torch.zeros(n_out, 256, dtype=torch.float64).scatter_add_(1, idx_f, w_f)
+        assert (dense - dense_f).abs().max() < 1e-12
+
+
+def _warped_grid(scale: float, alpha: float = 0.25) -> "object":
+    sal = torch.zeros(4, 8)
+    sal[1, 2] = 1.0
+    sal[3, 6] = 0.5
+    return make_grid(sal, alpha, scale)
+
+
+@pytest.mark.parametrize("scale", GRID_SCALES)
+@pytest.mark.parametrize("alpha", [0.0, 0.25, 0.75])
+def test_matmul_resampling_equals_the_gather(scale, alpha):
+    from warp.grid import filter_taps
+
+    frame = torch.rand(2, 3, 64, 128, generator=torch.Generator().manual_seed(5))
+    g = _warped_grid(scale, alpha) if alpha else make_grid(torch.zeros(4, 8), 0.0, scale)
+    size = (int(round(64 * scale)), int(round(128 * scale)))
+    ref = warp_frame(frame, g, size, antialias=True)
+    for taps in (None, filter_taps(scale)):
+        out = warp_frame(frame, g, size, antialias=True, method="matmul", taps=taps)
+        assert out.shape == ref.shape and (out - ref).abs().max() < 1e-5
+    assert (warp_frame(frame, g, size, antialias=True, taps=filter_taps(scale)) - ref).abs().max() < 1e-6
+
+
+@pytest.mark.parametrize("scale", GRID_SCALES)
+def test_matmul_at_alpha_zero_is_the_baseline_downscale(scale):
+    frame = torch.rand(1, 3, 64, 128, generator=torch.Generator().manual_seed(6))
+    ref = downsample(frame, scale)
+    out = warp_frame(frame, make_grid(torch.zeros(4, 8), 0.0, scale), tuple(ref.shape[-2:]), antialias=True,
+                     method="matmul")
+    assert (out - ref).abs().max() < 1e-4
+    with pytest.raises(ValueError):
+        warp_frame(frame, make_grid(torch.zeros(4, 8), 0.0, scale), tuple(ref.shape[-2:]), antialias=True,
+                   method="fft")
+
+
+@pytest.mark.parametrize("stride,align", [(8, True), (1, False), (8, False), (1, True)])
+@pytest.mark.parametrize("warped", [False, True])
+def test_separable_unwarp_equals_grid_sample(stride, align, warped):
+    from warp.grid import unwarp_logits_separable
+
+    scale = 0.25
+    frame = (64, 128)
+    in_size = (int(round(64 * scale)), int(round(128 * scale)))  # 16 x 32
+    hl, wl = -(-in_size[0] // stride), -(-in_size[1] // stride)  # padded to whole strides
+    if stride == 8:
+        hl, wl = hl + 1, wl + 1  # logits that cover more than the input (padding)
+    logits = torch.randn(2, 19, hl, wl, generator=torch.Generator().manual_seed(7))
+    g = _warped_grid(scale) if warped else make_grid(torch.zeros(4, 8), 0.0, scale)
+    ref = unwarp_logits(logits, g, frame, align, stride, input_size=in_size)
+    out = unwarp_logits_separable(logits, g, frame, align, stride, input_size=in_size)
+    assert out.shape == ref.shape and (out - ref).abs().max() < 1e-4
+    assert torch.equal(out.argmax(1), ref.argmax(1)) or (out.argmax(1) != ref.argmax(1)).float().mean() < 1e-3
+
+
+def test_separable_unwarp_at_alpha_zero_is_upsample_logits():
+    from warp.grid import unwarp_logits_separable
+
+    for stride, align in ((8, True), (1, False)):
+        logits = torch.randn(1, 19, 16 // stride if stride == 8 else 16, 32 // stride if stride == 8 else 32)
+        ref = upsample_logits(logits, (64, 128), stride, align, input_size=(16, 32))
+        out = unwarp_logits_separable(logits, make_grid(torch.zeros(4, 8), 0.0, 0.25), (64, 128), align, stride,
+                                      input_size=(16, 32))
+        assert (out - ref).abs().max() < 1e-4

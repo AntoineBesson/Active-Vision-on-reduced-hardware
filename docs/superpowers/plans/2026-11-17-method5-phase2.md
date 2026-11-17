@@ -24,7 +24,7 @@
 
 ## Review Focus
 
-1. **The matrix resampling r2 against the gather r1:** same weights, so equal to fp32 tolerance at α 0 and at a strong warp, and at α 0 equal to the baseline's antialiased `downsample`. A wrong tap count would silently cut the filter at c 0.25 (up to 18 taps). Test in Task 1.
+1. **The matrix resampling r2 against the gather r1:** same weights, so equal to fp32 tolerance at α 0 and at a strong warp, and at α 0 equal to the baseline's antialiased `downsample`. A wrong tap count would silently cut the filter at c 0.25 (up to 19 taps). Test in Task 1.
 2. **The separable unwarp u2 against `unwarp_logits` (u1)** for both conventions: PIDNet-S (stride 8, `align_corners=True`) and BiSeNetV2 (stride 1, `False`), including logits padded to whole strides and the border rows. Test in Task 1.
 3. **Nothing in a timed step may sync with the host** (`.item()`, a data-dependent loop, a shape that depends on values): the capture would fail or, worse, time something else. The density runs a fixed number of rounds; the filter has a fixed tap count per scale. Test in Task 2 (capture on CUDA, skipped without it).
 4. **The closed loop's first frame and its state:** frame 0 takes P (configurations with P) or the uniform grid; each configuration carries its own state, so two configurations of one batch can never read each other's previous output. Test in Task 5.
@@ -43,7 +43,7 @@
 - Produces:
   - `axis_density(profile, alpha, scale, d_min=0.5, d_max=None, rounds: Optional[int] = None)`: with `rounds` set, exactly that many clip-and-renormalise rounds, no early stop, no host sync. `rounds=None` keeps phase 1's loop (unchanged results).
   - `make_grid(..., rounds=None)`: passes `rounds` through.
-  - `filter_taps(scale: float, d_min: float = 0.5) -> int`: `ceil(2 / (scale · d_min)) + 2` (18 at 0.25, 13 at 0.375, 10 at 0.5), the tap count that never cuts the triangle.
+  - `filter_taps(scale: float, d_min: float = 0.5) -> int`: `floor(2 / (scale · d_min)) + 3` (19 at 0.25, 13 at 0.375, 11 at 0.5), the tap count that never cuts the triangle (the renormalisation can leave a density a hair under d_min, so `ceil + 2` falls one short when 2 / (scale · d_min) is a whole number).
   - `_axis_filter(density, n_src, n_out, taps: Optional[int] = None)`: with `taps`, no `.item()`.
   - `axis_matrix(density, n_src, n_out, taps) -> Tensor[n_out, n_src]`: the same weights, scattered into a dense matrix.
   - `warp_frame(frame, grid, out_size, ..., antialias=False, method="gather", taps=None)`: `method="matmul"` computes `Wy @ frame @ Wxᵀ` per channel (r2). r1 is `antialias=True, method="gather"`; r3 is `antialias=False, supersample=1` (plain bilinear `grid_sample`).
