@@ -1,4 +1,15 @@
-# Method 5, phase 1: feasibility bound of a single pass on a warped frame — passes, narrowly
+# Method 5: a single pass on a warped frame — closed, negative
+
+**Closed on 2026-11-17, negative.** Phase 1's oracle bound passed narrowly on
+train. In phase 2 only a fixed warp (the static prior P) fit the T4 budget.
+It passed gate B on train, but on val no finalist's 95 % interval at equal
+latency is above 0. A fixed warp gains up to +0.8 points at the same input
+scale, but a full frame given the same time does as well. See
+[Phase 2, stage C](#phase-2-stage-c-the-finalists-once-on-val). Not tested:
+a cheaper per-frame saliency, a free 2-D warp, a backbone trained on warped
+frames.
+
+## Phase 1: feasibility bound — passes, narrowly
 
 **Result (2026-11-16, 400 clips of `train_all`): the pre-registered check
 passes for both backbones, by a narrow margin.** With an oracle warp, one pass
@@ -411,9 +422,9 @@ was run again with the new P (`prior_scored_<model>.pt`;
 
 The 5 finalists, streamed once on the 50 val clips, with the uniform rows of
 their scales as the pipeline check (equal to the full frame to 3e-7);
-`phase2/val/` and `phase2/verdict_val_scored_provisional.json`. Priced
-provisionally by stage A, paired: the `m5final` T4 sessions have not been
-run.
+`phase2/val/` and `phase2/verdict_val_scored_provisional.json`. Priced by
+stage A, paired. The `m5final` T4 sessions were not run: the user closed the
+method on this reading (spec amendment of 2026-11-17).
 
 **The pass rule reads negative: no finalist's 95 % interval at equal latency
 is above 0.**

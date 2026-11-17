@@ -88,8 +88,9 @@ once) fits, so the closed-loop accuracy stage goes on with that prior alone.
 On train, with the prior fitted on the scored pixels, BiSeNetV2 at scale 0.25
 beats the full-frame curve by +0.94 points at equal latency (in-sample). On
 val, read once, no finalist's 95 % interval is above 0: the pass rule reads
-negative (provisional prices from stage A; the final T4 timing has not been
-run).
+negative (prices from stage A), and **Method 5 is closed, negative**
+(2026-11-17). A fixed warp gains up to +0.8 points at the same input scale,
+but never clearly beats a full frame given the same time.
 
 ### Next steps
 
@@ -151,7 +152,7 @@ python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yam
 | Method 2: foveation without memory | ✅ negative, [results](results/method2/README.md) |
 | Method 3: motion-gated reuse | ✅ negative on train, val not run, [results](results/method3/README.md) |
 | Method 4: persistent canvas + glimpse policy | ✅ feasibility bound negative on train, policy not built, [results](results/method4/README.md) |
-| Method 5: one pass on an oracle-warped frame | ✅ feasibility bound passes narrowly on train (scale 0.25 only); phase 2: only the static prior P fits the T4 budget; gate B continues on train; on val no finalist clears the pass rule (provisional prices), [results](results/method5/README.md) |
+| Method 5: one pass on an oracle-warped frame | ✅ feasibility bound passes narrowly on train (scale 0.25 only); phase 2: only the static prior P fits the T4 budget; gate B continues on train; on val no finalist clears the pass rule: closed, negative, [results](results/method5/README.md) |
 | Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout

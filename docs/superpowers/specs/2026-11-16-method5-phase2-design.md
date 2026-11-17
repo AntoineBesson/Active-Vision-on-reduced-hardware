@@ -368,3 +368,28 @@ the same filter and scale, is at most +0.8 points (+0.49 for PIDNet-S and
 These choices are made on train, with val unread. They make the rule
 stricter (no r3, no discount from the stage A full frame), and P is still
 fitted on train only.
+
+### 2026-11-17, after the val read: Method 5 is closed, negative
+
+**What val showed** (results/method5/TRIES.md, 2026-11-17;
+`results/method5/phase2/verdict_val_scored_provisional.json`). The 5
+finalists were read once on the 50 val clips. Priced by stage A, paired, none
+has its 95 % interval at equal mean latency above 0: the pass rule reads
+negative for both backbones. The best are PIDNet-S c0.25 a0.25 s1, +0.43
+[−0.49, +1.20], and BiSeNetV2 c0.375 a0.1 s1, +0.45 [−0.33, +0.99].
+BiSeNetV2 c0.25 a0.25 s4, the best on train, is −0.83 [−1.51, +0.08].
+
+**The user's decision (2026-11-17, in the thread):** close the method now,
+without the three `m5final` T4 sessions. The pass rule is read on the stage A
+prices, and that reading is the result. The timing would move only the
+prices, not the val confusions. For PIDNet-S at 0.25, the one finalist near
+0, the warp step cost 0.056 to 0.061 ms over the full frame in each of the
+three stage A sessions. That puts the lower end at −0.49. A pass would need
+an overhead of about 0, and even then the interval sits on 0 (−0.02 with the
+rule's seed, −0.05 to +0.03 over seeds 0 to 7).
+
+**What this closes:** the separable warp with the static prior P, on frozen
+PIDNet-S and BiSeNetV2, priced on a T4. Not tested, and not ruled out by this
+result: a cheaper per-frame saliency (TRIES.md, 2026-11-17, "a leaner
+per-frame step"), a free 2-D warp (decision 3; its oracle bound was never
+run), and a backbone trained on warped frames.

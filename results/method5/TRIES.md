@@ -880,5 +880,15 @@ resamples (`same_scale_interval`, computed from the committed confusions;
   (per-class IoU +20.85 and −12.28 points) and few clips hold them: the two
   largest hold 75 % of val's truck pixels and 84 % of its bus pixels.
 
-**Not decided yet:** close Method 5 as negative now, or run the 3 Colab T4
-sessions (`m5f-s1` to `s3`, notebook ready) for the formal verdict first.
+## 2026-11-17 — Method 5 closed: negative
+
+The user closed the method on the val reading above, without the three
+`m5final` T4 sessions (dated amendment in the phase 2 spec). The timing
+could only move the prices, and the warp step's overhead at PIDNet-S 0.25
+(0.056 to 0.061 ms in every stage A session) already puts that finalist's
+lower end at −0.49. **Result: negative.** A fixed separable warp gains up to
++0.8 points at the same input scale on val, but never clearly beats the full
+frame given the same time on a T4.
+
+Left open, never run: the leaner per-frame step above, the oracle bound of a
+free 2-D warp, and a backbone trained on warped frames.
