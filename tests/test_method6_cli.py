@@ -56,9 +56,9 @@ def test_the_default_grid_is_the_specs():
         cfgs = method6.grid_configs(args, model)
         local = [c for c in cfgs if c.form == "2d" and not c.uniform]
         sep = [c for c in cfgs if c.form == "sep"]
-        assert len(cfgs) == len({c.name() for c in cfgs}) == 108 + 3 + 3
-        assert len(local) == 3 * 3 * 3 * 2 * 2
-        assert sorted(c.scale for c in cfgs if c.uniform) == [0.25, 0.375, 0.5]
+        assert len(cfgs) == len({c.name() for c in cfgs}) == 144 + 4 + 4
+        assert len(local) == 4 * 3 * 3 * 2 * 2
+        assert sorted(c.scale for c in cfgs if c.uniform) == [0.25, 0.375, 0.5, 0.75]
         assert {c.kernel for c in local} == {4.0, 12.0} and {c.alpha for c in local} == {0.1, 0.25, 0.5}
         assert {(c.scale, c.saliency, c.alpha, c.sigma) for c in sep} == {
             (s, *v) for s, v in method6.SEP_BAR[model].items()}

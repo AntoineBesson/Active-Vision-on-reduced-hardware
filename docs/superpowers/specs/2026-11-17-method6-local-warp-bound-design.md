@@ -1,11 +1,12 @@
 # Method 6: feasibility bound for a single pass on a locally (2-D) warped frame
 
-Status: **draft, written 2026-11-17, not yet accepted.** Nothing has been run.
+Status: **accepted by the user on 2026-11-17, before any run**, with one
+change to the draft: scale 0.75 is kept in the grid (the draft left it out).
 The user asked for it on 2026-11-17 ("try something else still on the T4,
 start with 2D warp"; no retraining, so the backbone stays frozen and the
 method stays model-agnostic). The design is Claude's proposal; points marked
-*(my call)* are open until the user accepts the spec. Once accepted, nothing
-here may change after the first `bound` run, except in a dated
+*(my call)* were settled by Claude and accepted as written. Nothing here may
+change after the first `bound` run, except in a dated
 "Amendments" section at the end.
 
 ## Intent
@@ -102,23 +103,23 @@ Per model (PIDNet-S, BiSeNetV2):
 
 | Dimension | Values |
 | --- | --- |
-| input scale c | 0.25, 0.375, 0.5 |
+| input scale c | 0.25, 0.375, 0.5, 0.75 |
 | saliency | E, B, S |
 | strength α | 0.1, 0.25, 0.5 |
 | saliency smoothing σ (cells) | 1, 4 |
 | kernel σ_k (cells) | 4, 12 |
 
-3 × 3 × 3 × 2 × 2 = 108 configurations per model, plus per scale:
+4 × 3 × 3 × 2 × 2 = 144 configurations per model, plus per scale:
 
 - the **uniform** row (α = 0, through the 2-D code path): the pipeline check;
 - one **separable** row, Method 5's best separable now configuration at
   that scale for that model (the bar of rule part (b), table below), through
   Method 5's own code: the reproduction check against Method 5's files.
 
-(108 + 3 + 3 = 114 network passes per labelled frame.)
+(144 + 4 + 4 = 152 network passes per labelled frame.)
 
-Scale 0.75 is left out *(my call)*: Method 5's best there was +0.15 / +0.03,
-and scale 1 with magnification gave nothing worth reading. α 0.1 and 0.25
+Scale 0.75 is in the grid (the user's decision on acceptance; the draft left
+it out because Method 5's best there was +0.21 / +0.07). α 0.1 and 0.25
 bracket Method 5's optimum (0.15 to 0.25); α 0.5 is there because a local
 warp distorts less for the same strength and may tolerate more. σ_k 4 cells
 (64 px) is an object-sized zoom, 12 cells (192 px) a region-sized one.
@@ -156,6 +157,7 @@ Method 5's best separable now configuration per scale (the bar of part (b)):
 | 0.25 | +1.25 (`E/a0.25/s1`) | +1.80 (`E/a0.25/s4`) |
 | 0.375 | +0.92 (`E/a0.15/s1`) | +1.17 (`E/a0.15/s4`) |
 | 0.5 | +1.00 (`E/a0.15/s4`) | +0.33 (`B/a0.15/s4`) |
+| 0.75 | +0.21 (`S/a0.1/s4`) | +0.07 (`B/a0.1/s1`) |
 
 (mIoU points above the full frame at that scale.)
 
@@ -185,7 +187,7 @@ If either fails, the run stops until it is understood.
   val, so a 2-D warp that only matches it has nothing to offer. +0.5 is half
   the oracle margin; both sides are the best of a grid picked on the same
   clips, so the selection bias is similar on both sides (the 2-D grid has
-  108 configurations at three scales, the separable one 120 at four).
+  144 configurations at four scales, the separable one 120 at four).
 - The budget, the three curves and the distortion figures are reported and
   do not enter the rule.
 - Chunk 0 (100 clips) is a smoke run and a first look; the rule is read on
@@ -200,8 +202,8 @@ budget, val as in Method 5.
 
 ## Cost of the run
 
-Per model and labelled frame: the teacher, the 3 uniform passes for E and
-114 warped passes. Method 5 phase 1 ran 148 passes plus the t − 1 teacher in
+Per model and labelled frame: the teacher, the 4 uniform passes for E and
+152 warped passes. Method 5 phase 1 ran 148 passes plus the t − 1 teacher in
 18 to 21 s per clip on the cluster's P100 and 28 to 34 s on the laptop; the
 2-D resampling (a gather of up to about 20 × 20 taps per output pixel) and the
 Newton inverse (2 M points, about 10 iterations) add work that is not
@@ -241,14 +243,16 @@ thermal rule.
   its row and column far away are not.
 - Ledger: `results/method6/TRIES.md`. Outcome: `results/method6/README.md`.
 
-## Open points for the user
+## Open points (settled 2026-11-17)
+
+The user agreed to 1 and 2 as drafted and kept scale 0.75 (point 3).
 
 1. **The name.** "Method 6" keeps the numbering, since the map, the code and
    the rule differ from Method 5's.
 2. **Rule part (b).** +0.5 point over the best separable warp. Lower (0) only
    asks "is it at least as good"; higher would decide the run before it ran.
-3. **The grid.** Scale 0.75 out, **prev** out, two kernel sizes. Say so if
-   either should come back before it is frozen.
+3. **The grid.** **prev** out, two kernel sizes; scale 0.75 kept (the
+   user's change on acceptance).
 
 ## Amendments
 

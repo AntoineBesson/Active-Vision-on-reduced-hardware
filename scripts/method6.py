@@ -53,8 +53,8 @@ REPRO_TOLERANCE = 0.001  # each separable row within 0.1 mIoU point of Method 5'
 # train_all (registered grid and the alpha 0.1 / 0.15 extension; spec table). ``score`` checks these
 # against the files; ``bound`` runs them as the reproduction rows: (saliency, alpha, sigma).
 SEP_BAR = {
-    "pidnet_s": {0.25: ("E", 0.25, 1.0), 0.375: ("E", 0.15, 1.0), 0.5: ("E", 0.15, 4.0)},
-    "bisenetv2": {0.25: ("E", 0.25, 4.0), 0.375: ("E", 0.15, 4.0), 0.5: ("B", 0.15, 4.0)},
+    "pidnet_s": {0.25: ("E", 0.25, 1.0), 0.375: ("E", 0.15, 1.0), 0.5: ("E", 0.15, 4.0), 0.75: ("S", 0.1, 4.0)},
+    "bisenetv2": {0.25: ("E", 0.25, 4.0), 0.375: ("E", 0.15, 4.0), 0.5: ("B", 0.15, 4.0), 0.75: ("B", 0.1, 1.0)},
 }
 SEP_DEFAULT = ("E", 0.25, 1.0)  # other models (the fixture's dummy)
 
@@ -340,7 +340,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
     b = sub.add_parser("bound", help="Every configuration of the grid on the labelled frames, per clip (resumable).")
     common(b)
-    b.add_argument("--scales", default="0.25,0.375,0.5", help="Input scales c (the warped image is c x the frame).")
+    b.add_argument("--scales", default="0.25,0.375,0.5,0.75", help="Input scales c (the warped image is c x the frame).")
     b.add_argument("--saliencies", default="E,B,S", help="E: error, B: boundaries, S: small classes.")
     b.add_argument("--alphas", default="0.1,0.25,0.5", help="Warp strengths (the uniform row, 0, is always run).")
     b.add_argument("--sigmas", default="1,4", help="Saliency smoothing, in cells.")
