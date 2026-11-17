@@ -1,13 +1,12 @@
 # Method 5, phase 2: a warp a real policy can compute, at its real cost
 
-Status: **draft, 2026-11-16. Nothing is built or run.** The user asked for
-this spec on 2026-11-16, after phase 1 passed, and settled its open points
-the same evening ([decisions](#the-users-decisions-2026-11-16)). The scale 1
-magnification extension, run before acceptance, did not change the scales.
-Acceptance waits for the user's word on the last point (gate A straddle). The design is Claude's proposal; points
-marked *(my call)* are Claude's choices. Once the user accepts it, nothing
-here changes after the first stage B run, except in a dated "Amendments"
-section at the end, as for phase 1.
+Status: **accepted by the user on 2026-11-17, before any code or run.** The
+user asked for this spec on 2026-11-16, after phase 1 passed, and settled its
+open points the same evening ([decisions](#the-users-decisions-2026-11-16)).
+The scale 1 magnification extension, run before acceptance, did not change
+the scales. The design is Claude's proposal; points marked *(my call)* are
+Claude's choices. Nothing here changes after the first stage B run, except in
+a dated "Amendments" section at the end, as for phase 1.
 
 ## What phase 1 leaves
 
@@ -101,7 +100,7 @@ two resampling steps on a T4 against that budget".
   saliency cannot pay for its own resampling.
 - If the sessions straddle the budget somewhere (smallest under, largest
   over), stage B goes on for that model and scale, and the README says the
-  gate was not decided by the timing *(reviewer's call, to confirm)*.
+  gate was not decided by the timing *(reviewer's call, accepted with the spec)*.
 - If only r3 fits, stage B goes on with r3 alone, and its accuracy decides.
 - If only P fits, stage B goes on with P alone.
 
@@ -247,7 +246,7 @@ decision 2).
 - Reporting a phase 1 oracle number as a result of the method.
 - Changing the results of phase 1 or of Methods 2 to 4.
 
-## How it would be built (after acceptance, with its own plan)
+## How it is built (with its own plan, reviewed before any code)
 
 - **`src/warp/grid.py`:**
   - r2, the matrix form of the antialiased resampling, tested equal to r1 up
@@ -305,8 +304,8 @@ scored.
    about 0.65 to 0.75 ms for BiSeNetV2 at 0.375: each model has one scale
    with real room.
 
-Still to confirm at acceptance: the rule when the gate A sessions straddle
-the budget (stage B goes on, marked *to confirm* above).
+The rule for gate A sessions that straddle the budget (stage B goes on) was
+accepted with the spec on 2026-11-17.
 
 ## Changes after review (2026-11-16, before acceptance)
 
