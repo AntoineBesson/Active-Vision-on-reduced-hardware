@@ -407,7 +407,33 @@ was run again with the new P (`prior_scored_<model>.pt`;
   cost leaves it only just above the curve.
 - **All in-sample:** P is fitted on these clips.
 
-Stage C (val) is next. Details: [TRIES](TRIES.md).
+## Phase 2, stage C: the finalists once on val
+
+The 5 finalists, streamed once on the 50 val clips, with the uniform rows of
+their scales as the pipeline check (equal to the full frame to 3e-7);
+`phase2/val/` and `phase2/verdict_val_scored_provisional.json`. Priced
+provisionally by stage A, paired: the `m5final` T4 sessions have not been
+run.
+
+**The pass rule reads negative: no finalist's 95 % interval at equal latency
+is above 0.**
+
+| | Δ same scale | Δ at equal latency [95 %] |
+|---|---|---|
+| PIDNet-S c0.25 a0.25 s1 | +0.82 | +0.43 [−0.49, +1.20] |
+| PIDNet-S c0.375 a0.25 s4 | +0.18 | −0.28 [−3.16, +1.79] |
+| PIDNet-S c0.5 a0.1 s4 | +0.24 | −0.00 [−0.44, +0.64] |
+| BiSeNetV2 c0.25 a0.25 s4 | −0.69 | −0.83 [−1.51, +0.08] |
+| BiSeNetV2 c0.375 a0.1 s1 | +0.62 | +0.45 [−0.33, +0.99] |
+
+- **BiSeNetV2 at 0.25**, +0.94 at equal latency on train, does not carry
+  over to val.
+- **PIDNet-S at 0.25** gains +0.82 at the same scale (39 of 50 clips
+  better). Even at zero warp cost its interval would sit on 0 (−0.02 with
+  the seed of the rule). The 0.06 ms the warp step costs at that scale is
+  enough to put the lower end at −0.49.
+
+Details: [TRIES](TRIES.md).
 
 ## Files
 
@@ -419,10 +445,12 @@ Stage C (val) is next. Details: [TRIES](TRIES.md).
   `warp` part of `scripts/latency_floor.py`, `scripts/method5.py cost`;
   `src/warp/prior.py` and `method5 prior` / `prior-merge` (the static prior
   P); `src/warp/stream.py` and `method5 stream` / `merge --kind stream` /
-  `score2` (stage B); results in `phase2/` (the three T4 sessions,
+  `score2` (stage B), `method5 report` and the `m5final` part of
+  `scripts/latency_floor.py` (stage C); results in `phase2/` (the three T4 sessions,
   `gate_a.json`, `prior_<model>.pt` / `.json`, the prior fitted on the
   400 `train_all` clips, and `prior_scored_<model>.*`, fitted on their scored
   pixels; stage B's scores, gate B and finalists, plain, `amended` and
-  `scored`).
+  `scored`; the val confusions in `phase2/val/` and the provisional val
+  reading).
 - Design: [spec](../../docs/superpowers/specs/2026-11-12-method5-warp-bound-design.md),
   [plan](../../docs/superpowers/plans/2026-11-12-method5-warp-bound.md).

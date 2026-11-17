@@ -835,3 +835,50 @@ uniform row) and at equal latency, old P → new P (points):
 - BiSeNetV2: c0.25 a0.25 s4 and c0.375 a0.1 s1.
 
 **Next: stage C (val)**, with the user's go.
+
+## 2026-11-17 — stage C: the finalists read once on val; no finalist clears the pass rule (provisional prices)
+
+**Run** (the user's go in the thread; laptop RTX 2060, peak 72 °C, no
+pause): the 5 finalists of `finalists_<model>_scored.json` streamed once on
+the 50 val clips at 21d3069 (`stream --split val --prior scored --finalists`).
+The uniform rows of their scales, the pipeline check, were added afterwards
+with `stream --uniform-only` at c8d0bcd, without reading the finalists again
+(they are the full frame, which Method 2 already read on val). Merged
+confusions in `phase2/val/`, reading in `phase2/verdict_val_scored_provisional.json`
+(00c3c31).
+
+- **Pipeline check:** every uniform row equals the full frame to 3e-7.
+- **Prices:** provisional. The `m5final` T4 sessions have not been run, so
+  each finalist is priced as the final sessions' full frame at its scale plus
+  the stage A overhead (paired). The file is not a verdict.
+
+| | val mIoU (train) | Δ vs full frame, same scale | Δ at equal latency [95 %] | if the warp cost nothing [95 %] |
+|---|---|---|---|---|
+| PIDNet-S c0.25 a0.25 s1 | 50.94 (53.28) | +0.82 | +0.43 [−0.49, +1.20] | [−0.02, +1.53] |
+| PIDNet-S c0.375 a0.25 s4 | 58.80 (62.10) | +0.18 | −0.28 [−3.16, +1.79] | [−2.93, +2.44] |
+| PIDNet-S c0.5 a0.1 s4 | 65.06 (68.35) | +0.24 | −0.00 [−0.44, +0.64] | [−0.19, +0.87] |
+| BiSeNetV2 c0.25 a0.25 s4 | 58.45 (60.34) | −0.69 | −0.83 [−1.51, +0.08] | [−1.38, +0.23] |
+| BiSeNetV2 c0.375 a0.1 s1 | 64.87 (67.14) | +0.62 | +0.45 [−0.33, +0.99] | [−0.20, +1.19] |
+
+Intervals: clip bootstrap, 1000 resamples, seed 0. The last column is the
+interval of Δ against the uniform row of the same scale, read on the same
+resamples (`same_scale_interval`, computed from the committed confusions;
+`report` records it as `zero_cost` from now on).
+
+- **The pass rule reads negative:** no finalist has its interval above 0.
+- **BiSeNetV2 at 0.25, the train star** (+1.16 same scale, +0.94 at equal
+  latency, in-sample), is −0.69 at the same scale on val. P was fitted on the
+  train clips, and at this scale its gain does not carry over.
+- **PIDNet-S at 0.25 is the warp's one consistent gain:** +0.82 at the same
+  scale, 39 of the 50 clips better. If the warp cost nothing, its interval
+  would sit on 0: −0.02 with seed 0, and −0.05 to +0.03 over seeds 0 to 7.
+- **The cost is what decides it.** The warp step cost 0.056 to 0.061 ms over
+  the full frame at 0.25 in each of the 3 stage A sessions. At that price the
+  lower end is −0.49. For the `m5final` sessions to turn it positive, they
+  would have to find an overhead of about 0.
+- **The PIDNet-S c0.375 interval is wide** because truck and bus swing
+  (per-class IoU +20.85 and −12.28 points) and few clips hold them: the two
+  largest hold 75 % of val's truck pixels and 84 % of its bus pixels.
+
+**Not decided yet:** close Method 5 as negative now, or run the 3 Colab T4
+sessions (`m5f-s1` to `s3`, notebook ready) for the formal verdict first.
