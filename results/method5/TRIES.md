@@ -596,3 +596,33 @@ measured end-to-end curve):
   (BiSeNetV2). This is the spec's condition for the local 2-D warp's own
   oracle bound (decision 3), and only for a fixed 2-D warp: a per-frame one
   has no room.
+
+## 2026-11-17 — after gate A: stage B with P only; a leaner per-frame step kept for later
+
+The user chose, on gate A's result, to go on with the static prior P only, as
+the spec's rule says, and asked that the cheaper per-frame test be written
+down for later rather than run now. It is not in this phase's spec or plan,
+and nothing of it has been built or timed. What it would be, from where
+stage A's time went (PIDNet-S 0.25, B with r3u1, 1.78 ms over P):
+
+- **Fewer density rounds:** 50 rounds are about 0.7 ms. The prior fit
+  records, per frame, how many rounds phase 1's loop needs on the E, B and S
+  maps at each α and σ (`prior_<model>.json`, `max_rounds`); a step would run
+  that many and no more.
+- **The warp maps and filters in float32 and at the saliency grid:** about
+  1.0 ms goes into building the per-pixel maps and filter weights each
+  frame, in many small float64 operations. Built in float32 from the
+  64 × 128 cumulative density and interpolated, it would be a few kernels.
+- **B and S on the network's own output:** the masks are made on the
+  full-size unwarped labels; made on the warped logits' argmax (stride 8 for
+  PIDNet-S) and pooled to the cells through the inverse map, they touch
+  64 times fewer pixels. U on BiSeNetV2 (stride 1) the same way, after an
+  8 × 8 pooling of the logits.
+- **How it would be read:** a dated amendment to the phase 2 spec, the step
+  timed with `latency_floor --parts warp` in three Colab T4 sessions, and the
+  same gate A. The budgets stay phase 1's (0.18 to 0.75 ms); the smallest
+  per-frame overhead measured is 1.45 ms, so PIDNet-S at 0.25 and 0.375 is
+  the least likely to fit and BiSeNetV2 at 0.375 the most.
+- **When:** after stage B with P. If no fixed warp gains on train, a
+  per-frame one has to make up the whole gap with a saliency weaker than the
+  oracle's, and the test is then worth less.

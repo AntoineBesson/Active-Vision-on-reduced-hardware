@@ -358,6 +358,10 @@ phase 1 budget:
   not antialias, so its accuracy is read in stage B.
 - Details, per-variant table and where the per-frame time goes:
   [TRIES](TRIES.md).
+- Kept for later, at the user's request (2026-11-17): a leaner per-frame
+  step (fewer density rounds, maps built in float32 at the saliency grid,
+  B and S from the network's own low-resolution output), timed by the same
+  gate. Not built; what it would be is in [TRIES](TRIES.md).
 
 ## Files
 
