@@ -626,3 +626,36 @@ stage A's time went (PIDNet-S 0.25, B with r3u1, 1.78 ms over P):
 - **When:** after stage B with P. If no fixed warp gains on train, a
   per-frame one has to make up the whole gap with a saliency weaker than the
   oracle's, and the test is then worth less.
+
+## 2026-11-17 — phase 2: the static prior P fitted on the 400 train_all clips
+
+Code: plan Task 4 (`52dd98f`). Eight cluster jobs approved by the user
+("go start the 8 cluster jobs"), Tesla P100, `scripts/cluster/m5_prior.sh`:
+PIDNet-S chunks 0 to 3 jobs 1108031 to 1108034, BiSeNetV2 1108035 to 1108038.
+All ended with `JOB_OK` on the first try, 2:43 to 3:17 per job, 1.0 to 1.5 s
+per clip. Each chunk file holds 100 clips. Merged on the laptop
+(`prior-merge`), committed in `0848552`: `phase2/prior_<model>.pt` and
+`.json`.
+
+Per labelled frame, the teacher (scale 1) and the uniform pass at each stage B
+scale; P is the share of pixels where they differ, per 16-px cell, over the
+2400 labelled frames:
+
+| | c 0.25 | c 0.375 | c 0.5 |
+|---|---|---|---|
+| PIDNet-S, mean E share | 13.3 % | 10.3 % | 8.2 % |
+| BiSeNetV2, mean E share | 8.1 % | 6.1 % | not in stage B |
+
+- **Density rounds:** phase 1's loop needs at most 11 rounds on any frame's
+  E, B or S map, at any α and σ (S: 10 to 11; E: 1 to 9; B: 1 to 7). Gate A
+  timed 50, so stage B keeps 50. For P it does not matter: its warp is
+  computed once.
+- **Where P puts the resolution:** for both models, mostly at the horizon
+  band (rows of cells 26 to 33, about 420 to 540 px from the top), and very
+  little sideways (column densities 0.95 to 1.08 at α 0.25, σ 4). For
+  PIDNet-S, 24 % of the prior's mass is also in the bottom 128 px (12 % for
+  BiSeNetV2), most likely the ego vehicle, which the labels ignore. There
+  the P warp of PIDNet-S samples at a density of 1.2 to 1.4, so part of its
+  resolution goes to pixels that are not scored. This is the spec's P (the
+  mean of phase 1's E, which counts every pixel, as the phase 1 oracle did),
+  so it is not changed; it is noted to read stage B.

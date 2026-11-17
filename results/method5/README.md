@@ -371,6 +371,10 @@ phase 1 budget:
   `LatencyTables.predict_warp_frame` in `src/foveation/latency_model.py`.
 - Phase 2: `src/warp/policy.py` (saliencies B, S, U, P and `WarpStep`), the
   `warp` part of `scripts/latency_floor.py`, `scripts/method5.py cost`;
-  results in `phase2/` (the three T4 sessions and `gate_a.json`).
+  `src/warp/prior.py` and `method5 prior` / `prior-merge` (the static prior
+  P); `src/warp/stream.py` and `method5 stream` / `merge --kind stream` /
+  `score2` (stage B); results in `phase2/` (the three T4 sessions,
+  `gate_a.json`, and `prior_<model>.pt` / `.json`, the prior fitted on the
+  400 `train_all` clips).
 - Design: [spec](../../docs/superpowers/specs/2026-11-12-method5-warp-bound-design.md),
   [plan](../../docs/superpowers/plans/2026-11-12-method5-warp-bound.md).
