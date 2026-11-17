@@ -1,0 +1,67 @@
+{
+ "split": "train_all",
+ "verdict": "continue",
+ "prior": "scored",
+ "pricing": "paired",
+ "variants": [
+  "r2u1"
+ ],
+ "models": {
+  "pidnet_s": {
+   "rule": "gate B (spec, stage B): continue when, for at least one model, a configuration lies above the measured full-frame curve at equal mean latency on train (all clips; pipeline check of r1/r2 passed)",
+   "pricing": "paired",
+   "variants": [
+    "r2u1"
+   ],
+   "clips": 400,
+   "complete": true,
+   "verdict": "continue",
+   "state": "CONTINUE: 3 configurations above the measured full-frame curve",
+   "above": [
+    "5p/c0.25/P/a0.25/s1/r2u1",
+    "5p/c0.5/P/a0.1/s1/r2u1",
+    "5p/c0.5/P/a0.1/s4/r2u1"
+   ],
+   "best": {
+    "name": "5p/c0.5/P/a0.1/s4/r2u1",
+    "miou": 0.6834923937906252,
+    "latency_ms": 7.323263883590698,
+    "delta_miou_at_equal_latency": 0.0008648838668018355,
+    "delta_vs_fullframe": 0.004071499926698752,
+    "delta_vs_uniform": 0.004071483732089987,
+    "uniform_delta_miou_at_equal_latency": -0.003206599865288151
+   }
+  },
+  "bisenetv2": {
+   "rule": "gate B (spec, stage B): continue when, for at least one model, a configuration lies above the measured full-frame curve at equal mean latency on train (all clips; pipeline check of r1/r2 passed)",
+   "pricing": "paired",
+   "variants": [
+    "r2u1"
+   ],
+   "clips": 400,
+   "complete": true,
+   "verdict": "continue",
+   "state": "CONTINUE: 9 configurations above the measured full-frame curve",
+   "above": [
+    "5p/c0.25/P/a0.1/s1/r2u1",
+    "5p/c0.25/P/a0.1/s4/r2u1",
+    "5p/c0.25/P/a0.15/s1/r2u1",
+    "5p/c0.25/P/a0.15/s4/r2u1",
+    "5p/c0.25/P/a0.25/s1/r2u1",
+    "5p/c0.25/P/a0.25/s4/r2u1",
+    "5p/c0.375/P/a0.1/s1/r2u1",
+    "5p/c0.375/P/a0.1/s4/r2u1",
+    "5p/c0.375/P/a0.15/s4/r2u1"
+   ],
+   "best": {
+    "name": "5p/c0.25/P/a0.25/s4/r2u1",
+    "miou": 0.6034368026019794,
+    "latency_ms": 4.33515191078186,
+    "delta_miou_at_equal_latency": 0.009428018981719188,
+    "delta_vs_fullframe": 0.011560716318886222,
+    "delta_vs_uniform": 0.011560685141254301,
+    "uniform_delta_miou_at_equal_latency": -0.0021326661595351126
+   }
+  }
+ }
+}
