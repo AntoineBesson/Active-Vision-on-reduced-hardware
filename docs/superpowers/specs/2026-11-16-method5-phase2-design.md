@@ -326,3 +326,45 @@ run the α extension and the scale 1 extension before accepting this spec
 (points 1 and 4); stage A can start meanwhile, since its timings are needed
 either way; keep the draft margin (point 2); bound the 2-D warp only if gate A
 leaves room (point 3); both models (point 5).
+
+## Amendments
+
+### 2026-11-17, after stage B on train, before any val read
+
+**What stage B showed** (results/method5/TRIES.md, 2026-11-17). Under the rule
+above, gate B continues for both models. But the best configurations use the
+bilinear resampling r3, and the uniform r3 row, with no warp at all, already
+lies above the full-frame curve: +1.87 points for PIDNet-S and +1.49 for
+BiSeNetV2 at scale 0.375. That gain comes from a cheaper resize, which the
+full frame could use too; it is not the warp's. Stage A's full frame also ran
+1 to 3 % faster than the final sessions' full frame, which lowers every W(c)
+against the curve. The warp's own gain, measured against the uniform row of
+the same filter and scale, is at most +0.8 points (+0.49 for PIDNet-S and
++0.69 for BiSeNetV2 with r2).
+
+**The user's decisions (2026-11-17, in the thread):**
+
+1. **The full frame's own filter only.** Only r2u1, the antialiased
+   resampling that equals the full frame at α 0, may be a finalist. Gate B
+   and the finalists read the r2u1 rows only. The r3 rows stay reported, as a
+   side finding about the baseline's resize.
+2. **Paired pricing.** A configuration's price is the final sessions' full
+   frame at its scale plus its stage A overhead paired within each session
+   (median over the sessions; p95 the same way). Gate B, the finalists, the
+   pass rule's "measured full-frame curve at equal mean latency" and the val
+   reading use it. The spec's W(c) stays reported next to it.
+3. **P on the scored pixels only.** E counts only where the frame's label is
+   not ignored (255). The P fitted on every pixel put 24 % of its mass for
+   PIDNet-S (12 % for BiSeNetV2) in the bottom 128 px, the ego vehicle, which
+   is never scored; at α 0.15 it gave the hood rows 1.6 times the uniform
+   density against 1.15 at the horizon (PIDNet-S, scale 0.375). The new prior is in
+   `prior_scored_<model>.pt`; the first P and its stage B stay committed as
+   they are.
+4. **Stage B again, on train.** The 400 clips are run with the scored P,
+   r2u1 only (the uniform rows do not depend on P). Gate B and the finalists
+   come from this run (files labelled `scored`). If gate B stops there,
+   Method 5 stops and is written up.
+
+These choices are made on train, with val unread. They make the rule
+stricter (no r3, no discount from the stage A full frame), and P is still
+fitted on train only.

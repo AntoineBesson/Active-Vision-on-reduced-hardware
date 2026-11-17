@@ -16,8 +16,13 @@
 # Output: ~/avrh_results/method5/prior/prior_train_all_${MODEL}_c${CHUNK}of4.jsonl.gz, appended clip
 # by clip: a job that hits the time limit is submitted again and resumes. Then, from the copied
 # chunks: python -m scripts.method5 prior-merge --split train_all --out-dir <folder of the chunks>
+# SCORED=1 (amendment of 2026-11-17): E counted on the scored pixels only (label not ignored), in
+# ~/avrh_results/method5/prior_scored/prior_scored_train_all_${MODEL}_c${CHUNK}of4.jsonl.gz; merge
+# those with prior-merge --scored-only.
 set -euo pipefail
 : "${CHUNK:?}" "${MODEL:?}"
+if [ "${SCORED:-0}" = 1 ]; then KIND=(--scored-only); OUT=$HOME/avrh_results/method5/prior_scored
+else KIND=(); OUT=$HOME/avrh_results/method5/prior; fi
 
 module purge
 module load python/3.12.3
@@ -37,7 +42,7 @@ nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
 python -m pytest -q tests/test_warp_grid.py tests/test_warp_policy.py
 
 # The root holds only this chunk's clips, so no --chunk; the tag names the file like a --chunk run.
-OUT=$HOME/avrh_results/method5/prior
 mkdir -p "$OUT"
-python -u -m scripts.method5 prior --split train_all --models "$MODEL" --tag "c${CHUNK}of4" --out-dir "$OUT"
+python -u -m scripts.method5 prior --split train_all --models "$MODEL" --tag "c${CHUNK}of4" --out-dir "$OUT" \
+    ${KIND[@]+"${KIND[@]}"}
 echo JOB_OK

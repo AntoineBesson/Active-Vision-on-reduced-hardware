@@ -14,7 +14,9 @@
 # CHUNK: 0..3, read from ~/avrh_data/vps_train_all_chunk$CHUNK.zip (the 100 clips of that chunk).
 # MODEL: pidnet_s | bisenetv2. VARIANTS: default "r2u1 r3u1" (gate_a.json, 2026-11-17).
 # CHECK=1: the pipeline check only, the first 5 clips of the chunk (tag check5).
-# Needs results/method5/phase2/prior_$MODEL.pt and gate_a.json in the checkout (git pull first).
+# PRIOR: plain (default, prior_$MODEL.pt) | scored (amendment of 2026-11-17: prior_scored_$MODEL.pt,
+# output in ~/avrh_results/method5/stream_scored; run it with VARIANTS=r2u1).
+# Needs results/method5/phase2/prior[_scored]_$MODEL.pt and gate_a.json in the checkout (git pull first).
 # Output: ~/avrh_results/method5/stream/stream_train_all_${MODEL}_<variant>_c${CHUNK}of4.jsonl.gz,
 # appended clip by clip: a job that hits the time limit is submitted again and resumes.
 # The 2 h limit is a first guess (P only runs the 6 labelled frames of a clip); set it to twice
@@ -22,6 +24,12 @@
 set -euo pipefail
 : "${CHUNK:?}" "${MODEL:?}"
 VARIANTS=${VARIANTS:-"r2u1 r3u1"}
+PRIOR=${PRIOR:-plain}
+case "$PRIOR" in
+  plain) PFILE=prior_$MODEL.pt; OUT=$HOME/avrh_results/method5/stream ;;
+  scored) PFILE=prior_scored_$MODEL.pt; OUT=$HOME/avrh_results/method5/stream_scored ;;
+  *) echo "PRIOR must be plain or scored, got $PRIOR"; exit 1 ;;
+esac
 
 module purge
 module load python/3.12.3
@@ -39,14 +47,14 @@ cd ~/avrh
 git log --oneline -1
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
 python -m pytest -q tests/test_warp_grid.py tests/test_warp_policy.py tests/test_warp_stream.py
-test -f "results/method5/phase2/prior_$MODEL.pt" || { echo "no prior for $MODEL: git pull"; exit 1; }
+test -f "results/method5/phase2/$PFILE" || { echo "no $PFILE: git pull"; exit 1; }
 
 # The root holds only this chunk's clips, so no --chunk for the full run; the tag names the file
 # like a --chunk run. The check takes the chunk's first 5 clips (0/20 of 100).
 if [ "${CHECK:-0}" = 1 ]; then SEL=(--chunk 0/20 --tag check5); else SEL=(--tag "c${CHUNK}of4"); fi
-OUT=$HOME/avrh_results/method5/stream
 mkdir -p "$OUT"
 for V in $VARIANTS; do
-  python -u -m scripts.method5 stream --split train_all --models "$MODEL" --variant "$V" "${SEL[@]}" --out-dir "$OUT"
+  python -u -m scripts.method5 stream --split train_all --models "$MODEL" --variant "$V" "${SEL[@]}" \
+      --prior "$PRIOR" --out-dir "$OUT"
 done
 echo JOB_OK

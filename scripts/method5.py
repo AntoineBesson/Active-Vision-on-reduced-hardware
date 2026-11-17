@@ -54,7 +54,7 @@ import zlib
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 if __package__ in (None, ""):  # `python scripts/method5.py`
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -155,13 +155,14 @@ def cmd_bound(args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------- #
 # merge
 # --------------------------------------------------------------------------- #
-_PLURAL = {"resample": "resamplings", "variant": "variants"}
+_PLURAL = {"resample": "resamplings", "variant": "variants", "prior": "priors"}
 
 
-def _merge_one(files: Sequence[Path], merged: Path, field: str, label: str) -> set:
+def _merge_one(files: Sequence[Path], merged: Path, field: Union[str, Sequence[str]], label: str) -> set:
     """``files`` -> ``merged``; the clips written. Refuses a (config, clip) seen twice, a clip
     without every config of the others and files whose rows differ in ``field`` (``resample``
-    for bound files, ``variant`` for stream files)."""
+    for bound files, ``variant`` and ``prior`` for stream files)."""
+    fields = (field,) if isinstance(field, str) else tuple(field)
     seen: Dict[Tuple[str, str], str] = {}
     per_clip: Counter = Counter()
     kinds = set()
@@ -174,7 +175,7 @@ def _merge_one(files: Sequence[Path], merged: Path, field: str, label: str) -> s
                     raise SystemExit(f"duplicate line {key} in {f.name} and {seen[key]}: a chunk merged twice?")
                 seen[key] = f.name
                 per_clip[r["clip_id"]] += 1
-                kinds.add(r.get(field))
+                kinds.add(tuple(r.get(f) for f in fields) if len(fields) > 1 else r.get(fields[0]))
                 yield r
 
     n = _write_lines(merged, rows())
@@ -182,7 +183,7 @@ def _merge_one(files: Sequence[Path], merged: Path, field: str, label: str) -> s
         merged.unlink()
         what = (f"clips with different numbers of configs ({sorted(set(per_clip.values()))}): a cut-off chunk? "
                 "Run it again" if len(set(per_clip.values())) > 1 else
-                f"files written with different {_PLURAL[field]} {sorted(map(str, kinds))}")
+                f"files written with different {' / '.join(_PLURAL[f] for f in fields)} {sorted(map(str, kinds))}")
         raise SystemExit(f"[{label}] {merged.name}: {what}")
     print(f"[{label}] {len(files)} files, {n} lines, {len(per_clip)} clips -> {merged}")
     return set(per_clip)
@@ -202,7 +203,7 @@ def cmd_merge(args: argparse.Namespace) -> int:
     out_dir = _stream_dir(args) if stream else _out_dir(args)
     for model in _strs(args.models):
         if stream:
-            jobs = [(out_dir / f"stream_{args.split}_{model}_{v}.jsonl.gz", fs, "variant")
+            jobs = [(out_dir / f"stream_{args.split}_{model}_{v}.jsonl.gz", fs, ("variant", "prior"))
                     for v, fs in _variant_files(out_dir, args.split, model).items()]
         else:
             merged = out_dir / f"bound_{args.split}_{model}.jsonl.gz"
@@ -450,13 +451,25 @@ def cmd_score(args: argparse.Namespace) -> int:
 EXP2 = EXP / "phase2"
 
 
+PRIORS = ("plain", "scored")  # P fitted on every pixel (Task 4), or on the scored pixels only (2026-11-17)
+SCORED_SOURCE = "E oracle, phase 1 teacher, scored pixels only (label not ignored)"
+
+
+def _prior_prefix(kind: str) -> str:
+    """File prefix of a prior's chunks and merged files: ``prior`` (plain) or ``prior_scored``."""
+    if kind not in PRIORS:
+        raise SystemExit(f"unknown prior {kind!r}, expected one of {PRIORS}")
+    return "prior" if kind == "plain" else f"prior_{kind}"
+
+
 def _prior_scales(args: argparse.Namespace, model: str) -> List[float]:
     return _floats(args.scales) if args.scales else list(STAGE_B.get(model, COST_SCALES))
 
 
 def cmd_prior(args: argparse.Namespace) -> int:
     """Per clip, the E counts per cell at each stage B scale of the model and the density rounds its
-    frames need (:func:`warp.prior.prior_clip`), appended to a ``.jsonl.gz`` file (resumable)."""
+    frames need (:func:`warp.prior.prior_clip`), appended to a ``.jsonl.gz`` file (resumable).
+    ``--scored-only``: E counted on the scored pixels only, in ``prior_scored_*`` files."""
     if args.split != "train_all" and not args.fixture:
         raise SystemExit("the prior is fitted on train_all (spec); val is its out-of-sample reading, never fitted on")
     from models.registry import build_backbone
@@ -465,10 +478,12 @@ def cmd_prior(args: argparse.Namespace) -> int:
     device = resolve_device(args.device)
     dataset, clips = _dataset_and_clips(args)
     out_dir = Path(args.out_dir) if args.out_dir else EXP2
+    scored = bool(args.scored_only)
+    prefix = _prior_prefix("scored" if scored else "plain")
     for model in _strs(args.models):
         scales = _prior_scales(args, model)
         expected = {prior_name(s) for s in scales} | {"rounds"}
-        path = out_dir / f"prior_{args.split}_{model}_{_tag(args)}.jsonl.gz"
+        path = out_dir / f"{prefix}_{args.split}_{model}_{_tag(args)}.jsonl.gz"
         done = resume(path, expected, label="method5 prior")
         todo = [i for i in clips if dataset.clip_id(i) not in done]
         print(f"[method5 prior] {model}: scales {scales}, {len(todo)} clips to run, {len(clips) - len(todo)} already "
@@ -480,9 +495,10 @@ def cmd_prior(args: argparse.Namespace) -> int:
         t0 = time.time()
         for n, i in enumerate(todo):
             clip_id = dataset.clip_id(i)
-            out = prior_clip(dataset, i, backbone, scales, device, allow_any_frame_size=args.fixture, cell=args.cell)
+            out = prior_clip(dataset, i, backbone, scales, device, allow_any_frame_size=args.fixture, cell=args.cell,
+                             scored_only=scored)
             base = {"split": args.split, "model": model, "clip_id": clip_id, "frames": out["frames"],
-                    "cell": args.cell}
+                    "cell": args.cell, "scored_only": scored}
             rows = [{**base, "name": prior_name(s), "scale": s, "counts": out[prior_name(s)].tolist()} for s in scales]
             rows.append({**base, "name": "rounds", "rounds": out["rounds"]})
             _append(path, rows)
@@ -495,12 +511,16 @@ def cmd_prior(args: argparse.Namespace) -> int:
 
 def cmd_prior_merge(args: argparse.Namespace) -> int:
     """Chunk files -> ``prior_<model>.pt`` (a list of :func:`warp.policy.prior_record`, one per scale)
-    and ``prior_<model>.json`` (clips, frames, mean E share, the most density rounds needed).
-    Refuses a (row, clip) seen twice, a clip without every row, mixed cells, and missing clips."""
+    and ``prior_<model>.json`` (clips, frames, mean E share, the most density rounds needed);
+    with ``--scored-only``, the ``prior_scored_*`` chunks into ``prior_scored_<model>.*``.
+    Refuses a (row, clip) seen twice, a clip without every row, mixed cells, a row fitted the
+    other way, and missing clips."""
     import torch
 
-    from warp.policy import prior_record
+    from warp.policy import PRIOR_SOURCE, prior_record
 
+    scored = bool(args.scored_only)
+    prefix = _prior_prefix("scored" if scored else "plain")
     expected = None
     if not args.no_expect:
         dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split)
@@ -508,7 +528,7 @@ def cmd_prior_merge(args: argparse.Namespace) -> int:
     src = Path(args.out_dir) if args.out_dir else EXP2
     dest = Path(args.dest) if args.dest else PHASE2
     for model in _strs(args.models):
-        files = sorted(src.glob(f"prior_{args.split}_{model}_*.jsonl.gz"))
+        files = sorted(src.glob(f"{prefix}_{args.split}_{model}_*.jsonl.gz"))
         if not files:
             raise SystemExit(f"[method5 prior-merge] {model}: no chunk file in {src}")
         seen: Dict[Tuple[str, str], str] = {}
@@ -523,6 +543,10 @@ def cmd_prior_merge(args: argparse.Namespace) -> int:
                 if key in seen:
                     raise SystemExit(f"[method5 prior-merge] {key} in {f.name} and {seen[key]}: a chunk merged twice?")
                 seen[key] = f.name
+                if bool(r.get("scored_only", False)) != scored:
+                    raise SystemExit(f"[method5 prior-merge] {f.name}: rows fitted "
+                                     f"{'on the scored pixels only' if not scored else 'on every pixel'}; "
+                                     f"{'add' if not scored else 'drop'} --scored-only")
                 names.setdefault(r["clip_id"], set()).add(r["name"])
                 cells.add(r["cell"])
                 if r["name"] == "rounds":
@@ -541,19 +565,21 @@ def cmd_prior_merge(args: argparse.Namespace) -> int:
             missing = sorted(expected - set(names))
             raise SystemExit(f"[method5 prior-merge] {model}: {len(missing)} clips missing, e.g. {missing[:5]}")
         cell = cells.pop()
-        records = [prior_record(model, s, sums[s].to(torch.float64) / cell ** 2, frames[s])
+        records = [prior_record(model, s, sums[s].to(torch.float64) / cell ** 2, frames[s],
+                                source=SCORED_SOURCE if scored else PRIOR_SOURCE)
                    for s in sorted(sums)]
         dest.mkdir(parents=True, exist_ok=True)
-        torch.save(records, dest / f"prior_{model}.pt")
-        summary = {"model": model, "split": args.split, "clips": len(names), "cell": cell, "files": [f.name for f in files],
+        torch.save(records, dest / f"{prefix}_{model}.pt")
+        summary = {"model": model, "split": args.split, "scored_only": scored, "clips": len(names), "cell": cell,
+                   "files": [f.name for f in files],
                    "scales": {f"{s:g}": {"frames": frames[s],
                                          "mean_e_share": float(sums[s].sum()) / (cell ** 2 * frames[s] * sums[s].numel())}
                               for s in sorted(sums)},
                    "max_rounds": dict(sorted(rounds.items())), "max_rounds_all": max(rounds.values(), default=0)}
-        (dest / f"prior_{model}.json").write_text(json.dumps(summary, indent=1) + "\n")
+        (dest / f"{prefix}_{model}.json").write_text(json.dumps(summary, indent=1) + "\n")
         print(f"[method5 prior-merge] {model}: {len(files)} files, {len(names)} clips, "
               + ", ".join(f"c{k} {v['frames']} frames E {v['mean_e_share'] * 100:.1f} %" for k, v in summary["scales"].items())
-              + f"; density rounds needed at most {summary['max_rounds_all']} -> {dest / f'prior_{model}.pt'}")
+              + f"; density rounds needed at most {summary['max_rounds_all']} -> {dest / f'{prefix}_{model}.pt'}")
     return 0
 
 
@@ -770,19 +796,29 @@ def _check_gate_a(gate: Dict[str, Any], model: str, cfgs: Sequence[Any], variant
             raise SystemExit(f"{c.name()}: gate A did not keep {want} for {model} at scale {c.scale:g}")
 
 
-def _first_field(path: Path, field: str) -> Optional[Any]:
+def _first_row(path: Path) -> Optional[Dict[str, Any]]:
     try:
         with gzip.open(path, "rt", encoding="utf-8") as fh:
             for line in fh:
                 if line.strip():
-                    return json.loads(line).get(field)
+                    return json.loads(line)
     except (EOFError, OSError, zlib.error, json.JSONDecodeError):
         pass
     return None
 
 
+def _first_field(path: Path, field: str) -> Optional[Any]:
+    row = _first_row(path)
+    return None if row is None else row.get(field)
+
+
 def _stream_dir(args: argparse.Namespace) -> Path:
-    return Path(args.out_dir) if args.out_dir else EXP2 / args.split
+    """``--out-dir``, else experiments/method5/phase2/<split>, or <split>_scored for the scored
+    prior, so that its run never mixes with the first one."""
+    if args.out_dir:
+        return Path(args.out_dir)
+    prior = getattr(args, "prior", "plain")
+    return EXP2 / (args.split if prior == "plain" else f"{args.split}_{prior}")
 
 
 def cmd_stream(args: argparse.Namespace) -> int:
@@ -807,13 +843,17 @@ def cmd_stream(args: argparse.Namespace) -> int:
             continue
         if gate is not None:
             _check_gate_a(gate, model, cfgs, args.variant)
-        prior_file = Path(args.priors) / f"prior_{model}.pt"
+        prior_file = Path(args.priors) / f"{_prior_prefix(args.prior)}_{model}.pt"
         priors = {c.scale: load_prior(prior_file, model, c.scale) for c in cfgs if c.saliency == "P"}
         path = _stream_dir(args) / f"stream_{args.split}_{model}_{args.variant}_{_tag(args)}.jsonl.gz"
-        if path.exists():
-            written = _first_field(path, "variant")
-            if written is not None and written != args.variant:
-                raise SystemExit(f"{path} was written with variant {written}: use another --tag or delete it")
+        first = _first_row(path) if path.exists() else None
+        if first is not None:
+            if first.get("variant") != args.variant:
+                raise SystemExit(f"{path} was written with variant {first.get('variant')}: use another --tag or "
+                                 "delete it")
+            if first.get("prior", "plain") != args.prior:
+                raise SystemExit(f"{path} was written with the {first.get('prior', 'plain')} prior: use another "
+                                 "--out-dir")
         done = resume(path, {c.name() for c in cfgs}, label="method5 stream")
         todo = [i for i in clips if dataset.clip_id(i) not in done]
         every = True if args.every_frame else None
@@ -830,7 +870,7 @@ def cmd_stream(args: argparse.Namespace) -> int:
             positions, out = stream_clip(dataset, i, backbone, steps, device, batch=args.batch,
                                          allow_any_frame_size=args.fixture, every_frame=every)
             base = {"split": args.split, "model": model, "clip_id": clip_id, "variant": args.variant,
-                    "frames": len(positions), "positions": positions, "cell": args.cell}
+                    "prior": args.prior, "frames": len(positions), "positions": positions, "cell": args.cell}
             _append(path, [{**base, "name": c.name(), "config": asdict(c), "conf": out[c.name()].tolist()}
                            for c in cfgs])
             dt = time.time() - t0
@@ -1059,7 +1099,8 @@ def _from_scores(path: Path, gate: Dict[str, Any], model: str) -> Dict[str, Any]
         price_config(c, gate, e2e, model)
     return {"configs": configs, "checks": data["pipeline_check"], "e2e": e2e, "fullframe": data["fullframe"],
             "complete": bool(data["gate_b"]["complete"]), "clips": int(data["gate_b"]["clips"]),
-            "files": data["files"], "positions": data["positions"], "source": _rel(path)}
+            "files": data["files"], "positions": data["positions"], "source": _rel(path),
+            "prior": data.get("prior", "plain")}
 
 
 def cmd_score2(args: argparse.Namespace) -> int:
@@ -1072,7 +1113,8 @@ def cmd_score2(args: argparse.Namespace) -> int:
     rule_variants = _strs(args.rule_variants) if args.rule_variants else None
     if rule_variants and any(v not in STREAM_VARIANTS for v in rule_variants):
         raise SystemExit(f"--rule-variants must be among {STREAM_VARIANTS}, got {rule_variants}")
-    suffix = f"_{args.label}" if args.label else ""
+    label = args.label or (None if args.prior == "plain" else args.prior)  # never overwrite the plain run's files
+    suffix = f"_{label}" if label else ""
     fin_dir = Path(args.finalists_dir) if args.finalists_dir else PHASE2
     gates: Dict[str, Any] = {}
     if not args.from_scores:
@@ -1087,7 +1129,7 @@ def cmd_score2(args: argparse.Namespace) -> int:
             configs, checks, e2e, complete, n_clips = (read["configs"], read["checks"], read["e2e"], read["complete"],
                                                        read["clips"])
             files, positions, fullframe = read["files"], read["positions"], read["fullframe"]
-            source = read["source"]
+            source, source_prior = read["source"], read["prior"]
         else:
             variants = sorted({f.name[len(f"stream_{args.split}_{model}_"):-len(".jsonl.gz")]
                                for f in out_dir.glob(f"stream_{args.split}_{model}_*.jsonl.gz")} & set(STREAM_VARIANTS))
@@ -1097,7 +1139,14 @@ def cmd_score2(args: argparse.Namespace) -> int:
             scored = []
             for v in variants:
                 path = out_dir / f"stream_{args.split}_{model}_{v}.jsonl.gz"
-                clips = sorted({r["clip_id"] for r in read_lines(path)})
+                clips, priors = set(), set()
+                for r in read_lines(path):
+                    clips.add(r["clip_id"])
+                    priors.add(r.get("prior", "plain"))
+                if priors != {args.prior}:
+                    raise SystemExit(f"{path.name} was run with the {'/'.join(sorted(priors))} prior, not "
+                                     f"{args.prior}: pass --prior")
+                clips = sorted(clips)
                 ref = fullframe_ref(Path(args.fullframe), model, args.split, tables, clips)
                 e2e = e2e_curves(args.e2e, model, ref)
                 if e2e is None:
@@ -1113,7 +1162,8 @@ def cmd_score2(args: argparse.Namespace) -> int:
             n_clips, files, positions = len(clip_sets[0]), [_rel(s["file"]) for s in scored], scored[0]["positions"]
             fullframe, source = _public(ref), None
         g = gates[model] = gate_b(configs, checks, complete, n_clips, args.pricing, rule_variants)
-        payload = {"split": args.split, "model": model, "gate_a": _rel(args.gate), "fullframe": fullframe,
+        payload = {"split": args.split, "model": model, "prior": source_prior if args.from_scores else args.prior,
+                   "gate_a": _rel(args.gate), "fullframe": fullframe,
                    "fullframe_e2e": {k: v for k, v in e2e.items() if k != "curves"}, "gate_b": g,
                    "pipeline_check": checks, "files": files, "positions": positions, "configs": configs}
         if source:
@@ -1124,7 +1174,8 @@ def cmd_score2(args: argparse.Namespace) -> int:
         fin = finalists_of(configs, e2e, model, args.pricing, rule_variants)
         fin_dir.mkdir(parents=True, exist_ok=True)
         (fin_dir / f"finalists_{model}{suffix}.json").write_text(json.dumps(
-            {"split": args.split, "model": model, "gate_b": g["verdict"], "pricing": args.pricing,
+            {"split": args.split, "model": model, "prior": payload["prior"], "gate_b": g["verdict"],
+             "pricing": args.pricing,
              "variants": rule_variants or "all",
              "rule": "per judge (mean: median latency, p95): the Pareto front over (latency, mIoU) of the warped "
                      "configurations and the best mIoU within each full-frame scale's measured latency; the union",
@@ -1143,7 +1194,8 @@ def cmd_score2(args: argparse.Namespace) -> int:
         states = [g["verdict"] for g in gates.values()]
         verdict = None if any(v is None for v in states) else ("continue" if "continue" in states else "stop")
         (out_dir / f"gate_b_{args.split}{suffix}.json").write_text(json.dumps(
-            {"split": args.split, "verdict": verdict, "pricing": args.pricing, "variants": rule_variants or "all",
+            {"split": args.split, "verdict": verdict, "prior": args.prior, "pricing": args.pricing,
+             "variants": rule_variants or "all",
              "models": gates}, indent=1, allow_nan=True) + "\n")
         print(f"[method5 score2] gate B: {verdict or 'NOT READ'} (models: {', '.join(gates)})")
     return 0
@@ -1189,6 +1241,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     m.add_argument("--kind", default="bound", choices=("bound", "stream"),
                    help="bound: phase 1 files; stream: phase 2 stage B files, one merged file per variant "
                         "(default folder experiments/method5/phase2/<split>).")
+    m.add_argument("--prior", default="plain", choices=PRIORS,
+                   help="--kind stream: the default folder of the scored prior's run is <split>_scored.")
     m.set_defaults(fn=cmd_merge)
 
     s = sub.add_parser("score", help="Per config: mIoU, latency, both judges, both references; the pipeline check "
@@ -1207,12 +1261,16 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     common(pr)
     pr.add_argument("--scales", default=None, help="Default: the stage B scales of the model (spec).")
     pr.add_argument("--cell", type=int, default=16, help="Saliency cell, px (16: a 64 x 128 grid).")
+    pr.add_argument("--scored-only", action="store_true",
+                    help="Count E only where the label is not ignored (amendment of 2026-11-17); prior_scored_* files.")
     pr.set_defaults(fn=cmd_prior)
 
     pm = sub.add_parser("prior-merge", help="Phase 2: chunk files -> results/method5/phase2/prior_<model>.pt.")
     common(pm)
     pm.add_argument("--dest", default=None, help="Folder of the prior files (default results/method5/phase2).")
     pm.add_argument("--no-expect", action="store_true", help="Do not compare against the dataset's clips.")
+    pm.add_argument("--scored-only", action="store_true",
+                    help="Merge the prior_scored_* chunks into prior_scored_<model>.pt / .json.")
     pm.set_defaults(fn=cmd_prior_merge)
 
     st = sub.add_parser("stream", help="Phase 2, stage B: every configuration in its own closed loop over each clip, "
@@ -1229,6 +1287,9 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     st.add_argument("--cell", type=int, default=16, help="Saliency cell, px (16: a 64 x 128 grid).")
     st.add_argument("--batch", type=int, default=4, help="Warped images of one scale per forward pass.")
     st.add_argument("--priors", default=str(PHASE2), help="Folder of prior_<model>.pt (prior-merge).")
+    st.add_argument("--prior", default="plain", choices=PRIORS,
+                    help="plain: prior_<model>.pt; scored: prior_scored_<model>.pt (2026-11-17; default folder "
+                         "experiments/method5/phase2/<split>_scored).")
     st.add_argument("--gate", default=None, help="gate_a.json (default results/method5/phase2/gate_a.json; "
                                                  "not read with --fixture unless given).")
     st.add_argument("--finalists", default=None, help="Run only these configurations (finalists_<model>.json); "
@@ -1258,7 +1319,11 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                     help="Variants gate B and the finalists read (default: all, the spec's).")
     s2.add_argument("--from-scores", default=None,
                     help="Re-read the score2 files in this folder (re-priced; no stream file needed).")
-    s2.add_argument("--label", default=None, help="Suffix of the output files (score2, gate_b, finalists).")
+    s2.add_argument("--label", default=None, help="Suffix of the output files (score2, gate_b, finalists); "
+                                                  "default none, or the prior's name when it is not plain.")
+    s2.add_argument("--prior", default="plain", choices=PRIORS,
+                    help="The prior the stream files were run with (checked); scored: default folder "
+                         "<split>_scored and label scored.")
     s2.set_defaults(fn=cmd_score2)
 
     c = sub.add_parser("cost", help="Phase 2, stage A: the warp step's overhead over the full frame on a T4, paired "

@@ -388,6 +388,64 @@ def test_prior_is_fitted_on_train_all_only():
         method5.main(["prior", "--split", "val", "--models", "pidnet_s"])
 
 
+def test_the_scored_prior_counts_only_the_pixels_the_score_reads(vps, oracle_backbone):
+    """Amendment of 2026-11-17: an E pixel counts only where the label is not ignored (255); the
+    fixture's labels ignore 12 pixels a frame, so some cells lose counts and none gains."""
+    from eval.harness import frame_to_tensor
+    from reuse.method import full_pass
+    from warp.oracle import pixel_mask
+    from warp.prior import prior_clip, prior_name
+
+    plain = prior_clip(vps, 0, oracle_backbone, (0.5, 0.25), "cpu", allow_any_frame_size=True, cell=8)
+    scored = prior_clip(vps, 0, oracle_backbone, (0.5, 0.25), "cpu", allow_any_frame_size=True, cell=8,
+                        scored_only=True)
+    labelled = [int(t) for t in np.flatnonzero(np.asarray(vps.labeled_mask(0), dtype=bool))]
+    assert scored["frames"] == plain["frames"] == len(labelled) and scored["rounds"].keys() == plain["rounds"].keys()
+    for s in (0.5, 0.25):
+        ref = torch.zeros(2, 4, dtype=torch.int64)
+        for t in labelled:
+            frame = frame_to_tensor(vps.load_frame(0, t), "cpu")
+            teacher, uniform = full_pass(oracle_backbone, frame, 1.0, (4, 8))[0], full_pass(oracle_backbone, frame, s,
+                                                                                              (4, 8))[0]
+            ok = torch.from_numpy(np.asarray(vps.load_label(0, t), dtype=np.int64)) != 255
+            ref += (pixel_mask("E", teacher, uniform) & ok).reshape(2, 8, 4, 8).sum((1, 3))
+        a, b = scored[prior_name(s)], plain[prior_name(s)]
+        assert torch.equal(a, ref) and bool((a <= b).all()) and bool((a < b).any())
+
+
+def test_the_scored_prior_has_files_of_its_own(tmp_path):
+    """--scored-only writes prior_scored_* chunks and merges them into prior_scored_<model>.*, next to
+    the plain prior without touching it; neither merge takes the other's chunks."""
+    from warp.policy import PRIOR_SOURCE, load_prior
+
+    src, dest = tmp_path / "pc", tmp_path / "res"
+    assert method5.main(["prior", *_common(), *PRIOR, "--out-dir", str(src)]) == 0
+    assert method5.main(["prior-merge", *_common(), "--out-dir", str(src), "--dest", str(dest)]) == 0
+    plain_pt = (dest / "prior_dummy.pt").read_bytes()
+    assert method5.main(["prior", *_common(), *PRIOR, "--scored-only", "--out-dir", str(src)]) == 0
+    rows = _read(src / "prior_scored_val_dummy_all.jsonl.gz")
+    assert rows and all(r["scored_only"] is True for r in rows)
+    assert all(r["scored_only"] is False for r in _read(src / "prior_val_dummy_all.jsonl.gz"))
+    assert method5.main(["prior-merge", *_common(), "--scored-only", "--out-dir", str(src), "--dest", str(dest)]) == 0
+    assert (dest / "prior_dummy.pt").read_bytes() == plain_pt
+    summary = json.loads((dest / "prior_scored_dummy.json").read_text())
+    assert summary["scored_only"] is True and summary["files"] == ["prior_scored_val_dummy_all.jsonl.gz"]
+    assert json.loads((dest / "prior_dummy.json").read_text())["scored_only"] is False
+    records = torch.load(dest / "prior_scored_dummy.pt", weights_only=True)
+    assert {r["source"] for r in records} == {method5.SCORED_SOURCE} != {PRIOR_SOURCE}
+    for s in (0.5, 0.25):
+        a, b = load_prior(dest / "prior_scored_dummy.pt", "dummy", s), load_prior(dest / "prior_dummy.pt", "dummy", s)
+        assert bool((a <= b).all()) and not torch.equal(a, b)
+    # a chunk of the other kind under this kind's name is refused
+    wrong = tmp_path / "wrong"
+    wrong.mkdir()
+    (wrong / "prior_val_dummy_all.jsonl.gz").write_bytes((src / "prior_scored_val_dummy_all.jsonl.gz").read_bytes())
+    with pytest.raises(SystemExit, match="add --scored-only"):
+        method5.main(["prior-merge", *_common(), "--out-dir", str(wrong), "--dest", str(tmp_path / "x")])
+    with pytest.raises(SystemExit, match="no chunk file"):
+        method5.main(["prior-merge", *_common(), "--scored-only", "--out-dir", str(wrong), "--dest", str(tmp_path / "x")])
+
+
 # --------------------------------------------------------------------------- #
 # Phase 2, stage B: stream -> merge --kind stream -> score2
 # --------------------------------------------------------------------------- #
@@ -659,3 +717,57 @@ def test_gate_b_reads_only_the_variants_and_price_it_is_given():
     g = method5.gate_b(cfgs, ok, True, 400, "paired", ["r2u1"])
     assert g["verdict"] == "stop" and g["above"] == [] and g["best"]["name"] == "b"
     assert method5.gate_b(cfgs, ok, True, 400, "spec", ["r2u1"])["verdict"] == "continue"
+
+
+def test_the_scored_prior_runs_scores_and_picks_finalists_apart(work, stage_b, tmp_path):
+    """stream --prior scored reads prior_scored_<model>.pt and marks its rows; a file of one prior
+    is not resumed, merged or scored as the other; score2 labels the scored run's files ``scored``
+    and leaves the plain run's finalists alone."""
+    from warp.policy import load_prior
+
+    d = stage_b
+    assert method5.main(["prior", *_common(), "--cell", "8", "--scales", "0.5,0.25", "--scored-only",
+                         "--out-dir", str(d / "pc")]) == 0
+    assert method5.main(["prior-merge", *_common(), "--scored-only", "--out-dir", str(d / "pc"),
+                         "--dest", str(d / "priors")]) == 0
+    assert not torch.equal(load_prior(d / "priors" / "prior_scored_dummy.pt", "dummy", 0.5),
+                           load_prior(d / "priors" / "prior_dummy.pt", "dummy", 0.5))
+    run = [*_common(), *STREAM, "--priors", str(d / "priors"), "--gate", str(d / "gate_a.json"), "--variant", "r2u1"]
+    out = tmp_path / "s"
+    for chunk in ("0/2", "1/2"):
+        assert method5.main(["stream", *run, "--prior", "scored", "--chunk", chunk, "--out-dir", str(out)]) == 0
+    rows = _read(out / "stream_val_dummy_r2u1_c0of2.jsonl.gz")
+    assert rows and {r["prior"] for r in rows} == {"scored"}
+    assert {r["prior"] for r in _read(d / "s" / "stream_val_dummy_r2u1.jsonl.gz")} == {"plain"}
+    # the P rows differ from the plain prior's, the uniform rows do not
+    plain = {(r["name"], r["clip_id"]): r["conf"] for r in _read(d / "s" / "stream_val_dummy_r2u1_c0of2.jsonl.gz")}
+    mine = {(r["name"], r["clip_id"]): r["conf"] for r in rows}
+    assert mine.keys() == plain.keys()
+    assert all(mine[k] == plain[k] for k in mine if "/P/" not in k[0])
+    assert any(mine[k] != plain[k] for k in mine if "/P/" in k[0])
+    # a file of the other prior is not resumed
+    with pytest.raises(SystemExit, match="plain prior"):
+        method5.main(["stream", *run, "--prior", "scored", "--chunk", "0/2", "--out-dir", str(d / "s")])
+    # nor merged with this one
+    mixed = tmp_path / "mixed"
+    mixed.mkdir()
+    (mixed / "stream_val_dummy_r2u1_c0of2.jsonl.gz").write_bytes((d / "s" / "stream_val_dummy_r2u1_c0of2.jsonl.gz")
+                                                                 .read_bytes())
+    (mixed / "stream_val_dummy_r2u1_c1of2.jsonl.gz").write_bytes((out / "stream_val_dummy_r2u1_c1of2.jsonl.gz")
+                                                                 .read_bytes())
+    with pytest.raises(SystemExit, match="variants / priors"):
+        method5.main(["merge", "--kind", "stream", *_common(), "--out-dir", str(mixed)])
+    assert method5.main(["merge", "--kind", "stream", *_common(), "--out-dir", str(out)]) == 0
+    # nor scored as the plain prior's run
+    args = _score2_args(work, d, out)
+    with pytest.raises(SystemExit, match="scored prior, not plain"):
+        method5.main(args)
+    fin = (d / "fin" / "finalists_dummy.json").read_text()
+    assert method5.main([*args, "--prior", "scored", "--pricing", "paired", "--rule-variants", "r2u1"]) == 0
+    assert (d / "fin" / "finalists_dummy.json").read_text() == fin
+    score = json.loads((out / "score2_val_dummy_scored.json").read_text())
+    picked = json.loads((d / "fin" / "finalists_dummy_scored.json").read_text())
+    gate = json.loads((out / "gate_b_val_scored.json").read_text())
+    assert score["prior"] == picked["prior"] == gate["prior"] == "scored"
+    assert picked["pricing"] == "paired" and picked["variants"] == ["r2u1"]
+    assert not (out / "score2_val_dummy.json").exists()

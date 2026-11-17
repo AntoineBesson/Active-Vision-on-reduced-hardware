@@ -140,6 +140,40 @@ the time limit set to twice the check's time per clip. Copy the chunk files
 to `experiments/method5/phase2/train_all/`, then `merge --kind stream` and
 `score2` there.
 
+### Method 5 phase 2, amendment of 2026-11-17: P on the scored pixels, r2 only
+
+The prior is refitted counting only the pixels whose label is not ignored
+(`SCORED=1`), then stage B runs again with it (`PRIOR=scored`), r2u1 only.
+Both write to folders of their own, so the first run's files stay as they are:
+
+```bash
+cd ~/avrh && git pull --ff-only
+for C in 0 1 2 3; do for M in pidnet_s bisenetv2; do
+  sbatch --job-name=m5ps_c${C}_$M --output=$HOME/avrh_jobs/%x_%j.out \
+      --export=ALL,CHUNK=$C,MODEL=$M,SCORED=1 scripts/cluster/m5_prior.sh
+done; done
+```
+
+Copy `~/avrh_results/method5/prior_scored/*.jsonl.gz` to a folder on the
+laptop, then `prior-merge --split train_all --scored-only --out-dir <that
+folder>`: it writes `results/method5/phase2/prior_scored_<model>.pt` and
+`.json`. Commit and push them, `git pull` on the gateway, then:
+
+```bash
+for C in 0 1 2 3; do for M in pidnet_s bisenetv2; do
+  sbatch --job-name=m5ss_c${C}_$M --output=$HOME/avrh_jobs/%x_%j.out \
+      --export=ALL,CHUNK=$C,MODEL=$M,PRIOR=scored,VARIANTS=r2u1 scripts/cluster/m5_stream.sh
+done; done
+```
+
+Copy `~/avrh_results/method5/stream_scored/*.jsonl.gz` to
+`experiments/method5/phase2/train_all_scored/`, then
+`merge --kind stream --prior scored` and
+`score2 --prior scored --pricing paired --rule-variants r2u1`. score2 labels
+its files `scored` (`score2_train_all_<model>_scored.json` and
+`gate_b_train_all_scored.json` in that folder, `finalists_<model>_scored.json`
+in `results/method5/phase2/`).
+
 ## Bringing results back
 
 ```bash
