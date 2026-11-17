@@ -28,6 +28,8 @@ synthetic fixture with the dummy backbone (a smoke test, not results).
 Phase 2 (spec docs/superpowers/specs/2026-11-16-method5-phase2-design.md):
 
     python -m scripts.method5 cost --sessions "results/method5/phase2/latency_floor_m5w-s*.json"   # gate A
+    python -m scripts.method5 prior --split train_all --models pidnet_s --chunk 0/4    # static prior P, per clip
+    python -m scripts.method5 prior-merge --split train_all                           # -> phase2/prior_<model>.pt
 
 ``cost`` reads the latency-floor sessions of the ``warp`` part (Colab T4): per model, scale and
 variant of the warp step, the overhead over the full frame paired within each session, against
@@ -420,6 +422,119 @@ def cmd_score(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Phase 2: the static prior P (prior, prior-merge)
+# --------------------------------------------------------------------------- #
+EXP2 = EXP / "phase2"
+
+
+def _prior_scales(args: argparse.Namespace, model: str) -> List[float]:
+    return _floats(args.scales) if args.scales else list(STAGE_B.get(model, COST_SCALES))
+
+
+def cmd_prior(args: argparse.Namespace) -> int:
+    """Per clip, the E counts per cell at each stage B scale of the model and the density rounds its
+    frames need (:func:`warp.prior.prior_clip`), appended to a ``.jsonl.gz`` file (resumable)."""
+    if args.split != "train_all" and not args.fixture:
+        raise SystemExit("the prior is fitted on train_all (spec); val is its out-of-sample reading, never fitted on")
+    from models.registry import build_backbone
+    from warp.prior import prior_clip, prior_name
+
+    device = resolve_device(args.device)
+    dataset, clips = _dataset_and_clips(args)
+    out_dir = Path(args.out_dir) if args.out_dir else EXP2
+    for model in _strs(args.models):
+        scales = _prior_scales(args, model)
+        expected = {prior_name(s) for s in scales} | {"rounds"}
+        path = out_dir / f"prior_{args.split}_{model}_{_tag(args)}.jsonl.gz"
+        done = resume(path, expected, label="method5 prior")
+        todo = [i for i in clips if dataset.clip_id(i) not in done]
+        print(f"[method5 prior] {model}: scales {scales}, {len(todo)} clips to run, {len(clips) - len(todo)} already "
+              f"in {path.name}", flush=True)
+        if not todo:
+            continue
+        backbone = build_backbone(model_config(model, args.fixture)["backbone"],
+                                  context={"palette": dataset.palette}).to(device).eval()
+        t0 = time.time()
+        for n, i in enumerate(todo):
+            clip_id = dataset.clip_id(i)
+            out = prior_clip(dataset, i, backbone, scales, device, allow_any_frame_size=args.fixture, cell=args.cell)
+            base = {"split": args.split, "model": model, "clip_id": clip_id, "frames": out["frames"],
+                    "cell": args.cell}
+            rows = [{**base, "name": prior_name(s), "scale": s, "counts": out[prior_name(s)].tolist()} for s in scales]
+            rows.append({**base, "name": "rounds", "rounds": out["rounds"]})
+            _append(path, rows)
+            dt = time.time() - t0
+            print(f"[method5 prior] {model} clip {n + 1}/{len(todo)} {clip_id} ({dt:.0f} s, {dt / (n + 1):.1f} s/clip)",
+                  flush=True)
+        print(f"[method5 prior] {model}: {len(clips)} clips in {path}")
+    return 0
+
+
+def cmd_prior_merge(args: argparse.Namespace) -> int:
+    """Chunk files -> ``prior_<model>.pt`` (a list of :func:`warp.policy.prior_record`, one per scale)
+    and ``prior_<model>.json`` (clips, frames, mean E share, the most density rounds needed).
+    Refuses a (row, clip) seen twice, a clip without every row, mixed cells, and missing clips."""
+    import torch
+
+    from warp.policy import prior_record
+
+    expected = None
+    if not args.no_expect:
+        dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split)
+        expected = {dataset.clip_id(i) for i in range(len(dataset))}
+    src = Path(args.out_dir) if args.out_dir else EXP2
+    dest = Path(args.dest) if args.dest else PHASE2
+    for model in _strs(args.models):
+        files = sorted(src.glob(f"prior_{args.split}_{model}_*.jsonl.gz"))
+        if not files:
+            raise SystemExit(f"[method5 prior-merge] {model}: no chunk file in {src}")
+        seen: Dict[Tuple[str, str], str] = {}
+        names: Dict[str, set] = {}
+        sums: Dict[float, Any] = {}
+        frames: Dict[float, int] = {}
+        rounds: Dict[str, int] = {}
+        cells = set()
+        for f in files:
+            for r in read_lines(f):
+                key = (r["name"], r["clip_id"])
+                if key in seen:
+                    raise SystemExit(f"[method5 prior-merge] {key} in {f.name} and {seen[key]}: a chunk merged twice?")
+                seen[key] = f.name
+                names.setdefault(r["clip_id"], set()).add(r["name"])
+                cells.add(r["cell"])
+                if r["name"] == "rounds":
+                    for k, v in r["rounds"].items():
+                        rounds[k] = max(rounds.get(k, 0), int(v))
+                    continue
+                s = float(r["scale"])
+                c = torch.tensor(r["counts"], dtype=torch.int64)
+                sums[s] = c if s not in sums else sums[s] + c
+                frames[s] = frames.get(s, 0) + int(r["frames"])
+        if len({frozenset(v) for v in names.values()}) > 1:
+            raise SystemExit(f"[method5 prior-merge] {model}: clips with different rows: a cut-off chunk?")
+        if len(cells) != 1:
+            raise SystemExit(f"[method5 prior-merge] {model}: chunks written with different cells {sorted(cells)}")
+        if expected is not None and set(names) != expected:
+            missing = sorted(expected - set(names))
+            raise SystemExit(f"[method5 prior-merge] {model}: {len(missing)} clips missing, e.g. {missing[:5]}")
+        cell = cells.pop()
+        records = [prior_record(model, s, sums[s].to(torch.float64) / cell ** 2, frames[s])
+                   for s in sorted(sums)]
+        dest.mkdir(parents=True, exist_ok=True)
+        torch.save(records, dest / f"prior_{model}.pt")
+        summary = {"model": model, "split": args.split, "clips": len(names), "cell": cell, "files": [f.name for f in files],
+                   "scales": {f"{s:g}": {"frames": frames[s],
+                                         "mean_e_share": float(sums[s].sum()) / (cell ** 2 * frames[s] * sums[s].numel())}
+                              for s in sorted(sums)},
+                   "max_rounds": dict(sorted(rounds.items())), "max_rounds_all": max(rounds.values(), default=0)}
+        (dest / f"prior_{model}.json").write_text(json.dumps(summary, indent=1) + "\n")
+        print(f"[method5 prior-merge] {model}: {len(files)} files, {len(names)} clips, "
+              + ", ".join(f"c{k} {v['frames']} frames E {v['mean_e_share'] * 100:.1f} %" for k, v in summary["scales"].items())
+              + f"; density rounds needed at most {summary['max_rounds_all']} -> {dest / f'prior_{model}.pt'}")
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # Phase 2, stage A: the cost of the warp step on a T4 (gate A)
 # --------------------------------------------------------------------------- #
 PHASE2 = REPO_ROOT / "results" / "method5" / "phase2"
@@ -632,6 +747,19 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     s.add_argument("--no-expect", action="store_true",
                    help="Do not load the dataset (clip list, class names): the verdict is then not read.")
     s.set_defaults(fn=cmd_score)
+
+    pr = sub.add_parser("prior", help="Phase 2: E counts per cell and density rounds per clip, for the static prior "
+                                      "P (train_all; resumable).")
+    common(pr)
+    pr.add_argument("--scales", default=None, help="Default: the stage B scales of the model (spec).")
+    pr.add_argument("--cell", type=int, default=16, help="Saliency cell, px (16: a 64 x 128 grid).")
+    pr.set_defaults(fn=cmd_prior)
+
+    pm = sub.add_parser("prior-merge", help="Phase 2: chunk files -> results/method5/phase2/prior_<model>.pt.")
+    common(pm)
+    pm.add_argument("--dest", default=None, help="Folder of the prior files (default results/method5/phase2).")
+    pm.add_argument("--no-expect", action="store_true", help="Do not compare against the dataset's clips.")
+    pm.set_defaults(fn=cmd_prior_merge)
 
     c = sub.add_parser("cost", help="Phase 2, stage A: the warp step's overhead over the full frame on a T4, paired "
                                     "per session, against the phase 1 budget (gate A).")

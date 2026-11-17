@@ -44,7 +44,7 @@ import torch
 import torch.nn.functional as F
 
 __all__ = ["D_MIN", "WarpGrid", "axis_density", "forward_coords", "inverse_coords", "make_grid", "warp_frame",
-           "unwarp_logits", "filter_taps", "axis_matrix", "unwarp_logits_separable"]
+           "unwarp_logits", "filter_taps", "axis_matrix", "unwarp_logits_separable", "rounds_needed"]
 
 D_MIN = 0.5  # the spec's lower clip: no region gets less than half the uniform density
 MAX_ITER = 50  # clip-and-renormalise rounds (the worst of 20 000 random profiles needs 32)
@@ -93,6 +93,26 @@ def axis_density(profile: torch.Tensor, alpha: float, scale: float, d_min: float
     else:
         raise RuntimeError(f"the density clip did not settle in {MAX_ITER} rounds (alpha {alpha}, scale {scale})")
     return d.to(torch.float32)
+
+
+def rounds_needed(profile: torch.Tensor, alpha: float, scale: float, d_min: float = D_MIN,
+                  d_max: Optional[float] = None) -> int:
+    """Clip-and-renormalise rounds the default loop of :func:`axis_density` runs on ``profile``
+    before it stops (0 when there is nothing to clip: alpha 0 or an all-zero profile). A fixed
+    number of rounds at least this large gives the loop's density to within its tolerance."""
+    p = profile.detach().to("cpu", torch.float64).flatten()
+    mean = float(p.mean())
+    if alpha == 0.0 or mean <= 0.0:
+        return 0
+    top = 1.0 / scale if d_max is None else float(d_max)
+    d = (1.0 - alpha) + alpha * p / mean
+    for k in range(MAX_ITER):
+        clipped = d.clamp(d_min, top)
+        change = float((clipped - d).abs().max())
+        d = clipped / clipped.mean()
+        if change < TOL:
+            return k + 1
+    raise RuntimeError(f"the density clip did not settle in {MAX_ITER} rounds (alpha {alpha}, scale {scale})")
 
 
 def _density_fixed_rounds(profile: torch.Tensor, alpha: float, d_min: float, top: float, rounds: int) -> torch.Tensor:

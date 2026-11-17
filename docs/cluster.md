@@ -94,6 +94,24 @@ tail -n 2 ~/avrh_jobs/m5_c1_*.out
 - A lesson from Method 3: do not test `pytest -q` output with
   `grep " 1 passed"`; use the exit code.
 
+### Method 5 phase 2: the static prior P
+
+[scripts/cluster/m5_prior.sh](../scripts/cluster/m5_prior.sh) fits one chunk of the
+prior for one model (P100, 2 h limit): the teacher and the uniform pass at each
+stage B scale on every labelled frame, no warped pass. Same loop as above,
+without `RUN`:
+
+```bash
+for C in 0 1 2 3; do for M in pidnet_s bisenetv2; do
+  sbatch --job-name=m5p_c${C}_$M --output=$HOME/avrh_jobs/%x_%j.out \
+      --export=ALL,CHUNK=$C,MODEL=$M scripts/cluster/m5_prior.sh
+done; done
+```
+
+The chunks land in `~/avrh_results/method5/prior/`; copy them back and run
+`python -m scripts.method5 prior-merge --split train_all --out-dir <that folder>`
+on the laptop, which writes `results/method5/phase2/prior_<model>.pt` and `.json`.
+
 ## Bringing results back
 
 ```bash

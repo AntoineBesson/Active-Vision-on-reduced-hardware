@@ -319,3 +319,70 @@ def test_a_failed_pipeline_check_blocks_the_verdict():
     missing = method5.pipeline_check([{**_cfg("now", 0.0, alpha=0.0), "config": {"scale": 0.375, "alpha": 0.0}}],
                                      {}, ref)
     assert not missing["0.375"]["ok"] and missing["0.375"]["baseline_miou"] is None
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2: the static prior P (prior, prior-merge)
+# --------------------------------------------------------------------------- #
+PRIOR = ["--cell", "8", "--scales", "0.5,0.25"]
+
+
+def test_prior_clip_counts_the_phase1_error_oracle(vps, oracle_backbone):
+    """The counts are phase 1's E saliency (unsmoothed) times the cell area, summed over the clip's
+    labelled frames; the rounds are those of the density loop on its saliencies."""
+    from eval.harness import frame_to_tensor
+    from reuse.method import full_pass
+    from warp.oracle import saliency
+    from warp.prior import prior_clip, prior_name
+
+    out = prior_clip(vps, 0, oracle_backbone, (0.5, 0.25), "cpu", allow_any_frame_size=True, cell=8)
+    labelled = np.flatnonzero(np.asarray(vps.labeled_mask(0), dtype=bool))
+    assert out["frames"] == len(labelled) > 0
+    for s in (0.5, 0.25):
+        ref = torch.zeros(2, 4, dtype=torch.float64)
+        for t in labelled:
+            frame = frame_to_tensor(vps.load_frame(0, int(t)), "cpu")
+            teacher, uniform = full_pass(oracle_backbone, frame, 1.0, (4, 8))[0], full_pass(oracle_backbone, frame, s,
+                                                                                              (4, 8))[0]
+            ref += saliency("E", teacher, uniform, 0, 8).double()
+        c = out[prior_name(s)]
+        assert c.dtype == torch.int64 and c.shape == (2, 4) and torch.allclose(c.double() / 64, ref)
+    assert set(out["rounds"]) == {f"{k}/c{s:g}" for k in "EBS" for s in (0.5, 0.25)}
+    assert all(isinstance(v, int) and 0 <= v <= 50 for v in out["rounds"].values())
+
+
+def test_prior_cli_chunks_merge_to_the_whole_and_refuse_doubles(tmp_path, capsys):
+    from warp.policy import load_prior
+
+    whole, parts = tmp_path / "whole", tmp_path / "parts"
+    assert method5.main(["prior", *_common(), *PRIOR, "--out-dir", str(whole)]) == 0
+    for chunk in ("0/2", "1/2"):
+        assert method5.main(["prior", *_common(), *PRIOR, "--chunk", chunk, "--out-dir", str(parts)]) == 0
+    rows = _read(whole / "prior_val_dummy_all.jsonl.gz")
+    clips = {r["clip_id"] for r in rows}
+    assert len(rows) == 3 * len(clips) and {r["name"] for r in rows} == {"prior/c0.5", "prior/c0.25", "rounds"}
+    # resumable: run again, nothing is added
+    assert method5.main(["prior", *_common(), *PRIOR, "--out-dir", str(whole)]) == 0
+    assert len(_read(whole / "prior_val_dummy_all.jsonl.gz")) == len(rows)
+    for src in (whole, parts):
+        assert method5.main(["prior-merge", *_common(), "--out-dir", str(src), "--dest", str(src / "res")]) == 0
+    for s in (0.5, 0.25):
+        a, b = load_prior(whole / "res" / "prior_dummy.pt", "dummy", s), load_prior(parts / "res" / "prior_dummy.pt",
+                                                                                    "dummy", s)
+        assert a.shape == (2, 4) and torch.equal(a, b) and 0 <= float(a.min()) and float(a.max()) <= 1
+    summary = json.loads((whole / "res" / "prior_dummy.json").read_text())
+    assert summary["clips"] == len(clips) and summary["cell"] == 8
+    assert summary["max_rounds_all"] == max(summary["max_rounds"].values())
+    # a chunk merged twice, and a missing clip, are refused
+    (parts / "prior_val_dummy_dup.jsonl.gz").write_bytes((parts / "prior_val_dummy_c0of2.jsonl.gz").read_bytes())
+    with pytest.raises(SystemExit, match="merged twice"):
+        method5.main(["prior-merge", *_common(), "--out-dir", str(parts), "--dest", str(tmp_path / "x")])
+    (parts / "prior_val_dummy_dup.jsonl.gz").unlink()
+    (parts / "prior_val_dummy_c1of2.jsonl.gz").unlink()
+    with pytest.raises(SystemExit, match="missing"):
+        method5.main(["prior-merge", *_common(), "--out-dir", str(parts), "--dest", str(tmp_path / "x")])
+
+
+def test_prior_is_fitted_on_train_all_only():
+    with pytest.raises(SystemExit):
+        method5.main(["prior", "--split", "val", "--models", "pidnet_s"])
