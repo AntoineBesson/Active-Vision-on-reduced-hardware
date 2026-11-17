@@ -1241,15 +1241,44 @@ def final_prices(sessions: Sequence[Dict[str, Any]], model: str) -> Dict[str, An
     return out
 
 
-def pass_rule(results: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def _at_equal_latency(r: Dict[str, Any]) -> Tuple[Any, Any]:
+    return r["judges"]["mean"]["delta_miou_at_equal_latency"], r["bootstrap"]["mean"]["delta_miou"][0]
+
+
+def _at_zero_cost(r: Dict[str, Any]) -> Tuple[Any, Any]:
+    z = r.get("zero_cost")
+    return (None, None) if z is None else (z["delta_miou"], z["interval"][0])
+
+
+def same_scale_interval(conf: Any, ref_conf: Any, n: int = 1000, seed: int = 0) -> Tuple[float, float]:
+    """95% clip-bootstrap interval of mIoU(``conf``) minus mIoU(``ref_conf``), both (N, C, C) per-clip
+    confusions read on the same clip resamples (the draws of ``clip_bootstrap`` with the same seed).
+    Against the full frame at the finalist's own scale, it is the interval at equal latency if the
+    warp step cost nothing over that full frame."""
+    import numpy as np
+
+    from eval.tradeoff import miou_of
+
+    rng = np.random.default_rng(seed)
+    num = conf.shape[0]
+    vals = []
+    for _ in range(n):
+        pick = rng.integers(0, num, num)
+        vals.append(miou_of(conf[pick].sum(0)) - miou_of(ref_conf[pick].sum(0)))
+    arr = np.asarray(vals, dtype=np.float64)
+    ok = arr[~np.isnan(arr)]
+    return (float(np.percentile(ok, 2.5)), float(np.percentile(ok, 97.5))) if len(ok) else (math.nan, math.nan)
+
+
+def pass_rule(results: Sequence[Dict[str, Any]], reading: Any = _at_equal_latency) -> Dict[str, Any]:
     """The spec's rule on val: positive if, for at least one backbone, a finalist has ΔmIoU above 0
     against the measured full-frame curve at equal mean latency and the lower end of its
     clip-bootstrap 95% interval above 0; negative otherwise. A finalist with no reading (its
-    latency outside the curve) does not pass."""
+    latency outside the curve) does not pass. ``reading=_at_zero_cost``: the same rule on the
+    reading against the full frame at the finalist's scale, as if the warp step cost nothing."""
     models: Dict[str, Any] = {}
     for r in results:
-        d = r["judges"]["mean"]["delta_miou_at_equal_latency"]
-        lo = r["bootstrap"]["mean"]["delta_miou"][0]
+        d, lo = reading(r)
         ok = d is not None and not math.isnan(d) and d > 0 and lo is not None and not math.isnan(lo) and lo > 0
         m = models.setdefault(r["model"], {"passes": False, "passing": []})
         if ok:
@@ -1350,8 +1379,10 @@ def cmd_report(args: argparse.Namespace) -> int:
             return np.stack([np.asarray(have[c]["conf"], dtype=np.int64).sum(0) for c in clip_ids])
 
         checks[model] = {}
+        uniform_at: Dict[Tuple[float, str], str] = {}
         for name in sorted(n for n in lines if "/uniform/" in n):
             scale = float(next(iter(lines[name].values()))["config"]["scale"])
+            uniform_at[(scale, next(iter(lines[name].values()))["variant"])] = name
             got = miou_of(per_clip(name).sum(0))
             base = ref["miou"][ref["scales"].index(scale)] if scale in ref["scales"] else None
             gap = None if base is None else got - base
@@ -1375,6 +1406,12 @@ def cmd_report(args: argparse.Namespace) -> int:
             j = ref["scales"].index(scale) if scale in ref["scales"] else None
             boot = {"mean": clip_bootstrap(conf, ref["clips"], ff_med, mean_ms, n=args.bootstrap, seed=0),
                     "p95": clip_bootstrap(conf, ref["clips"], ff_p95, p95_ms, n=args.bootstrap, seed=0)}
+            uni = uniform_at.get((scale, f["variant"]))
+            zero = None
+            if uni is not None:  # the uniform row of its scale: the full frame, read in the same run
+                uconf = per_clip(uni)
+                zero = {"against": uni, "delta_miou": miou - miou_of(uconf.sum(0)),
+                        "interval": same_scale_interval(conf, uconf, n=args.bootstrap, seed=0)}
             results.append({
                 "model": model, "name": f["name"], "variant": f["variant"], "config": f["config"],
                 "reasons": f.get("reasons"), "train": f.get("train"), "miou": miou,
@@ -1382,7 +1419,7 @@ def cmd_report(args: argparse.Namespace) -> int:
                 "latency": {"mean_ms": mean_ms, "p95_ms": p95_ms, "sessions": price["sessions"]},
                 "judges": judge_readings(miou, mean_ms, p95_ms, ref),
                 "delta_vs_fullframe": None if j is None else miou - ref["miou"][j],
-                "bootstrap": boot})
+                "bootstrap": boot, "zero_cost": zero})
             d = results[-1]["judges"]["mean"]["delta_miou_at_equal_latency"]
             lo, hi = boot["mean"]["delta_miou"]
             print(f"[method5 report] {model} {f['name']}: mIoU {miou:.4f} at {mean_ms:.2f} ms, "
@@ -1403,7 +1440,11 @@ def cmd_report(args: argparse.Namespace) -> int:
         "rule": "positive if, for at least one backbone, a finalist chosen on train has ΔmIoU above 0 against the "
                 "measured full-frame curve at equal mean latency on val, and the lower end of its clip-bootstrap 95% "
                 "interval is also above 0 (spec, stage C; prices: the m5final sessions)",
-        "pass_rule": rule, "sessions": info, "session_files": [_rel(Path(p)) for p in paths],
+        "pass_rule": rule,
+        "zero_cost_rule": dict(pass_rule(results, _at_zero_cost), reading=(
+            "the pass rule if the warp step cost exactly the full frame at the finalist's scale: ΔmIoU against "
+            "the uniform row of that scale (the full frame, pipeline check), clip-bootstrap 95% interval")),
+        "sessions": info, "session_files": [_rel(Path(p)) for p in paths],
         "clips": {m: len(r["clips"][0]) for m, r in refs.items()}, "bootstrap_resamples": args.bootstrap,
         "pipeline_check": checks, "fullframe": {m: _public(r) for m, r in refs.items()},
         "finalists": results}, indent=1, allow_nan=True) + "\n")

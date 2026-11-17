@@ -853,7 +853,12 @@ def test_report_reads_the_finalists_priced_by_the_m5final_sessions(work, stage_b
         assert r["latency"]["mean_ms"] == pytest.approx(22 * s * s + 2.05) and r["latency"]["sessions"] == 3
         lo, hi = r["bootstrap"]["mean"]["delta_miou"]
         assert lo <= hi
+        z = r["zero_cost"]  # against the uniform row of its scale, which is the full frame there
+        assert "/uniform/" in z["against"] and f"/c{s:g}/" in z["against"]
+        assert z["delta_miou"] == pytest.approx(r["delta_vs_fullframe"], abs=method5.CHECK_TOLERANCE)
+        assert z["interval"][0] <= z["interval"][1]
     assert v["verdict"] == ("positive" if method5.pass_rule(v["finalists"])["positive"] else "negative")
+    assert v["zero_cost_rule"]["positive"] == method5.pass_rule(v["finalists"], method5._at_zero_cost)["positive"]
 
 
 def test_report_does_not_read_a_verdict_without_three_full_t4_sessions(work, stage_b, stage_c):
@@ -900,6 +905,27 @@ def test_the_pass_rule_needs_the_interval_above_zero():
     assert not method5.pass_rule([r("a", float("nan"), 0.01), r("b", -0.01, -0.02)])["positive"]
     rule = method5.pass_rule([r("a", 0.01, -0.001), r("b", 0.004, 0.0005)])
     assert rule["positive"] and rule["models"]["b"]["passing"] == ["b/0.004/0.0005"] and not rule["models"]["a"]["passes"]
+
+
+def test_the_zero_cost_interval_is_the_interval_at_equal_latency_of_a_finalist_priced_as_the_full_frame():
+    from eval.tradeoff import clip_bootstrap
+
+    rng = np.random.default_rng(3)
+    conf = rng.integers(0, 50, size=(12, 4, 4))
+    ff = rng.integers(0, 50, size=(3, 12, 4, 4))
+    lat = [2.0, 4.0, 9.0]
+    for j in range(3):
+        at_price = clip_bootstrap(conf, ff, lat, lat[j], n=60, seed=0)["delta_miou"]
+        assert method5.same_scale_interval(conf, ff[j], n=60, seed=0) == pytest.approx(at_price)
+
+
+def test_the_zero_cost_rule_reads_the_same_scale_interval():
+    def r(model, d, lo):
+        return {"model": model, "name": f"{model}/{d}", "zero_cost": {"delta_miou": d, "interval": (lo, 0.05)}}
+
+    assert not method5.pass_rule([r("a", 0.008, -0.0002), {"model": "b", "name": "b", "zero_cost": None}],
+                                 method5._at_zero_cost)["positive"]
+    assert method5.pass_rule([r("a", 0.008, 0.0002)], method5._at_zero_cost)["models"]["a"]["passing"] == ["a/0.008"]
 
 
 def test_a_provisional_val_reading_is_priced_by_stage_a_and_is_never_a_verdict(work, stage_b, stage_c):
