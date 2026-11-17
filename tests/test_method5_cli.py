@@ -400,9 +400,12 @@ def _fake_gate(path: Path, variants=("r2u1", "r3u1"), verdict="continue") -> Pat
     for s in (0.5, 0.25):
         vs = {}
         for i, v in enumerate(variants):
-            ff = 22 * s * s + 2
+            ff = (22 * s * s + 2) * 0.97  # stage A's full frame a little faster than the final sessions'
             w = ff + (0.05 if v.startswith("r2") else -0.05) * (i + 1)
-            vs[f"{v}/P/n50"] = {"delta_ms": w - ff, "w_ms": w, "w_p95_ms": w * 1.2, "ff_ms": ff, "status": "fits"}
+            per = [{"session": f"s{k}", "w_ms": w + k * 0.01, "ff_ms": ff + k * 0.02, "w_p95_ms": (w + k * 0.01) * 1.2,
+                    "ff_p95_ms": (ff + k * 0.02) * 1.1, "delta_ms": w - ff - k * 0.01} for k in (-1, 0, 1)]
+            vs[f"{v}/P/n50"] = {"delta_ms": w - ff, "w_ms": w, "w_p95_ms": w * 1.2, "ff_ms": ff, "ff_p95_ms": ff * 1.1,
+                                "status": "fits", "per_session": per}
         groups[f"dummy/{s:g}"] = {"model": "dummy", "scale": s, "kept": sorted(vs), "variants": vs}
     path.write_text(json.dumps({"verdict": verdict, "groups": groups}))
     return path
@@ -594,3 +597,65 @@ def test_score2_reads_the_share_of_the_oracles_gain_kept(stage_b, work, tmp_path
     assert c["oracle"]["delta_vs_fullframe"] == pytest.approx(0.04)
     assert c["oracle"]["share_kept"] == pytest.approx(c["delta_vs_fullframe"] / 0.04)
     assert configs["5p/c0.5/P/a0.1/s1/r2u1"]["oracle"] is None  # no oracle at alpha 0.1 in that file
+
+
+def test_both_prices_are_reported_and_the_paired_one_uses_the_curves_own_full_frame(stage_b):
+    score = json.loads((stage_b / "s" / "score2_val_dummy.json").read_text())
+    gate = json.loads((stage_b / "gate_a.json").read_text())
+    e2e = score["fullframe_e2e"]
+    for c in score["configs"]:
+        s = c["config"]["scale"]
+        v = gate["groups"][f"dummy/{s:g}"]["variants"][f"{c['variant']}/P/n50"]
+        j = e2e["scales"].index(s)
+        assert c["latency_paired"]["mean_ms"] == pytest.approx(e2e["median_ms"][j] + v["delta_ms"])
+        d95 = sorted(p["w_p95_ms"] - p["ff_p95_ms"] for p in v["per_session"])[1]
+        assert c["latency_paired"]["p95_ms"] == pytest.approx(e2e["p95_ms"][j] + d95)
+        assert c["latency"]["mean_ms"] == v["w_ms"] and "mean" in c["judges_paired"]
+    # the fake stage A full frame is 3 % faster than the final one: the spec's price is the lower
+    assert all(c["latency"]["mean_ms"] < c["latency_paired"]["mean_ms"] for c in score["configs"])
+
+
+def test_score2_re_reads_committed_scores_as_it_reads_the_stream_files(stage_b, work, tmp_path):
+    """--from-scores re-prices the configurations of score2 files: the same gate and finalists as
+    scoring the stream files with the same --pricing and --rule-variants."""
+    opts = ["--pricing", "paired", "--rule-variants", "r2u1", "--label", "amended"]
+    direct = tmp_path / "direct"
+    direct.mkdir()
+    for v in ("r2u1", "r3u1"):
+        src = stage_b / "s" / f"stream_val_dummy_{v}.jsonl.gz"
+        (direct / src.name).write_bytes(src.read_bytes())
+    args = _score2_args(work, stage_b, direct)
+    args[args.index("--finalists-dir") + 1] = str(direct)
+    assert method5.main(args + opts) == 0
+    again = tmp_path / "again"
+    args = _score2_args(work, stage_b, again)
+    args[args.index("--finalists-dir") + 1] = str(again)
+    assert method5.main(args + opts + ["--from-scores", str(stage_b / "s")]) == 0
+    a = json.loads((direct / "gate_b_val_amended.json").read_text())
+    b = json.loads((again / "gate_b_val_amended.json").read_text())
+    assert a == b and a["pricing"] == "paired" and a["variants"] == ["r2u1"]
+    assert all(n.endswith("r2u1") for n in a["models"]["dummy"]["above"])
+    fa = json.loads((direct / "finalists_dummy_amended.json").read_text())
+    fb = json.loads((again / "finalists_dummy_amended.json").read_text())
+    assert fa == fb and all(f["variant"] == "r2u1" for f in fa["finalists"])
+    assert json.loads((again / "score2_val_dummy_amended.json").read_text())["re_read_from"].endswith(
+        "score2_val_dummy.json")
+    # the spec's files are not touched by a labelled run
+    assert not (direct / "gate_b_val.json").exists()
+
+
+def test_gate_b_reads_only_the_variants_and_price_it_is_given():
+    ok = {"r2u1": {"0.25": {"checked": True, "ok": True}}, "r3u1": {"0.25": {"checked": False, "ok": None}}}
+
+    def c(name, variant, spec, paired):
+        out = _c2(name, "P", 0.25, 0.5, 4.0, spec, variant)
+        out["latency_paired"] = {"mean_ms": 4.1, "p95_ms": 5.0}
+        out["judges_paired"] = {"mean": {"delta_miou_at_equal_latency": paired}}
+        return out
+
+    cfgs = [c("a", "r3u1", 0.02, 0.01), c("b", "r2u1", 0.004, -0.002)]
+    assert method5.gate_b(cfgs, ok, True, 400)["above"] == ["a", "b"]
+    assert method5.gate_b(cfgs, ok, True, 400, "paired")["above"] == ["a"]
+    g = method5.gate_b(cfgs, ok, True, 400, "paired", ["r2u1"])
+    assert g["verdict"] == "stop" and g["above"] == [] and g["best"]["name"] == "b"
+    assert method5.gate_b(cfgs, ok, True, 400, "spec", ["r2u1"])["verdict"] == "continue"

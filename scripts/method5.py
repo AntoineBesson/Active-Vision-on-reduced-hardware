@@ -852,6 +852,42 @@ def _variant_files(out_dir: Path, split: str, model: str) -> Dict[str, List[Path
     return out
 
 
+PRICINGS = ("spec", "paired")
+
+
+def price_config(c: Dict[str, Any], gate: Dict[str, Any], e2e: Dict[str, Any], model: str) -> None:
+    """Both prices of a configuration, and both readings against the measured full-frame curve
+    ``e2e`` (``latency_floor_final``):
+
+    - ``latency`` / ``judges_e2e``, the spec's: W(c) of its variant from stage A (median over the
+      sessions of the session median; p95 the same way);
+    - ``latency_paired`` / ``judges_paired``: the curve's own full frame at the configuration's
+      scale plus the stage A overhead paired within each session (median over the sessions; the
+      p95 overhead the same way), so that both sides come from the same sessions."""
+    cfg, variant = c["config"], c["variant"]
+    scale = float(cfg["scale"])
+    price = gate["groups"].get(f"{model}/{scale:g}", {}).get("variants", {}).get(_priced_as(cfg, variant))
+    if price is None:
+        raise SystemExit(f"{c['name']}: no stage A timing of {_priced_as(cfg, variant)} for {model} at {scale:g}")
+    if scale not in e2e["scales"]:
+        raise SystemExit(f"{c['name']}: the measured full-frame curve has no scale {scale:g}")
+    j = e2e["scales"].index(scale)
+    per = price.get("per_session") or []
+    d95 = statistics.median(p["w_p95_ms"] - p["ff_p95_ms"] for p in per) if per else (
+        price["w_p95_ms"] - price["ff_p95_ms"])
+    prices = {"latency": (float(price["w_ms"]), float(price["w_p95_ms"])),
+              "latency_paired": (e2e["median_ms"][j] + float(price["delta_ms"]), e2e["p95_ms"][j] + float(d95))}
+    for key, judges in (("latency", "judges_e2e"), ("latency_paired", "judges_paired")):
+        mean_ms, p95_ms = prices[key]
+        readings = judge_readings(c["miou"], mean_ms, p95_ms, e2e)
+        for judge, ms in (("mean", mean_ms), ("p95", p95_ms)):
+            readings[judge]["latency_saved_frontier"] = (e2e["curves"][judge].latency_at(c["miou"], frontier=True)
+                                                         - ms)
+        c[key] = {"mean_ms": mean_ms, "p95_ms": p95_ms, "priced_as": _priced_as(cfg, variant),
+                  "delta_vs_paired_fullframe_ms": float(price["delta_ms"])}
+        c[judges] = readings
+
+
 def score_stream(path: Path, model: str, variant: str, gate: Dict[str, Any], ref: Dict[str, Any],
                  e2e: Dict[str, Any], oracle: Dict[str, float], class_names: Sequence[str]) -> Dict[str, Any]:
     """Every configuration of one merged stream file: mIoU, per-class IoU, mIoU per labelled
@@ -886,29 +922,20 @@ def score_stream(path: Path, model: str, variant: str, gate: Dict[str, Any], ref
     for name, total in totals.items():
         cfg = cfg_of[name]
         scale = float(cfg["scale"])
-        group = gate["groups"].get(f"{model}/{scale:g}", {})
-        price = group.get("variants", {}).get(_priced_as(cfg, variant))
-        if price is None:
-            raise SystemExit(f"{name}: no stage A timing of {_priced_as(cfg, variant)} for {model} at {scale:g}")
         miou = miou_of(total.sum(0))
-        mean_ms, p95_ms = float(price["w_ms"]), float(price["w_p95_ms"])
-        judges = judge_readings(miou, mean_ms, p95_ms, e2e)
-        for judge, ms in (("mean", mean_ms), ("p95", p95_ms)):
-            judges[judge]["latency_saved_frontier"] = e2e["curves"][judge].latency_at(miou, frontier=True) - ms
         base = baseline.get(scale)
         orc = oracle.get(f"5o/c{scale:g}/E/a{float(cfg['alpha']):g}/s{float(cfg['sigma']):g}/now")
         delta = None if base is None else miou - base
         orc_delta = None if orc is None or base is None else orc - base
-        configs.append({
-            "name": name, "model": model, "variant": variant, "config": cfg, "miou": miou,
-            "per_class_iou": {n: (None if math.isnan(v) else float(v)) for n, v in zip(class_names, _iou(total.sum(0)))},
-            "miou_by_position": {str(t): miou_of(total[j]) for j, t in enumerate(pos)},
-            "latency": {"mean_ms": mean_ms, "p95_ms": p95_ms, "priced_as": _priced_as(cfg, variant),
-                        "delta_vs_paired_fullframe_ms": price.get("delta_ms")},
-            "clips": len(clip_ids), "judges_e2e": judges, "delta_vs_fullframe": delta,
-            "oracle": None if orc is None else {"miou": orc, "delta_vs_fullframe": orc_delta,
-                                                "share_kept": (delta / orc_delta) if delta is not None and orc_delta
-                                                and orc_delta > 0 else None}})
+        c = {"name": name, "model": model, "variant": variant, "config": cfg, "miou": miou,
+             "per_class_iou": {n: (None if math.isnan(v) else float(v)) for n, v in zip(class_names, _iou(total.sum(0)))},
+             "miou_by_position": {str(t): miou_of(total[j]) for j, t in enumerate(pos)},
+             "clips": len(clip_ids), "delta_vs_fullframe": delta,
+             "oracle": None if orc is None else {"miou": orc, "delta_vs_fullframe": orc_delta,
+                                                 "share_kept": (delta / orc_delta) if delta is not None and orc_delta
+                                                 and orc_delta > 0 else None}}
+        price_config(c, gate, e2e, model)
+        configs.append(c)
     uniform = {float(c["config"]["scale"]): c for c in configs if c["config"]["saliency"] == "uniform"}
     for c in configs:
         u = uniform.get(float(c["config"]["scale"]))
@@ -925,18 +952,27 @@ def score_stream(path: Path, model: str, variant: str, gate: Dict[str, Any], ref
             "pipeline_check": check, "configs": configs}
 
 
+_KEYS = {"spec": ("latency", "judges_e2e"), "paired": ("latency_paired", "judges_paired")}
+
+
+def _in_rule(c: Dict[str, Any], variants: Optional[Sequence[str]]) -> bool:
+    return c["config"]["saliency"] != "uniform" and (not variants or c["variant"] in variants)
+
+
 def gate_b(configs: Sequence[Dict[str, Any]], checks: Dict[str, Dict[str, Any]], complete: bool,
-           clips: int) -> Dict[str, Any]:
+           clips: int, pricing: str = "spec", variants: Optional[Sequence[str]] = None) -> Dict[str, Any]:
     """The spec's gate B for one model: ``continue`` when a warped configuration lies above the
     measured full-frame curve at equal median latency (mean judge) on every clip of the split,
     ``stop`` otherwise; not read (None) on a partial set or when a checked pipeline check fails.
     The best configuration is reported with its uniform row's own reading, so that a gain that a
-    cheaper resampling alone would give (r3) is visible."""
+    cheaper resampling alone would give (r3) is visible. ``pricing`` (:func:`price_config`) and
+    ``variants`` (None: all) choose the price and the variants the gate reads."""
+    lat_key, judges = _KEYS[pricing]
     failed = sorted(f"{v}/c{k}" for v, ch in checks.items() for k, x in ch.items() if x["checked"] and not x["ok"])
-    warped = [c for c in configs if c["config"]["saliency"] != "uniform"
-              and not math.isnan(c["judges_e2e"]["mean"]["delta_miou_at_equal_latency"])]
-    best = max(warped, key=lambda c: c["judges_e2e"]["mean"]["delta_miou_at_equal_latency"], default=None)
-    above = [c["name"] for c in warped if c["judges_e2e"]["mean"]["delta_miou_at_equal_latency"] > 0]
+    warped = [c for c in configs if _in_rule(c, variants)
+              and not math.isnan(c[judges]["mean"]["delta_miou_at_equal_latency"])]
+    best = max(warped, key=lambda c: c[judges]["mean"]["delta_miou_at_equal_latency"], default=None)
+    above = [c["name"] for c in warped if c[judges]["mean"]["delta_miou_at_equal_latency"] > 0]
     if not complete:
         verdict, state = None, f"not read (partial: {clips} clips)"
     elif failed:
@@ -949,38 +985,41 @@ def gate_b(configs: Sequence[Dict[str, Any]], checks: Dict[str, Dict[str, Any]],
     if best is not None:
         uni = next((c for c in configs if c["config"]["saliency"] == "uniform" and c["variant"] == best["variant"]
                     and c["config"]["scale"] == best["config"]["scale"]), None)
-        shown = {"name": best["name"], "miou": best["miou"], "latency_ms": best["latency"]["mean_ms"],
-                 "delta_miou_at_equal_latency": best["judges_e2e"]["mean"]["delta_miou_at_equal_latency"],
+        shown = {"name": best["name"], "miou": best["miou"], "latency_ms": best[lat_key]["mean_ms"],
+                 "delta_miou_at_equal_latency": best[judges]["mean"]["delta_miou_at_equal_latency"],
                  "delta_vs_fullframe": best["delta_vs_fullframe"], "delta_vs_uniform": best["delta_vs_uniform"],
                  "uniform_delta_miou_at_equal_latency": None if uni is None else
-                 uni["judges_e2e"]["mean"]["delta_miou_at_equal_latency"]}
+                 uni[judges]["mean"]["delta_miou_at_equal_latency"]}
     return {"rule": "gate B (spec, stage B): continue when, for at least one model, a configuration lies above the "
                     "measured full-frame curve at equal mean latency on train (all clips; pipeline check of r1/r2 "
-                    "passed)", "clips": clips, "complete": complete, "verdict": verdict, "state": state,
-            "above": above, "best": shown}
+                    "passed)", "pricing": pricing, "variants": list(variants) if variants else "all",
+            "clips": clips, "complete": complete, "verdict": verdict, "state": state, "above": above, "best": shown}
 
 
-def finalists_of(configs: Sequence[Dict[str, Any]], e2e: Dict[str, Any], model: str) -> List[Dict[str, Any]]:
+def finalists_of(configs: Sequence[Dict[str, Any]], e2e: Dict[str, Any], model: str, pricing: str = "spec",
+                 variants: Optional[Sequence[str]] = None) -> List[Dict[str, Any]]:
     """As Methods 2 and 3, per judge (mean: median latency, p95): the Pareto front over (latency,
     mIoU) of the warped configurations, and the best mIoU within each full-frame scale's measured
-    latency; the union. The uniform rows are references, not finalists."""
+    latency; the union. The uniform rows are references, not finalists. ``pricing`` and
+    ``variants`` as in :func:`gate_b`."""
+    lat_key = _KEYS[pricing][0]
     picked: Dict[str, Dict[str, Any]] = {}
-    cands = [c for c in configs if c["config"]["saliency"] != "uniform"]
+    cands = [c for c in configs if _in_rule(c, variants)]
     for judge, key, ff_ms in (("mean", "mean_ms", e2e["median_ms"]), ("p95", "p95_ms", e2e["p95_ms"])):
         def add(c: Dict[str, Any], reason: str) -> None:
             entry = picked.setdefault(c["name"], {
                 "model": model, "name": c["name"], "variant": c["variant"], "config": c["config"],
-                "train": {"miou": c["miou"], "mean_ms": c["latency"]["mean_ms"], "p95_ms": c["latency"]["p95_ms"]},
+                "train": {"miou": c["miou"], "mean_ms": c[lat_key]["mean_ms"], "p95_ms": c[lat_key]["p95_ms"]},
                 "reasons": []})
             entry["reasons"].append(reason)
 
         best = float("-inf")
-        for c in sorted(cands, key=lambda c: (c["latency"][key], -c["miou"])):
+        for c in sorted(cands, key=lambda c: (c[lat_key][key], -c["miou"])):
             if c["miou"] > best:
                 best = c["miou"]
                 add(c, f"pareto_{judge}")
         for scale, lat in zip(e2e["scales"], ff_ms):
-            within = [c for c in cands if c["latency"][key] <= lat]
+            within = [c for c in cands if c[lat_key][key] <= lat]
             if within:
                 add(max(within, key=lambda c: c["miou"]), f"best_within_fullframe_s{scale:g}_{judge}")
     return list(picked.values())
@@ -1006,50 +1045,87 @@ def _rel(path: Any) -> str:
     return p.relative_to(REPO_ROOT).as_posix() if p.is_relative_to(REPO_ROOT) else p.as_posix()
 
 
+def _from_scores(path: Path, gate: Dict[str, Any], model: str) -> Dict[str, Any]:
+    """A committed ``score2`` file read back: its configurations re-priced (:func:`price_config`)
+    against its own measured full-frame curve, with its pipeline check and completeness."""
+    from eval.tradeoff import FullFrameCurve
+
+    data = _read_json(path)
+    e2e = dict(data["fullframe_e2e"])
+    e2e["curves"] = {"mean": FullFrameCurve(e2e["median_ms"], e2e["miou"]),
+                     "p95": FullFrameCurve(e2e["p95_ms"], e2e["miou"])}
+    configs = data["configs"]
+    for c in configs:
+        price_config(c, gate, e2e, model)
+    return {"configs": configs, "checks": data["pipeline_check"], "e2e": e2e, "fullframe": data["fullframe"],
+            "complete": bool(data["gate_b"]["complete"]), "clips": int(data["gate_b"]["clips"]),
+            "files": data["files"], "positions": data["positions"], "source": _rel(path)}
+
+
 def cmd_score2(args: argparse.Namespace) -> int:
-    """Stage B's reading of the merged stream files: per configuration (:func:`score_stream`),
-    gate B per model and overall (:func:`gate_b`), and the finalists (:func:`finalists_of`)."""
-    tables = latency_tables(args.latency, args.fixture)
+    """Stage B's reading of the merged stream files (or, with ``--from-scores``, of committed
+    ``score2`` files): per configuration (:func:`score_stream`, both prices: :func:`price_config`),
+    gate B per model and overall (:func:`gate_b`), and the finalists (:func:`finalists_of`), on the
+    price ``--pricing`` and the variants ``--rule-variants``."""
     out_dir = _stream_dir(args)
     gate = _read_json(Path(args.gate))
-    dataset = load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split) if not args.no_expect else None
-    names = list(dataset.class_names) if dataset is not None else [str(c) for c in range(19)]
-    expected = {dataset.clip_id(i) for i in range(len(dataset))} if dataset is not None else None
+    rule_variants = _strs(args.rule_variants) if args.rule_variants else None
+    if rule_variants and any(v not in STREAM_VARIANTS for v in rule_variants):
+        raise SystemExit(f"--rule-variants must be among {STREAM_VARIANTS}, got {rule_variants}")
+    suffix = f"_{args.label}" if args.label else ""
     fin_dir = Path(args.finalists_dir) if args.finalists_dir else PHASE2
     gates: Dict[str, Any] = {}
+    if not args.from_scores:
+        tables = latency_tables(args.latency, args.fixture)
+        dataset = (load_dataset(model_config(_strs(args.models)[0], args.fixture), args.split)
+                   if not args.no_expect else None)
+        names = list(dataset.class_names) if dataset is not None else [str(c) for c in range(19)]
+        expected = {dataset.clip_id(i) for i in range(len(dataset))} if dataset is not None else None
     for model in _strs(args.models):
-        variants = sorted({f.name[len(f"stream_{args.split}_{model}_"):-len(".jsonl.gz")]
-                           for f in out_dir.glob(f"stream_{args.split}_{model}_*.jsonl.gz")} & set(STREAM_VARIANTS))
-        if not variants:
-            raise SystemExit(f"no merged stream file of {model} in {out_dir}: run `merge --kind stream`")
-        clip_sets = []
-        scored = []
-        for v in variants:
-            path = out_dir / f"stream_{args.split}_{model}_{v}.jsonl.gz"
-            clips = sorted({r["clip_id"] for r in read_lines(path)})
-            ref = fullframe_ref(Path(args.fullframe), model, args.split, tables, clips)
-            e2e = e2e_curves(args.e2e, model, ref)
-            if e2e is None:
-                raise SystemExit(f"no latency_floor final session in {args.e2e} covers {model}'s scales")
-            scored.append(score_stream(path, model, v, gate, ref, e2e, _oracle_mious(args.oracle_scores, model), names))
-            clip_sets.append(set(clips))
-        if any(s != clip_sets[0] for s in clip_sets):
-            raise SystemExit(f"{model}: the variants' files hold different clips")
-        configs = [c for s in scored for c in s["configs"]]
-        checks = {s["variant"]: s["pipeline_check"] for s in scored}
-        complete = expected is not None and clip_sets[0] == expected
-        g = gates[model] = gate_b(configs, checks, complete, len(clip_sets[0]))
-        payload = {"split": args.split, "model": model, "gate_a": _rel(args.gate), "fullframe": _public(ref),
+        if args.from_scores:
+            read = _from_scores(Path(args.from_scores) / f"score2_{args.split}_{model}.json", gate, model)
+            configs, checks, e2e, complete, n_clips = (read["configs"], read["checks"], read["e2e"], read["complete"],
+                                                       read["clips"])
+            files, positions, fullframe = read["files"], read["positions"], read["fullframe"]
+            source = read["source"]
+        else:
+            variants = sorted({f.name[len(f"stream_{args.split}_{model}_"):-len(".jsonl.gz")]
+                               for f in out_dir.glob(f"stream_{args.split}_{model}_*.jsonl.gz")} & set(STREAM_VARIANTS))
+            if not variants:
+                raise SystemExit(f"no merged stream file of {model} in {out_dir}: run `merge --kind stream`")
+            clip_sets = []
+            scored = []
+            for v in variants:
+                path = out_dir / f"stream_{args.split}_{model}_{v}.jsonl.gz"
+                clips = sorted({r["clip_id"] for r in read_lines(path)})
+                ref = fullframe_ref(Path(args.fullframe), model, args.split, tables, clips)
+                e2e = e2e_curves(args.e2e, model, ref)
+                if e2e is None:
+                    raise SystemExit(f"no latency_floor final session in {args.e2e} covers {model}'s scales")
+                scored.append(score_stream(path, model, v, gate, ref, e2e, _oracle_mious(args.oracle_scores, model),
+                                           names))
+                clip_sets.append(set(clips))
+            if any(s != clip_sets[0] for s in clip_sets):
+                raise SystemExit(f"{model}: the variants' files hold different clips")
+            configs = [c for s in scored for c in s["configs"]]
+            checks = {s["variant"]: s["pipeline_check"] for s in scored}
+            complete = expected is not None and clip_sets[0] == expected
+            n_clips, files, positions = len(clip_sets[0]), [_rel(s["file"]) for s in scored], scored[0]["positions"]
+            fullframe, source = _public(ref), None
+        g = gates[model] = gate_b(configs, checks, complete, n_clips, args.pricing, rule_variants)
+        payload = {"split": args.split, "model": model, "gate_a": _rel(args.gate), "fullframe": fullframe,
                    "fullframe_e2e": {k: v for k, v in e2e.items() if k != "curves"}, "gate_b": g,
-                   "pipeline_check": checks, "files": [_rel(s["file"]) for s in scored],
-                   "positions": scored[0]["positions"],
-                   "configs": configs}
+                   "pipeline_check": checks, "files": files, "positions": positions, "configs": configs}
+        if source:
+            payload["re_read_from"] = source
         out_dir.mkdir(parents=True, exist_ok=True)
-        (out_dir / f"score2_{args.split}_{model}.json").write_text(json.dumps(payload, indent=1, allow_nan=True) + "\n")
-        fin = finalists_of(configs, e2e, model)
+        (out_dir / f"score2_{args.split}_{model}{suffix}.json").write_text(
+            json.dumps(payload, indent=1, allow_nan=True) + "\n")
+        fin = finalists_of(configs, e2e, model, args.pricing, rule_variants)
         fin_dir.mkdir(parents=True, exist_ok=True)
-        (fin_dir / f"finalists_{model}.json").write_text(json.dumps(
-            {"split": args.split, "model": model, "gate_b": g["verdict"],
+        (fin_dir / f"finalists_{model}{suffix}.json").write_text(json.dumps(
+            {"split": args.split, "model": model, "gate_b": g["verdict"], "pricing": args.pricing,
+             "variants": rule_variants or "all",
              "rule": "per judge (mean: median latency, p95): the Pareto front over (latency, mIoU) of the warped "
                      "configurations and the best mIoU within each full-frame scale's measured latency; the union",
              "finalists": fin}, indent=1) + "\n")
@@ -1060,13 +1136,15 @@ def cmd_score2(args: argparse.Namespace) -> int:
         checks_shown = "; ".join(f"{v} " + ", ".join(
             f"c{k} {'ok' if x['ok'] else ('reported' if not x['checked'] else 'NOT ok')}"
             + ("" if x["gap"] is None else f" ({x['gap'] * 100:+.2f})") for k, x in ch.items()) for v, ch in checks.items())
-        print(f"[method5 score2] {model}: {len(configs)} configs over {len(clip_sets[0])} clips; pipeline check: "
-              f"{checks_shown}; {shown}; gate B {g['state']}; {len(fin)} finalists")
+        print(f"[method5 score2] {model}: {len(configs)} configs over {n_clips} clips ({args.pricing} price, variants "
+              f"{','.join(rule_variants) if rule_variants else 'all'}); pipeline check: {checks_shown}; {shown}; "
+              f"gate B {g['state']}; {len(fin)} finalists")
     if gates and all(g["complete"] for g in gates.values()):
         states = [g["verdict"] for g in gates.values()]
         verdict = None if any(v is None for v in states) else ("continue" if "continue" in states else "stop")
-        (out_dir / f"gate_b_{args.split}.json").write_text(json.dumps(
-            {"split": args.split, "verdict": verdict, "models": gates}, indent=1, allow_nan=True) + "\n")
+        (out_dir / f"gate_b_{args.split}{suffix}.json").write_text(json.dumps(
+            {"split": args.split, "verdict": verdict, "pricing": args.pricing, "variants": rule_variants or "all",
+             "models": gates}, indent=1, allow_nan=True) + "\n")
         print(f"[method5 score2] gate B: {verdict or 'NOT READ'} (models: {', '.join(gates)})")
     return 0
 
@@ -1172,6 +1250,15 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                                                           "results/method5/phase2).")
     s2.add_argument("--no-expect", action="store_true",
                     help="Do not load the dataset (clip list, class names): gate B is then not read.")
+    s2.add_argument("--pricing", default="spec", choices=PRICINGS,
+                    help="spec: W(c) of stage A against the final sessions' full frame; paired: the final full "
+                         "frame at the scale plus the stage A overhead paired within each session. Both are "
+                         "reported; this one is read by gate B and the finalists.")
+    s2.add_argument("--rule-variants", default=None,
+                    help="Variants gate B and the finalists read (default: all, the spec's).")
+    s2.add_argument("--from-scores", default=None,
+                    help="Re-read the score2 files in this folder (re-priced; no stream file needed).")
+    s2.add_argument("--label", default=None, help="Suffix of the output files (score2, gate_b, finalists).")
     s2.set_defaults(fn=cmd_score2)
 
     c = sub.add_parser("cost", help="Phase 2, stage A: the warp step's overhead over the full frame on a T4, paired "
