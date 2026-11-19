@@ -1,0 +1,43 @@
+# Full-frame baseline with a larger frozen model: SegFormer (default B2).
+#
+#     export CITYSCAPES_VPS_ROOT=/path/to/cityscapes_vps
+#     pip install transformers
+#     python -m scripts.run_baseline --config configs/baseline_fullframe_segformer.yaml
+#     # another variant:
+#     python -m scripts.run_baseline --config configs/baseline_fullframe_segformer.yaml \
+#         --set backbone.type=segformer_b5 \
+#         --set backbone.weights=nvidia/segformer-b5-finetuned-cityscapes-1024-1024 --set run.name=fullframe_segformer_b5
+#
+# Weights: NVIDIA's public Cityscapes checkpoints on the Hugging Face hub,
+# downloaded on first use (pin a revision with `id@revision`). Nothing is trained.
+# Latency is measured by scripts/bigmodel_curve.py (CUDA graphs, interleaved with
+# PIDNet-S and BiSeNetV2 in the same session), not here.
+
+run:
+  name: fullframe_segformer_b2
+  seed: 0
+  output_dir: experiments
+
+dataset:
+  type: cityscapes_vps
+  config: configs/cityscapes_vps.yaml
+  split: val
+  root: null   # null -> $CITYSCAPES_VPS_ROOT
+
+backbone:
+  type: segformer_b2
+  num_classes: 19
+  weights: nvidia/segformer-b2-finetuned-cityscapes-1024-1024
+  strict: true
+
+eval:
+  # 0.125 and 0.1875 are added for the large models: at the latency of PIDNet-S
+  # (10-20 ms on a T4) they may only fit at very small inputs.
+  scales: [1.0, 0.75, 0.5, 0.375, 0.25, 0.1875, 0.125]
+  precision: fp32
+  frames: labeled
+
+cost:
+  latency:
+    enabled: false   # timed by scripts/bigmodel_curve.py
+  memory: false
