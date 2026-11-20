@@ -31,3 +31,27 @@ first only).
 - Known difference to the published SegFormer numbers: NVIDIA evaluates with a
   sliding 1024 × 1024 window; this harness runs every model on the whole
   resized frame.
+
+## 2026-11-20 — latency: 3 Colab T4 sessions (s1, s2, s3), accuracy not yet run
+
+`results/bigmodel/latency_s{1,2,3}.json`, CUDA graphs, fp16, all five models
+interleaved, no failure. `vps_val.zip` was not on Drive, so no accuracy yet.
+Median of the 3 session medians, `e2e` (ms; full frame to argmax):
+
+| model | 0.125 | 0.1875 | 0.25 | 0.375 | 0.5 | 0.75 | 1 |
+|---|---|---|---|---|---|---|---|
+| PIDNet-S | 3.33 | 3.51 | 3.76 | 4.98 | 6.57 | 11.96 | 19.73 |
+| BiSeNetV2 | 2.70 | 3.23 | 3.95 | 6.03 | 9.29 | 18.87 | 29.84 |
+| SegFormer-B0 | 3.19 | 3.95 | 4.73 | 7.99 | 13.56 | 42.24 | 83.58 |
+| SegFormer-B2 | 7.02 | 9.70 | 13.07 | 24.27 | 45.02 | 143.33 | 281.65 |
+| SegFormer-B5 | 13.32 | 18.64 | 24.44 | 46.59 | 81.82 | 239.17 | 473.70 |
+
+Session spread at scale 1 is 1-6 %. The small models agree with
+`results/latency_floor` (PIDNet-S 19.4, BiSeNetV2 31.2 ms backbone at scale 1).
+
+What latency alone already says (not the screen, which needs the mIoU):
+inside the small models' range (3-30 ms), B0 fits up to scale 0.5, B2 up to
+0.25, B5 only at 0.125-0.1875. Using the VPS-val mIoU of the small models
+from the README as the bar, the screen needs about B0 ≥ 68.4 at scale 0.5,
+B2 ≥ 68.3 at 0.25, B5 ≥ 69.3 at 0.1875 (2 points under the best small model
+at that latency).
