@@ -17,7 +17,7 @@ Nothing outside one dataset adapter is Cityscapes-specific: preprocessing,
 policies and evaluation are written against a dataset-agnostic interface so
 they can be retrained or reused on other video segmentation datasets.
 
-## Where we are (2026-11-16)
+## Where we are (2026-11-20)
 
 **Method 1 (full frame) is done and validated on real data.** The data
 layer, backbones, evaluation harness and baseline CLI run end to end on
@@ -92,6 +92,17 @@ negative (prices from stage A), and **Method 5 is closed, negative**
 (2026-11-17). A fixed warp gains up to +0.8 points at the same input scale,
 but never clearly beats a full frame given the same time.
 
+**Method 6 (one pass on a locally, 2-D warped frame) fails its feasibility
+bound on VPS train.** A free 2-D warp can magnify a region without stretching
+its whole row and column. With an oracle saliency that costs nothing, on the
+400 clips, the best 2-D configuration at every scale and for both backbones
+is below Method 5's best separable warp, by 0.03 to 0.62 points. The rule,
+fixed before the runs, needed +0.5 above it and +1.0 above the full frame.
+Against the full frame it gains +1.01 (PIDNet-S) and +1.19 (BiSeNetV2) at
+scale 0.25 only, and strong local warps hurt by up to 5.4 points. Method 6 stops
+there (2026-11-20). See [results/method6](results/method6/README.md) and the
+ledger [results/method6/TRIES.md](results/method6/TRIES.md).
+
 ### Next steps
 
 1. **Method 2: done (negative), see above.** The finalists' latency is confirmed
@@ -112,7 +123,11 @@ but never clearly beats a full frame given the same time.
    warp a real policy can compute, within a budget of 0.16 to 0.58 ms) waits
    for a decision. Not started: the same readings on an embedded card, where
    only the latency tables change.
-6. Optional: a secondary evaluation on the 500 official val images (frame
+6. **Method 6: a local 2-D warp, oracle bound: negative (2026-11-20).** No
+   2-D configuration beats the separable warp of Method 5; not built
+   further. See [results/method6](results/method6/README.md). What comes next
+   is the user's call.
+7. Optional: a secondary evaluation on the 500 official val images (frame
    `_000019`) for less noisy rare-class IoUs.
 
 ## Quickstart
@@ -153,6 +168,7 @@ python -m scripts.run_baseline --config configs/baseline_fullframe_bisenetv2.yam
 | Method 3: motion-gated reuse | ✅ negative on train, val not run, [results](results/method3/README.md) |
 | Method 4: persistent canvas + glimpse policy | ✅ feasibility bound negative on train, policy not built, [results](results/method4/README.md) |
 | Method 5: one pass on an oracle-warped frame | ✅ feasibility bound passes narrowly on train (scale 0.25 only); phase 2: only the static prior P fits the T4 budget; gate B continues on train; on val no finalist clears the pass rule: closed, negative, [results](results/method5/README.md) |
+| Method 6: one pass on an oracle, locally (2-D) warped frame | ✅ feasibility bound negative on train: below Method 5's separable warp at every scale and model, [results](results/method6/README.md) |
 | Full-frame results on real data | ✅ see [Real-data results](#real-data-results) |
 
 ## Layout
