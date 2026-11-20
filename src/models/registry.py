@@ -1,9 +1,9 @@
 """Build a backbone from a config mapping (torch).
 
     backbone:
-      type: pidnet_s          # pidnet_s | pidnet_m | pidnet_l | bisenetv2 | dummy
+      type: pidnet_s          # pidnet_s | pidnet_m | pidnet_l | bisenetv2 | segformer_b0..b5 | dummy
       num_classes: 19
-      weights: /path/or/https://url.pt   # required for real backbones
+      weights: /path/or/https://url.pt   # required for real backbones (SegFormer: a hub id or local dir)
       sha256: null            # optional pin of the weights file
       cache_dir: null         # where URL downloads go (default: torch hub cache)
       strict: true            # fail if the checkpoint does not fit exactly
@@ -26,7 +26,8 @@ from .pidnet import PIDNetBackbone
 
 __all__ = ["build_backbone", "BACKBONES"]
 
-BACKBONES = ("pidnet_s", "pidnet_m", "pidnet_l", "bisenetv2", "dummy")
+SEGFORMERS = tuple(f"segformer_b{i}" for i in range(6))
+BACKBONES = ("pidnet_s", "pidnet_m", "pidnet_l", "bisenetv2", *SEGFORMERS, "dummy")
 _WEIGHT_KEYS = ("weights", "sha256", "cache_dir", "strict", "trust_pickle", "allow_random_init")
 
 
@@ -39,6 +40,10 @@ def build_backbone(spec: Mapping[str, Any], context: Optional[Mapping[str, Any]]
         model: nn.Module = PIDNetBackbone(variant=kind[-1], **spec)
     elif kind == "bisenetv2":
         model = BiSeNetV2Backbone(**spec)
+    elif kind in SEGFORMERS:
+        from .segformer import SegFormerBackbone  # needs `transformers`, imported only when asked for
+
+        model = SegFormerBackbone(variant=kind.split("_")[1], **spec)
     elif kind == "dummy":
         if spec.get("class_colors") == "dataset_palette":
             if not context or context.get("palette") is None:
