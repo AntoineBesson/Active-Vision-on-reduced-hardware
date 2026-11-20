@@ -56,6 +56,12 @@ drive.mount("/content/drive")
 OUT = f"{DRIVE}/bigmodel"
 os.makedirs(f"{OUT}/accuracy", exist_ok=True)
 VPS = "/content/vps"
+if ACCURACY and not os.path.exists(f"{DRIVE}/vps_val.zip") and not os.path.exists(f"{VPS}/.val_ok"):
+    print(f"No {DRIVE}/vps_val.zip on Drive (files there: {sorted(os.listdir(DRIVE))}).")
+    print("Accuracy is skipped in this session; the latency part still runs. Upload vps_val.zip "
+          "(val/img_all, val/panoptic_video, panoptic_gt_val_city_vps.json), or run the accuracy "
+          "elsewhere with scripts/run_baseline.py and put its JSONs in MyDrive/avrh/bigmodel/accuracy/.")
+    ACCURACY = False
 if ACCURACY and not os.path.exists(f"{VPS}/.val_ok"):
     t = time.time()
     shutil.copy(f"{DRIVE}/vps_val.zip", "/content/vps.zip")   # local disk: much faster reads than Drive
@@ -125,8 +131,11 @@ if ACCURACY:
 ## 3. The screen (reads every session and accuracy file on Drive)
 """),
     code("""
-run([sys.executable, "-u", "-m", "scripts.bigmodel_curve", "report", "--latency", f"{OUT}/latency_*.json",
-     "--accuracy", f"{OUT}/accuracy/*.json", "--out", f"{OUT}/report.json"], "/content/bigmodel_report.log")
+if glob.glob(f"{OUT}/accuracy/*.json"):
+    run([sys.executable, "-u", "-m", "scripts.bigmodel_curve", "report", "--latency", f"{OUT}/latency_*.json",
+         "--accuracy", f"{OUT}/accuracy/*.json", "--out", f"{OUT}/report.json"], "/content/bigmodel_report.log")
+else:
+    print("No accuracy files yet in", f"{OUT}/accuracy/", "- the latency is saved; the report runs once they exist.")
 """),
     code("""
 import matplotlib.pyplot as plt
