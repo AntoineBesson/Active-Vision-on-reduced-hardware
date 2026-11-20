@@ -1,0 +1,220 @@
+{
+ "split": "train_all",
+ "passes": false,
+ "models": {
+  "pidnet_s": {
+   "rule": "at some scale, the best local configuration is (a) >= +1 mIoU points above the full frame at that scale and (b) >= +0.5 points above Method 5's best separable now configuration at that scale, on every clip of train_all (spec 2026-11-17)",
+   "margins": {
+    "a": 0.01,
+    "b": 0.005
+   },
+   "clips": 400,
+   "complete": true,
+   "pipeline_check_ok": true,
+   "reproduction_ok": true,
+   "per_scale": {
+    "0.25": {
+     "best": "6o/c0.25/E/a0.25/s1/k12",
+     "miou": 0.5386097318010514,
+     "delta_vs_fullframe": 0.010103486527707428,
+     "delta_vs_uniform": 0.010103491730274361,
+     "separable_bar": {
+      "name": "5o/c0.25/E/a0.25/s1/now",
+      "miou": 0.5409769410670742,
+      "delta_vs_fullframe": 0.012470695793730169
+     },
+     "delta_vs_separable": -0.0023672092660227406,
+     "a": true,
+     "b": false,
+     "both": false,
+     "budget_ms": 0.12690792147002394,
+     "distortion": {
+      "aniso_mean": 1.1640277633070946,
+      "aniso_p95": 1.3590453031162422,
+      "mag_p5": 0.9021698289612929,
+      "mag_p95": 1.1741705163319907,
+      "t": 1.0
+     }
+    },
+    "0.375": {
+     "best": "6o/c0.375/E/a0.25/s4/k4",
+     "miou": 0.6235271389600836,
+     "delta_vs_fullframe": 0.00617563161574175,
+     "delta_vs_uniform": 0.006175890618402291,
+     "separable_bar": {
+      "name": "5o/c0.375/E/a0.15/s1/now",
+      "miou": 0.6265348485116503,
+      "delta_vs_fullframe": 0.009183341167308456
+     },
+     "delta_vs_separable": -0.0030077095515667063,
+     "a": false,
+     "b": false,
+     "both": false,
+     "budget_ms": 0.15051061456831327,
+     "distortion": {
+      "aniso_mean": 1.0864778202275436,
+      "aniso_p95": 1.2178941329816977,
+      "mag_p5": 0.9402678906917572,
+      "mag_p95": 1.1048804078996182,
+      "t": 1.0
+     }
+    },
+    "0.5": {
+     "best": "6o/c0.5/B/a0.25/s4/k4",
+     "miou": 0.6847554281162629,
+     "delta_vs_fullframe": 0.005334534252336431,
+     "delta_vs_uniform": 0.005334531117471175,
+     "separable_bar": {
+      "name": "5o/c0.5/E/a0.15/s4/now",
+      "miou": 0.689384062116839,
+      "delta_vs_fullframe": 0.009963168252912546
+     },
+     "delta_vs_separable": -0.004628634000576115,
+     "a": false,
+     "b": false,
+     "both": false,
+     "budget_ms": 0.467088433934741,
+     "distortion": {
+      "aniso_mean": 1.080488098015388,
+      "aniso_p95": 1.1781496309737365,
+      "mag_p5": 0.9462942131360372,
+      "mag_p95": 1.0861392266551653,
+      "t": 1.0
+     }
+    },
+    "0.75": {
+     "best": "6o/c0.75/B/a0.1/s4/k12",
+     "miou": 0.7490545082369693,
+     "delta_vs_fullframe": 0.0010997257086258205,
+     "delta_vs_uniform": 0.0010998263266858155,
+     "separable_bar": {
+      "name": "5o/c0.75/S/a0.1/s4/now",
+      "miou": 0.7500198662082989,
+      "delta_vs_fullframe": 0.002065083679955393
+     },
+     "delta_vs_separable": -0.0009653579713295724,
+     "a": false,
+     "b": false,
+     "both": false,
+     "budget_ms": 0.6837554810879656,
+     "distortion": {
+      "aniso_mean": 1.0497950013975303,
+      "aniso_p95": 1.0998588760197163,
+      "mag_p5": 0.9650061807781458,
+      "mag_p95": 1.0499620130161444,
+      "t": 1.0
+     }
+    }
+   },
+   "passes": false,
+   "state": "FAILS"
+  },
+  "bisenetv2": {
+   "rule": "at some scale, the best local configuration is (a) >= +1 mIoU points above the full frame at that scale and (b) >= +0.5 points above Method 5's best separable now configuration at that scale, on every clip of train_all (spec 2026-11-17)",
+   "margins": {
+    "a": 0.01,
+    "b": 0.005
+   },
+   "clips": 400,
+   "complete": true,
+   "pipeline_check_ok": true,
+   "reproduction_ok": true,
+   "per_scale": {
+    "0.25": {
+     "best": "6o/c0.25/E/a0.25/s4/k12",
+     "miou": 0.6037472505242363,
+     "delta_vs_fullframe": 0.011871164241143095,
+     "delta_vs_uniform": 0.011871150514272344,
+     "separable_bar": {
+      "name": "5o/c0.25/E/a0.25/s4/now",
+      "miou": 0.6099152914067779,
+      "delta_vs_fullframe": 0.01803920512368473
+     },
+     "delta_vs_separable": -0.006168040882541637,
+     "a": true,
+     "b": false,
+     "both": false,
+     "budget_ms": 0.38187361180344226,
+     "distortion": {
+      "aniso_mean": 1.1594933658838271,
+      "aniso_p95": 1.3477919742465019,
+      "mag_p5": 0.9083658215403557,
+      "mag_p95": 1.1744847263395786,
+      "t": 1.0
+     }
+    },
+    "0.375": {
+     "best": "6o/c0.375/E/a0.1/s1/k12",
+     "miou": 0.6763305658992826,
+     "delta_vs_fullframe": 0.007832643217768664,
+     "delta_vs_uniform": 0.007832627911004919,
+     "separable_bar": {
+      "name": "5o/c0.375/E/a0.15/s4/now",
+      "miou": 0.6801992435433278,
+      "delta_vs_fullframe": 0.011701320861813858
+     },
+     "delta_vs_separable": -0.003868677644045193,
+     "a": false,
+     "b": false,
+     "both": false,
+     "budget_ms": 0.7886841193369225,
+     "distortion": {
+      "aniso_mean": 1.0727637553215026,
+      "aniso_p95": 1.1654915895561377,
+      "mag_p5": 0.9546886419256528,
+      "mag_p95": 1.0826335945228736,
+      "t": 1.0
+     }
+    },
+    "0.5": {
+     "best": "6o/c0.5/B/a0.1/s1/k12",
+     "miou": 0.7085217366443229,
+     "delta_vs_fullframe": 0.003066101723187109,
+     "delta_vs_uniform": 0.0030660606451027306,
+     "separable_bar": {
+      "name": "5o/c0.5/B/a0.15/s4/now",
+      "miou": 0.7087854040868944,
+      "delta_vs_fullframe": 0.003329769165758556
+     },
+     "delta_vs_separable": -0.0002636674425714469,
+     "a": false,
+     "b": false,
+     "both": false,
+     "budget_ms": 1.1850136764397625,
+     "distortion": {
+      "aniso_mean": 1.0605429096519947,
+      "aniso_p95": 1.125478639950355,
+      "mag_p5": 0.9612248495221138,
+      "mag_p95": 1.06464042087396,
+      "t": 1.0
+     }
+    },
+    "0.75": {
+     "best": "6o/c0.75/B/a0.1/s4/k4",
+     "miou": 0.7343288854361019,
+     "delta_vs_fullframe": 0.0004285607068783559,
+     "delta_vs_uniform": 0.0004285023467053284,
+     "separable_bar": {
+      "name": "5o/c0.75/B/a0.1/s1/now",
+      "miou": 0.7345822557052915,
+      "delta_vs_fullframe": 0.000681930976067946
+     },
+     "delta_vs_separable": -0.00025337026918959005,
+     "a": false,
+     "b": false,
+     "both": false,
+     "budget_ms": NaN,
+     "distortion": {
+      "aniso_mean": 1.0302226289113363,
+      "aniso_p95": 1.075047510166963,
+      "mag_p5": 0.9773167480776708,
+      "mag_p95": 1.0352677398920058,
+      "t": 1.0
+     }
+    }
+   },
+   "passes": false,
+   "state": "FAILS"
+  }
+ }
+}

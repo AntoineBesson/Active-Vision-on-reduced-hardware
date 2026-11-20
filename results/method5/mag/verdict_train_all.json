@@ -1,0 +1,128 @@
+{
+ "split": "train_all",
+ "passes": false,
+ "models": {
+  "pidnet_s": {
+   "rule": "best warped config with timing now >= +1 mIoU points above the full frame at the same scale (same backbone and post-processing: equal latency), on every clip of train_all (spec, amended 2026-11-13)",
+   "margin": 0.01,
+   "clips": 400,
+   "complete": true,
+   "pipeline_check_ok": true,
+   "best": {
+    "name": "5o/c1/B/a0.1/s1/now",
+    "scale": 1.0,
+    "miou": 0.7643932498280833,
+    "delta_vs_fullframe": 0.00356607130785902,
+    "delta_vs_uniform": 0.0035660445955745246,
+    "latency_ms": 21.49009609222412,
+    "budget_ms": NaN,
+    "readable": 12
+   },
+   "best_prev": {
+    "name": "5o/c1/B/a0.1/s1/prev",
+    "scale": 1.0,
+    "miou": 0.7639230495919612,
+    "delta_vs_fullframe": 0.003095871071736922,
+    "delta_vs_uniform": 0.0030958443594524265,
+    "latency_ms": 21.49009609222412,
+    "budget_ms": NaN,
+    "readable": 12
+   },
+   "passes": false,
+   "state": "FAILS",
+   "note": null,
+   "curves": {
+    "reading": "best \u0394mIoU at equal mean latency on each full-frame curve (information only, not the rule)",
+    "primary": {
+     "best": null,
+     "best_prev": null
+    },
+    "e2e": {
+     "best": null,
+     "best_prev": null
+    },
+    "same_parts": {
+     "best": {
+      "name": "5o/c1/B/a0.1/s1/now",
+      "miou": 0.7643932498280833,
+      "latency_ms": 21.49009609222412,
+      "delta_miou_at_equal_latency": 0.00356607130785902,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": 0.0035660445955745246,
+      "readable": 12
+     },
+     "best_prev": {
+      "name": "5o/c1/B/a0.1/s1/prev",
+      "miou": 0.7639230495919612,
+      "latency_ms": 21.49009609222412,
+      "delta_miou_at_equal_latency": 0.003095871071736922,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": 0.0030958443594524265,
+      "readable": 12
+     }
+    }
+   }
+  },
+  "bisenetv2": {
+   "rule": "best warped config with timing now >= +1 mIoU points above the full frame at the same scale (same backbone and post-processing: equal latency), on every clip of train_all (spec, amended 2026-11-13)",
+   "margin": 0.01,
+   "clips": 400,
+   "complete": true,
+   "pipeline_check_ok": true,
+   "best": {
+    "name": "5o/c1/B/a0.1/s4/now",
+    "scale": 1.0,
+    "miou": 0.7332416723160633,
+    "delta_vs_fullframe": -0.0002433870879841038,
+    "delta_vs_uniform": -0.00024337205982527532,
+    "latency_ms": 34.98980748653412,
+    "budget_ms": -12.965057784499745,
+    "readable": 12
+   },
+   "best_prev": {
+    "name": "5o/c1/B/a0.1/s4/prev",
+    "scale": 1.0,
+    "miou": 0.7333556369046493,
+    "delta_vs_fullframe": -0.0001294224993980686,
+    "delta_vs_uniform": -0.00012940747123924012,
+    "latency_ms": 34.98980748653412,
+    "budget_ms": -12.921011758536878,
+    "readable": 12
+   },
+   "passes": false,
+   "state": "FAILS",
+   "note": null,
+   "curves": {
+    "reading": "best \u0394mIoU at equal mean latency on each full-frame curve (information only, not the rule)",
+    "primary": {
+     "best": null,
+     "best_prev": null
+    },
+    "e2e": {
+     "best": null,
+     "best_prev": null
+    },
+    "same_parts": {
+     "best": {
+      "name": "5o/c1/B/a0.1/s4/now",
+      "miou": 0.7332416723160633,
+      "latency_ms": 34.98980748653412,
+      "delta_miou_at_equal_latency": -0.0002433870879841038,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": -0.00024337205982527532,
+      "readable": 12
+     },
+     "best_prev": {
+      "name": "5o/c1/B/a0.1/s4/prev",
+      "miou": 0.7333556369046493,
+      "latency_ms": 34.98980748653412,
+      "delta_miou_at_equal_latency": -0.0001294224993980686,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": -0.00012940747123924012,
+      "readable": 12
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,192 @@
+{
+ "split": "train_all",
+ "passes": true,
+ "models": {
+  "pidnet_s": {
+   "rule": "best warped config with timing now >= +1 mIoU points above the full frame at the same scale (same backbone and post-processing: equal latency), on every clip of train_all (spec, amended 2026-11-13)",
+   "margin": 0.01,
+   "clips": 400,
+   "complete": true,
+   "pipeline_check_ok": true,
+   "best": {
+    "name": "5o/c0.25/E/a0.25/s1/now",
+    "scale": 0.25,
+    "miou": 0.5409769410670742,
+    "delta_vs_fullframe": 0.012470695793730169,
+    "delta_vs_uniform": 0.012470703304837238,
+    "latency_ms": 4.857183933258057,
+    "budget_ms": 0.15664197483978626,
+    "readable": 72
+   },
+   "best_prev": {
+    "name": "5o/c0.25/E/a0.25/s1/prev",
+    "scale": 0.25,
+    "miou": 0.5382809225313544,
+    "delta_vs_fullframe": 0.0097746772580104,
+    "delta_vs_uniform": 0.00977468476911747,
+    "latency_ms": 4.857183933258057,
+    "budget_ms": 0.12277781243658392,
+    "readable": 72
+   },
+   "passes": true,
+   "state": "PASSES",
+   "note": null,
+   "curves": {
+    "reading": "best \u0394mIoU at equal mean latency on each full-frame curve (information only, not the rule)",
+    "primary": {
+     "best": {
+      "name": "5o/c0.75/S/a0.25/s1/now",
+      "miou": 0.7494132211549347,
+      "latency_ms": 13.486671924591064,
+      "delta_miou_at_equal_latency": -0.0026494931342291306,
+      "latency_saved_at_equal_miou": -1.7713251830571082,
+      "delta_vs_uniform": 0.001458527732831838,
+      "readable": 72
+     },
+     "best_prev": {
+      "name": "5o/c0.75/B/a0.25/s1/prev",
+      "miou": 0.7494345148256019,
+      "latency_ms": 13.486671924591064,
+      "delta_miou_at_equal_latency": -0.0026281994635619643,
+      "latency_saved_at_equal_miou": -1.7570892469057018,
+      "delta_vs_uniform": 0.0014798214034990043,
+      "readable": 72
+     }
+    },
+    "e2e": {
+     "best": {
+      "name": "5o/c0.5/B/a0.25/s1/now",
+      "miou": 0.6880659843261381,
+      "latency_ms": 7.485888123512268,
+      "delta_miou_at_equal_latency": 0.0035742576661978998,
+      "latency_saved_at_equal_miou": 0.31179901187886117,
+      "delta_vs_uniform": 0.008645057480868634,
+      "readable": 72
+     },
+     "best_prev": {
+      "name": "5o/c0.5/E/a0.25/s4/prev",
+      "miou": 0.687542634968646,
+      "latency_ms": 7.485888123512268,
+      "delta_miou_at_equal_latency": 0.003050908308705802,
+      "latency_saved_at_equal_miou": 0.26614482917214666,
+      "delta_vs_uniform": 0.008121708123376536,
+      "readable": 72
+     }
+    },
+    "same_parts": {
+     "best": {
+      "name": "5o/c0.25/E/a0.25/s1/now",
+      "miou": 0.5409769410670742,
+      "latency_ms": 4.857183933258057,
+      "delta_miou_at_equal_latency": 0.012470695793730169,
+      "latency_saved_at_equal_miou": 0.15664197483978626,
+      "delta_vs_uniform": 0.012470703304837238,
+      "readable": 72
+     },
+     "best_prev": {
+      "name": "5o/c0.25/E/a0.25/s1/prev",
+      "miou": 0.5382809225313544,
+      "latency_ms": 4.857183933258057,
+      "delta_miou_at_equal_latency": 0.0097746772580104,
+      "latency_saved_at_equal_miou": 0.12277781243658392,
+      "delta_vs_uniform": 0.00977468476911747,
+      "readable": 72
+     }
+    }
+   }
+  },
+  "bisenetv2": {
+   "rule": "best warped config with timing now >= +1 mIoU points above the full frame at the same scale (same backbone and post-processing: equal latency), on every clip of train_all (spec, amended 2026-11-13)",
+   "margin": 0.01,
+   "clips": 400,
+   "complete": true,
+   "pipeline_check_ok": true,
+   "best": {
+    "name": "5o/c0.25/E/a0.25/s4/now",
+    "scale": 0.25,
+    "miou": 0.6099152914067779,
+    "delta_vs_fullframe": 0.01803920512368473,
+    "delta_vs_uniform": 0.018039133407880326,
+    "latency_ms": 5.099631905555725,
+    "budget_ms": 0.5802881903334969,
+    "readable": 72
+   },
+   "best_prev": {
+    "name": "5o/c0.25/E/a0.25/s4/prev",
+    "scale": 0.25,
+    "miou": 0.6077355995115026,
+    "delta_vs_fullframe": 0.015859513228409394,
+    "delta_vs_uniform": 0.015859441512604988,
+    "latency_ms": 5.099631905555725,
+    "budget_ms": 0.5101714941308897,
+    "readable": 72
+   },
+   "passes": true,
+   "state": "PASSES",
+   "note": null,
+   "curves": {
+    "reading": "best \u0394mIoU at equal mean latency on each full-frame curve (information only, not the rule)",
+    "primary": {
+     "best": {
+      "name": "5o/c0.75/B/a0.25/s1/now",
+      "miou": 0.7341614389132598,
+      "latency_ms": 22.279311418533325,
+      "delta_miou_at_equal_latency": 0.00040070021650173704,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": 0.00026104024143736027,
+      "readable": 72
+     },
+     "best_prev": {
+      "name": "5o/c0.75/B/a0.25/s4/prev",
+      "miou": 0.7329406124532122,
+      "latency_ms": 22.279311418533325,
+      "delta_miou_at_equal_latency": -0.0008201262435458823,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": -0.000959786218610259,
+      "readable": 72
+     }
+    },
+    "e2e": {
+     "best": {
+      "name": "5o/c0.75/B/a0.25/s1/now",
+      "miou": 0.7341614389132598,
+      "latency_ms": 22.279311418533325,
+      "delta_miou_at_equal_latency": 0.0003250610841288859,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": 0.00026104024143736027,
+      "readable": 72
+     },
+     "best_prev": {
+      "name": "5o/c0.75/B/a0.25/s4/prev",
+      "miou": 0.7329406124532122,
+      "latency_ms": 22.279311418533325,
+      "delta_miou_at_equal_latency": -0.0008957653759187334,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": -0.000959786218610259,
+      "readable": 72
+     }
+    },
+    "same_parts": {
+     "best": {
+      "name": "5o/c0.25/E/a0.25/s4/now",
+      "miou": 0.6099152914067779,
+      "latency_ms": 5.099631905555725,
+      "delta_miou_at_equal_latency": 0.01803920512368473,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": 0.018039133407880326,
+      "readable": 72
+     },
+     "best_prev": {
+      "name": "5o/c0.25/E/a0.25/s4/prev",
+      "miou": 0.6077355995115026,
+      "latency_ms": 5.099631905555725,
+      "delta_miou_at_equal_latency": 0.015859513228409394,
+      "latency_saved_at_equal_miou": NaN,
+      "delta_vs_uniform": 0.015859441512604988,
+      "readable": 72
+     }
+    }
+   }
+  }
+ }
+}

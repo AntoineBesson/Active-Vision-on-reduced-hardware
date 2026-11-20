@@ -1,0 +1,91 @@
+{
+ "split": "train_all",
+ "model": "pidnet_s",
+ "prior": "plain",
+ "gate_b": "continue",
+ "pricing": "paired",
+ "variants": [
+  "r2u1"
+ ],
+ "rule": "per judge (mean: median latency, p95): the Pareto front over (latency, mIoU) of the warped configurations and the best mIoU within each full-frame scale's measured latency; the union",
+ "finalists": [
+  {
+   "model": "pidnet_s",
+   "name": "5p/c0.25/P/a0.25/s4/r2u1",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.25,
+    "saliency": "P",
+    "alpha": 0.25,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "train": {
+    "miou": 0.5309871175234979,
+    "mean_ms": 4.054095983505249,
+    "p95_ms": 5.474632227420807
+   },
+   "reasons": [
+    "pareto_mean",
+    "best_within_fullframe_s0.375_mean"
+   ]
+  },
+  {
+   "model": "pidnet_s",
+   "name": "5p/c0.375/P/a0.15/s1/r2u1",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.375,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 1.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "train": {
+    "miou": 0.6187619969080478,
+    "mean_ms": 5.38486385345459,
+    "p95_ms": 5.460254383087158
+   },
+   "reasons": [
+    "pareto_mean",
+    "best_within_fullframe_s0.5_mean",
+    "pareto_p95",
+    "best_within_fullframe_s0.5_p95"
+   ]
+  },
+  {
+   "model": "pidnet_s",
+   "name": "5p/c0.5/P/a0.15/s4/r2u1",
+   "variant": "r2u1",
+   "config": {
+    "scale": 0.5,
+    "saliency": "P",
+    "alpha": 0.15,
+    "sigma": 4.0,
+    "resample": "r2",
+    "unwarp": "u1",
+    "rounds": 50,
+    "taps": null
+   },
+   "train": {
+    "miou": 0.6843171764298368,
+    "mean_ms": 7.323263883590698,
+    "p95_ms": 7.4309952497482294
+   },
+   "reasons": [
+    "pareto_mean",
+    "best_within_fullframe_s1_mean",
+    "best_within_fullframe_s0.75_mean",
+    "pareto_p95",
+    "best_within_fullframe_s1_p95",
+    "best_within_fullframe_s0.75_p95"
+   ]
+  }
+ ]
+}

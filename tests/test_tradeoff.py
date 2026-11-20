@@ -30,6 +30,19 @@ def test_latency_at_needs_a_rising_curve():
     assert c.miou_at(5.0) == pytest.approx(0.72)
 
 
+def test_latency_at_frontier_drops_the_scales_a_cheaper_one_beats():
+    flat = FullFrameCurve([2.0, 5.0, 10.0], [0.50, 0.72, 0.70])  # the top scale is below a cheaper one
+    assert flat.latency_at(0.61, frontier=True) == pytest.approx(3.5)
+    assert flat.latency_at(0.72, frontier=True) == pytest.approx(5.0)
+    assert math.isnan(flat.latency_at(0.73, frontier=True)) and math.isnan(flat.latency_at(0.4, frontier=True))
+    tie = FullFrameCurve([2.0, 5.0, 10.0], [0.50, 0.72, 0.72])  # an exact plateau: the cheaper scale is kept
+    assert tie.latency_at(0.72, frontier=True) == pytest.approx(5.0)
+    dip = FullFrameCurve([2.0, 5.0, 10.0, 20.0], [0.50, 0.60, 0.55, 0.70])  # a dip in the middle
+    assert dip.latency_at(0.65, frontier=True) == pytest.approx(12.5)
+    rising = FullFrameCurve([10.0, 2.0], [0.70, 0.50])
+    assert rising.latency_at(0.65, frontier=True) == rising.latency_at(0.65) == pytest.approx(8.0)
+
+
 def test_readings():
     c = FullFrameCurve([2.0, 10.0], [0.50, 0.70])
     assert delta_miou_at_equal_latency(0.65, 6.0, c) == pytest.approx(0.05)

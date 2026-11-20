@@ -1,0 +1,74 @@
+{
+ "split": "train_all",
+ "verdict": "continue",
+ "models": {
+  "pidnet_s": {
+   "rule": "gate B (spec, stage B): continue when, for at least one model, a configuration lies above the measured full-frame curve at equal mean latency on train (all clips; pipeline check of r1/r2 passed)",
+   "clips": 400,
+   "complete": true,
+   "verdict": "continue",
+   "state": "CONTINUE: 21 configurations above the measured full-frame curve",
+   "above": [
+    "5p/c0.25/P/a0.25/s4/r2u1",
+    "5p/c0.375/P/a0.1/s1/r2u1",
+    "5p/c0.375/P/a0.1/s4/r2u1",
+    "5p/c0.375/P/a0.15/s1/r2u1",
+    "5p/c0.375/P/a0.15/s4/r2u1",
+    "5p/c0.5/P/a0.1/s1/r2u1",
+    "5p/c0.5/P/a0.1/s4/r2u1",
+    "5p/c0.5/P/a0.15/s1/r2u1",
+    "5p/c0.5/P/a0.15/s4/r2u1",
+    "5p/c0.375/P/a0.1/s1/r3u1",
+    "5p/c0.375/P/a0.1/s4/r3u1",
+    "5p/c0.375/P/a0.15/s1/r3u1",
+    "5p/c0.375/P/a0.15/s4/r3u1",
+    "5p/c0.375/P/a0.25/s1/r3u1",
+    "5p/c0.375/P/a0.25/s4/r3u1",
+    "5p/c0.5/P/a0.1/s1/r3u1",
+    "5p/c0.5/P/a0.1/s4/r3u1",
+    "5p/c0.5/P/a0.15/s1/r3u1",
+    "5p/c0.5/P/a0.15/s4/r3u1",
+    "5p/c0.5/P/a0.25/s1/r3u1",
+    "5p/c0.5/P/a0.25/s4/r3u1"
+   ],
+   "best": {
+    "name": "5p/c0.375/P/a0.15/s1/r3u1",
+    "miou": 0.6158560709397269,
+    "latency_ms": 4.956416130065918,
+    "delta_miou_at_equal_latency": 0.01937608346279851,
+    "delta_vs_fullframe": -0.0014954364046149138,
+    "delta_vs_uniform": 0.0007116471333953323,
+    "uniform_delta_miou_at_equal_latency": 0.018664436329403178
+   }
+  },
+  "bisenetv2": {
+   "rule": "gate B (spec, stage B): continue when, for at least one model, a configuration lies above the measured full-frame curve at equal mean latency on train (all clips; pipeline check of r1/r2 passed)",
+   "clips": 400,
+   "complete": true,
+   "verdict": "continue",
+   "state": "CONTINUE: 11 configurations above the measured full-frame curve",
+   "above": [
+    "5p/c0.375/P/a0.1/s1/r2u1",
+    "5p/c0.375/P/a0.1/s4/r2u1",
+    "5p/c0.375/P/a0.15/s1/r2u1",
+    "5p/c0.375/P/a0.15/s4/r2u1",
+    "5p/c0.375/P/a0.25/s4/r2u1",
+    "5p/c0.375/P/a0.1/s1/r3u1",
+    "5p/c0.375/P/a0.1/s4/r3u1",
+    "5p/c0.375/P/a0.15/s1/r3u1",
+    "5p/c0.375/P/a0.15/s4/r3u1",
+    "5p/c0.375/P/a0.25/s1/r3u1",
+    "5p/c0.375/P/a0.25/s4/r3u1"
+   ],
+   "best": {
+    "name": "5p/c0.375/P/a0.15/s1/r3u1",
+    "miou": 0.6741363097388893,
+    "latency_ms": 6.241328001022339,
+    "delta_miou_at_equal_latency": 0.01783748095910831,
+    "delta_vs_fullframe": 0.005638387057375294,
+    "delta_vs_uniform": 0.0029807719952454903,
+    "uniform_delta_miou_at_equal_latency": 0.01485670896386282
+   }
+  }
+ }
+}

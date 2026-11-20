@@ -30,11 +30,23 @@ re-times the latency floor instead.
 **Method 3 tables:** set `BRANCH = "motion-reuse"`, `PARTS = "batchk,reuse,reuse_e2e"` and
 `SESSION = "m3-s1"` (then `m3-s2`, `m3-s3`). It extends the glimpse batches to every k and
 times each op of a Method 3 frame (homography on the host CPU and on the GPU included).
+
+**Method 5 phase 2, stage A:** `BRANCH = "claude/project-thread-nmflag"`, `PARTS = "warp"`,
+`SESSION = "m5w-s1"`, then `m5w-s2` and `m5w-s3`, each in a fresh session. It first checks
+that the warp step captures in a CUDA graph on this GPU (a few seconds; if that cell fails,
+stop and send its output), then times one frame of the warp method against the full frame at
+scales 0.25, 0.375 and 0.5 for both models (about 15 minutes).
+
+**Method 5 phase 2, stage C (the current default):** `BRANCH = "claude/project-thread-nmflag"`,
+`PARTS = "m5final"`, `SESSION = "m5f-s1"`, then `m5f-s2` and `m5f-s3`, each in a fresh
+session. Same graph check, then each model's stage B finalists with their fitted prior and the
+full frame at its five scales, in the same rounds (a few minutes). Keep the JSON of each
+session: they go to `results/method5/phase2/`.
 """),
     code("""
-SESSION = "t4-s1"   # change for each separate session: t4-s2, t4-s3, ... (final-s1, ... for the finalists)
-BRANCH = "foveation-no-memory"
-PARTS = "area,batch,overhead,e2e"   # "final": time the method 2 finalists (results/method2/finalists.json)
+SESSION = "m5f-s1"   # change for each separate session: m5f-s2, m5f-s3 (t4-s1, final-s1, m3-s1, m5w-s1, ... for older parts)
+BRANCH = "claude/project-thread-nmflag"   # "foveation-no-memory" for the latency floor and the finalists
+PARTS = "m5final"   # "area,batch,overhead,e2e": the latency floor; "final": the method 2 finalists; "warp": stage A
 """),
     code("""
 !nvidia-smi --query-gpu=name,driver_version,clocks.max.sm,power.limit,temperature.gpu --format=csv
@@ -47,7 +59,16 @@ assert name and "T4" in name, "Switch the runtime to a T4 GPU (Runtime -> Change
 !rm -rf /content/avrh && git clone -q --depth 1 -b $BRANCH https://github.com/AntoineBesson/Active-Vision-on-reduced-hardware.git /content/avrh
 %cd /content/avrh
 !git log --oneline -1
-!pip install -q -e . nvidia-ml-py
+!pip install -q -e . nvidia-ml-py pytest
+"""),
+    code("""
+import subprocess, sys
+if "warp" in PARTS or "m5final" in PARTS:  # the warp step must capture in a CUDA graph (no read back to the host)
+    r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-x", "tests/test_warp_policy.py", "-k", "cuda_graph"],
+                       capture_output=True, text=True)
+    print(r.stdout[-3000:], r.stderr[-2000:])
+    if r.returncode != 0 or " passed" not in r.stdout:
+        raise RuntimeError("the warp step did not pass its CUDA graph test on this GPU: stop here and send this output")
 """),
     code("""
 import subprocess, sys
@@ -95,6 +116,8 @@ plt.tight_layout(); plt.show()
 for r in R.get("e2e", []):
     p = r.get("predicted_ms", {}).get("total")
     print(f"{r['level']:5s} {r['name']:40s} measured {r['cuda_event']['median_ms']:6.2f} ms  predicted {p if p is None else round(p, 2)}")
+for r in R.get("warp", []) + R.get("m5final", []):
+    print(f"chunk {r['chunk']:2d} {r['name']:52s} median {r['cuda_event']['median_ms']:6.2f}  p95 {r['cuda_event']['p95_ms']:6.2f} ms")
 for r in R.get("final", []):
     p = r.get("predicted_median_ms")
     print(f"{r['level']:5s} {r['name']:70s} median {r['cuda_event']['median_ms']:6.2f}  p95 {r['cuda_event']['p95_ms']:6.2f} ms"
