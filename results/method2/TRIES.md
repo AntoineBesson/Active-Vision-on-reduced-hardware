@@ -205,3 +205,18 @@ recomputed.
 Exploratory, on a val already reported and with finalists chosen for mIoU: mean IoU over the 8 thing
 classes gives 0 of 46 above the curve, best -1.09; over person, rider, motorcycle and bicycle, 0 of 46,
 best -2.01. The reading is worse than plain mIoU (-0.54). Not a new protocol.
+
+## 2026-11-20 — Methods 7 and 8, train_all (400 clips, both models, cluster P100)
+
+One dense pass per model: 11 full-frame scales and the 96 guided-upsampling configs at 0.25, 0.375,
+0.5 and 0.75, with full-frame object IoUs. Printed output: `results/method7/train_all_analysis.log`.
+
+**Method 7, gate 1 (zero overhead).** PIDNet-S: every guided config is below its own scale, the best
+-1.99 [-2.21, -1.79] (c0.25/rgb/prob/r1/e0.01); STOP, no finalist. BiSeNetV2: small gains at the
+lowest scale, best c0.25/rgb/logit/r2/e1e-4 +0.53 [+0.50, +0.57], then c0.25/rgb/prob/r2/e1e-4 +0.52;
+CONTINUE with these 2 finalists. The margin is +0.5 at an overhead of 0 ms, so the T4 timing decides.
+
+**Method 8, oracle bound.** Vs the envelope at equal mean latency: PIDNet-S +4.85 [+3.89, +5.75],
++3.97, +3.21 at budgets ff 0.5, 0.625, 0.75; BiSeNetV2 +2.08 [+1.28, +2.92], +1.10, +0.98. The bound
+PASSES (+1.0 margin), so a realisable per-frame selector is worth specifying. The oracle's moving-object
+recall stays close to the full frame at the same budget (-0.47 to +0.72 points).
