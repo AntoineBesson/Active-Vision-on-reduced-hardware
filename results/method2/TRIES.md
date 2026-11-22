@@ -209,7 +209,7 @@ best -2.01. The reading is worse than plain mIoU (-0.54). Not a new protocol.
 ## 2026-11-20 — Methods 7 and 8, train_all (400 clips, both models, cluster P100)
 
 One dense pass per model: 11 full-frame scales and the 96 guided-upsampling configs at 0.25, 0.375,
-0.5 and 0.75, with full-frame object IoUs. Printed output: `results/method7/train_all_analysis.log`.
+0.5 and 0.625, with full-frame object IoUs. Printed output: `results/method7/train_all_analysis.log`.
 
 **Method 7, gate 1 (zero overhead).** PIDNet-S: every guided config is below its own scale, the best
 -1.99 [-2.21, -1.79] (c0.25/rgb/prob/r1/e0.01); STOP, no finalist. BiSeNetV2: small gains at the
