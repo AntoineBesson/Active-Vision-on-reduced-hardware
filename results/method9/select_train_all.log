@@ -1,0 +1,9 @@
++ python -m scripts.method9 merge --split train_all --out-dir /home/infres/abesson-24/avrh_results/method9/train_all
+[method9 merge] 400 clips -> /home/infres/abesson-24/avrh_results/method9/train_all/features_train_all_pidnet_s.jsonl.gz
++ python -m scripts.method9 select --split train_all --out-dir /home/infres/abesson-24/avrh_results/method9/train_all --run-dir /home/infres/abesson-24/avrh_results/method7/train_all
+[method9 select] S1 (cross-fitted): 67.09 @ 7.06 ms  vs envelope -0.89 [-1.76, -0.20]  same as oracle 19%  -> STOP
+[method9 select] S2 (cross-fitted): 68.13 @ 7.14 ms  vs envelope +0.06 [-0.88, +0.95]  same as oracle 24%  -> STOP
+[method9 select] oracle: 72.79 @ 7.04 ms vs envelope +4.85
+[method9 select] continue: none: Method 9 stops -> /home/infres/abesson-24/avrh/results/method9
+
+[exited with code 0]
