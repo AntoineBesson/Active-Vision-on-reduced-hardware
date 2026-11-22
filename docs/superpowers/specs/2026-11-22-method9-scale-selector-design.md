@@ -1,6 +1,6 @@
 # Method 9: a realisable per-frame scale selector (PIDNet-S)
 
-Status: **draft, 2026-11-22, awaiting Antoine's choice of selector and acceptance. Nothing has run.**
+Status: **accepted 2026-11-22 (Antoine chose both selectors, S1 and S2). Nothing has run.**
 Frozen at its first run; changes go in a dated Amendments section.
 
 ## Why, and the target
@@ -58,3 +58,15 @@ session checks that replaying different graphs back to back costs the same as re
   exist in the Method 7 run files.
 * `select` (CPU): S1 and S2 on train, cross-fitted, gate 1.
 * val: closed loop on the 50 val clips, all frames, PIDNet-S (laptop or cluster, short).
+
+```bash
+# train_all features (cluster, 4 chunks): scripts/cluster/m9_features.sh
+python -m scripts.method9 merge --split train_all --out-dir ~/avrh_results/method9/train_all
+python -m scripts.method9 select --split train_all --out-dir ~/avrh_results/method9/train_all \
+    --run-dir ~/avrh_results/method7/train_all                     # gate, writes results/method9/selectors_pidnet_s.json
+# val (after gate and T4 timing): dense full frame for the envelope, then the closed loop
+python -m scripts.method7 run --split val --models pidnet_s,bisenetv2 --guided-scales none
+python -m scripts.method7 merge --split val
+python -m scripts.method9 closedloop --split val --kinds <survivors>
+python -m scripts.method9 score --split val --overhead-ms <T4 overhead>
+```
