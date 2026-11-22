@@ -1,0 +1,43 @@
++ python -m pytest -q tests/test_method7_cli.py
+.....                                                                    [100%]
+5 passed in 6.41s
++ python -m scripts.method7 screen --split train_all --out-dir /home/infres/abesson-24/avrh_results/method7/train_all --out /home/infres/abesson-24/avrh_results/method7/screen_train_all.json
+[method8 screen] pidnet_s budget ff 0.5 (7.04 ms):
+  frame_oracle  72.79 @ 7.04 ms  vs envelope +4.85 [+3.89, +5.75]  same choice as oracle 100%
+  clip_oracle   71.03 @ 7.04 ms  vs envelope +3.09 [+2.16, +4.01]  same choice as oracle 42%
+  stale         69.03 @ 7.05 ms  vs envelope +1.08 [+0.41, +1.81]  same choice as oracle 30%
+  shuffle_clip  69.39 @ 7.04 ms  vs envelope +1.45 [+0.58, +2.21]  same choice as oracle 39%
+  shuffle_all   65.35 @ 7.04 ms  vs envelope -2.60 [-3.25, -2.11]  same choice as oracle 13%
+[method8 screen] pidnet_s budget ff 0.625 (9.73 ms):
+  frame_oracle  76.31 @ 9.73 ms  vs envelope +3.97 [+3.10, +5.02]  same choice as oracle 100%
+  clip_oracle   74.70 @ 9.73 ms  vs envelope +2.36 [+1.69, +3.16]  same choice as oracle 39%
+  stale         72.88 @ 9.76 ms  vs envelope +0.53 [-0.03, +1.11]  same choice as oracle 27%
+  shuffle_clip  73.46 @ 9.73 ms  vs envelope +1.12 [+0.36, +1.96]  same choice as oracle 37%
+  shuffle_all   70.14 @ 9.73 ms  vs envelope -2.19 [-2.73, -1.73]  same choice as oracle 15%
+[method8 screen] pidnet_s budget ff 0.75 (13.02 ms):
+  frame_oracle  78.00 @ 13.02 ms  vs envelope +3.21 [+2.68, +3.83]  same choice as oracle 100%
+  clip_oracle   76.52 @ 13.02 ms  vs envelope +1.73 [+1.32, +2.26]  same choice as oracle 40%
+  stale         74.89 @ 13.01 ms  vs envelope +0.10 [-0.44, +0.59]  same choice as oracle 28%
+  shuffle_clip  75.35 @ 13.02 ms  vs envelope +0.55 [+0.15, +1.00]  same choice as oracle 36%
+  shuffle_all   72.86 @ 13.02 ms  vs envelope -1.93 [-2.37, -1.55]  same choice as oracle 15%
+[method8 screen] bisenetv2 budget ff 0.5 (10.05 ms):
+  frame_oracle  74.65 @ 10.05 ms  vs envelope +2.08 [+1.28, +2.92]  same choice as oracle 100%
+  clip_oracle   72.96 @ 10.05 ms  vs envelope +0.39 [-0.44, +1.20]  same choice as oracle 38%
+  stale         71.22 @ 10.04 ms  vs envelope -1.33 [-2.25, -0.52]  same choice as oracle 23%
+  shuffle_clip  71.52 @ 10.05 ms  vs envelope -1.05 [-1.91, -0.21]  same choice as oracle 34%
+  shuffle_all   68.62 @ 10.05 ms  vs envelope -3.95 [-5.21, -3.04]  same choice as oracle 13%
+[method8 screen] bisenetv2 budget ff 0.625 (14.65 ms):
+  frame_oracle  76.25 @ 14.65 ms  vs envelope +1.10 [+0.35, +1.89]  same choice as oracle 100%
+  clip_oracle   74.60 @ 14.65 ms  vs envelope -0.54 [-1.42, +0.29]  same choice as oracle 32%
+  stale         73.00 @ 14.68 ms  vs envelope -2.15 [-3.02, -1.37]  same choice as oracle 20%
+  shuffle_clip  73.20 @ 14.65 ms  vs envelope -1.94 [-2.95, -1.09]  same choice as oracle 30%
+  shuffle_all   71.03 @ 14.65 ms  vs envelope -4.11 [-5.15, -3.25]  same choice as oracle 11%
+[method8 screen] bisenetv2 budget ff 0.75 (20.27 ms):
+  frame_oracle  76.95 @ 20.27 ms  vs envelope +0.98 [+0.21, +1.75]  same choice as oracle 100%
+  clip_oracle   75.40 @ 20.27 ms  vs envelope -0.57 [-1.39, +0.28]  same choice as oracle 35%
+  stale         73.93 @ 20.30 ms  vs envelope -2.03 [-2.91, -1.22]  same choice as oracle 22%
+  shuffle_clip  74.06 @ 20.27 ms  vs envelope -1.91 [-2.84, -1.04]  same choice as oracle 33%
+  shuffle_all   72.23 @ 20.27 ms  vs envelope -3.74 [-4.69, -2.95]  same choice as oracle 14%
+[method8 screen] stale oracle KEEPS the margin (+1.0 vs envelope): build a selector
+[method8 screen] -> /home/infres/abesson-24/avrh_results/method7/screen_train_all.json
+exit 0
