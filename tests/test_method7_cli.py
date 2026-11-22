@@ -128,3 +128,20 @@ def test_screen_selections_and_cli(work):
     e = json.loads(out.read_text())["models"]["dummy"][0]
     assert set(e) >= {"frame_oracle", "clip_oracle", "stale", "shuffle_clip", "shuffle_all", "pass"}
     assert e["frame_oracle"]["miou"] >= e["clip_oracle"]["miou"] - 1e-12
+
+
+def test_merge_takes_a_finalists_rerun(tmp_path):
+    base = {"split": "val", "model": "dummy", "clip_id": "x", "frames": [0]}
+    conf = np.eye(19, dtype=int).tolist()
+    method7._append(tmp_path / "run_val_dummy_c0of1.jsonl.gz",
+                    [{**base, "ff": {"ff/1": [conf]}, "guided": {"7g/c0.5/gray/logit/r1/e0.001": conf}, "iou": {"ff/1": [0.7]}}])
+    method7._append(tmp_path / "run_val_dummy_fin.jsonl.gz",
+                    [{**base, "ff": {}, "guided": {"7g/c0.5/gray/logit/r1/e0.001": conf},
+                      "iou": {"7g/c0.5/gray/logit/r1/e0.001": [0.6]}}])
+    assert method7.main(["merge", "--fixture", "--split", "val", "--out-dir", str(tmp_path), "--no-expect"]) == 0
+    (r,) = _read(tmp_path / "run_val_dummy.jsonl.gz")
+    assert set(r["iou"]) == {"ff/1", "7g/c0.5/gray/logit/r1/e0.001"} and len(r["guided"]) == 1
+    # a repeated IoU row is still refused
+    method7._append(tmp_path / "run_val_dummy_fin2.jsonl.gz", [{**base, "iou": {"ff/1": [0.1]}}])
+    with pytest.raises(SystemExit):
+        method7.main(["merge", "--fixture", "--split", "val", "--out-dir", str(tmp_path), "--no-expect"])

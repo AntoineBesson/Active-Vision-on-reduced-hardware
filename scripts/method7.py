@@ -248,6 +248,7 @@ def cmd_merge(args: argparse.Namespace) -> int:
             print(f"[method7 merge] {model}: no chunk file in {out_dir}")
             continue
         clips: Dict[str, Dict[str, Any]] = {}
+        redone: Dict[str, int] = {}  # repeated confusions that differ from the first file's
         for f in files:
             for r in read_lines(f):
                 c = clips.setdefault(r["clip_id"], {k: r[k] for k in ("split", "model", "clip_id", "frames")})
@@ -255,9 +256,12 @@ def cmd_merge(args: argparse.Namespace) -> int:
                     raise SystemExit(f"{f}: clip {r['clip_id']}: labelled frames differ between files")
                 for key in ("ff", "guided", "iou"):
                     for name, v in r.get(key, {}).items():
-                        if name in c.setdefault(key, {}):
+                        if name not in c.setdefault(key, {}):
+                            c[key][name] = v
+                        elif key == "iou":
                             raise SystemExit(f"{f}: clip {r['clip_id']}: {key} {name} seen twice")
-                        c[key][name] = v
+                        elif c[key][name] != v:  # a re-run of a config (e.g. the finalists' objects run): keep the first
+                            redone[key] = redone.get(key, 0) + 1
         tmp = merged.with_suffix(".tmp")
         if tmp.exists():
             tmp.unlink()
@@ -265,7 +269,8 @@ def cmd_merge(args: argparse.Namespace) -> int:
         tmp.replace(merged)
         missing = sorted((expected or set()) - set(clips))
         print(f"[method7 merge] {model}: {len(clips)} clips from {len(files)} files -> {merged}"
-              + (f"; missing {len(missing)} clips, e.g. {missing[:3]}" if missing else ""))
+              + (f"; missing {len(missing)} clips, e.g. {missing[:3]}" if missing else "")
+              + (f"; repeated confusions differing from the first run (kept the first): {redone}" if redone else ""))
     return 0
 
 
