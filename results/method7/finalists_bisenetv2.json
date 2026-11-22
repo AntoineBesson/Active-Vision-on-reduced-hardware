@@ -1,0 +1,9 @@
+{
+ "model": "bisenetv2",
+ "split": "train_all",
+ "finalists": [
+  "7g/c0.25/rgb/logit/r2/e0.0001",
+  "7g/c0.25/rgb/prob/r2/e0.0001"
+ ],
+ "rule": "gate 1, zero overhead"
+}

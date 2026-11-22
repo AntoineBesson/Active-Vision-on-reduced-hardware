@@ -1,0 +1,67 @@
+Python 3.12.3 loaded
+Commands: python, python3, pip, pip3
+Pip cache: /tmp/pip_cache_abesson-24
++ python -m scripts.method7 merge --split train_all --out-dir /home/infres/abesson-24/avrh_results/method7/train_all --no-expect
+[method7 merge] pidnet_s: 400 clips from 4 files -> /home/infres/abesson-24/avrh_results/method7/train_all/run_train_all_pidnet_s.jsonl.gz
+[method7 merge] bisenetv2: 400 clips from 4 files -> /home/infres/abesson-24/avrh_results/method7/train_all/run_train_all_bisenetv2.jsonl.gz
++ python -m scripts.method7 score --split train_all --out-dir /home/infres/abesson-24/avrh_results/method7/train_all --write-finalists --out /home/infres/abesson-24/avrh_results/method7/score_train_all.json
+[method7 score] pidnet_s full frame: 0.25: 52.85 @ 4.00 ms, 0.3125: 57.51 @ 4.56 ms, 0.375: 61.74 @ 5.25 ms, 0.4375: 65.26 @ 6.08 ms, 0.5: 67.94 @ 7.04 ms, 0.5625: 69.78 @ 8.31 ms, 0.625: 72.33 @ 9.73 ms, 0.6875: 73.47 @ 11.30 ms, 0.75: 74.80 @ 13.02 ms, 0.875: 75.64 @ 16.94 ms, 1: 76.08 @ 21.47 ms
+  7g/c0.25/rgb/prob/r1/e0.01         50.86 @ 4.00 ms  same scale -1.99  vs own curve -1.99  vs envelope -1.99 [-2.21, -1.79]
+  7g/c0.25/gray/prob/r1/e0.01        50.85 @ 4.00 ms  same scale -2.00  vs own curve -2.00  vs envelope -2.00 [-2.23, -1.79]
+  7g/c0.5/rgb/prob/r1/e0.01          65.86 @ 7.04 ms  same scale -2.08  vs own curve -2.08  vs envelope -2.08 [-2.55, -1.97]
+  7g/c0.5/gray/prob/r1/e0.01         65.76 @ 7.04 ms  same scale -2.19  vs own curve -2.19  vs envelope -2.19 [-2.65, -2.06]
+  7g/c0.5/rgb/prob/r1/e0.001         65.66 @ 7.04 ms  same scale -2.29  vs own curve -2.29  vs envelope -2.29 [-2.77, -2.17]
+  7g/c0.5/gray/prob/r1/e0.001        65.64 @ 7.04 ms  same scale -2.31  vs own curve -2.31  vs envelope -2.31 [-2.80, -2.19]
+  7g/c0.25/gray/prob/r1/e0.001       50.53 @ 4.00 ms  same scale -2.32  vs own curve -2.32  vs envelope -2.32 [-2.54, -2.12]
+  7g/c0.25/rgb/prob/r1/e0.001        50.45 @ 4.00 ms  same scale -2.40  vs own curve -2.40  vs envelope -2.40 [-2.61, -2.20]
+  gate 1: STOP; finalists []
+[method7 score] bisenetv2 full frame: 0.25: 59.19 @ 4.27 ms, 0.3125: 63.26 @ 5.33 ms, 0.375: 66.85 @ 6.61 ms, 0.4375: 68.97 @ 8.21 ms, 0.5: 70.55 @ 10.05 ms, 0.5625: 71.69 @ 12.23 ms, 0.625: 72.44 @ 14.65 ms, 0.6875: 73.02 @ 17.34 ms, 0.75: 73.39 @ 20.27 ms, 0.875: 73.69 @ 26.32 ms, 1: 73.35 @ 33.30 ms
+  7g/c0.25/rgb/logit/r2/e0.0001      59.72 @ 4.27 ms  same scale +0.53  vs own curve +0.53  vs envelope +0.53 [+0.50, +0.57]
+  7g/c0.25/rgb/prob/r2/e0.0001       59.71 @ 4.27 ms  same scale +0.52  vs own curve +0.52  vs envelope +0.52 [+0.49, +0.55]
+  7g/c0.375/rgb/logit/r2/e0.0001     67.31 @ 6.61 ms  same scale +0.46  vs own curve +0.46  vs envelope +0.46 [-0.59, +0.48]
+  7g/c0.25/rgb/logit/r2/e0.001       59.63 @ 4.27 ms  same scale +0.45  vs own curve +0.45  vs envelope +0.45 [+0.41, +0.48]
+  7g/c0.375/rgb/prob/r2/e0.0001      67.29 @ 6.61 ms  same scale +0.44  vs own curve +0.44  vs envelope +0.44 [-0.61, +0.46]
+  7g/c0.25/rgb/prob/r2/e0.001        59.63 @ 4.27 ms  same scale +0.44  vs own curve +0.44  vs envelope +0.44 [+0.41, +0.47]
+  7g/c0.375/rgb/logit/r2/e0.001      67.25 @ 6.61 ms  same scale +0.40  vs own curve +0.40  vs envelope +0.40 [-0.65, +0.43]
+  7g/c0.25/gray/logit/r2/e0.0001     59.58 @ 4.27 ms  same scale +0.39  vs own curve +0.39  vs envelope +0.39 [+0.36, +0.43]
+  gate 1: CONTINUE; finalists ['7g/c0.25/rgb/logit/r2/e0.0001', '7g/c0.25/rgb/prob/r2/e0.0001']
+[method7 score] -> /home/infres/abesson-24/avrh_results/method7/score_train_all.json
++ python -m scripts.method7 oracle --split train_all --out-dir /home/infres/abesson-24/avrh_results/method7/train_all --out /home/infres/abesson-24/avrh_results/method7/oracle_train_all.json
+[method8 oracle] pidnet_s budget = ff 0.5 (7.04 ms): oracle 72.79 at 7.04 ms (seeds 72.79, 72.79, 72.79); same scale +4.85; vs envelope +4.85 [+3.89, +5.75]; shares {'0.25': 0.08541666666666667, '0.3125': 0.09958333333333333, '0.375': 0.12291666666666666, '0.4375': 0.14375, '0.5': 0.24375, '0.5625': 0.11083333333333334, '0.625': 0.12416666666666666, '0.6875': 0.04125, '0.75': 0.02, '0.875': 0.005416666666666667, '1': 0.002916666666666667}
+[method8 oracle] pidnet_s budget = ff 0.625 (9.73 ms): oracle 76.31 at 9.73 ms (seeds 76.31, 76.31, 76.31); same scale +3.97; vs envelope +3.97 [+3.10, +5.02]; shares {'0.25': 0.022083333333333333, '0.3125': 0.027916666666666666, '0.375': 0.0425, '0.4375': 0.06625, '0.5': 0.1225, '0.5625': 0.11416666666666667, '0.625': 0.24958333333333332, '0.6875': 0.165, '0.75': 0.13125, '0.875': 0.04083333333333333, '1': 0.017916666666666668}
+[method8 oracle] pidnet_s budget = ff 0.75 (13.02 ms): oracle 78.00 at 13.02 ms (seeds 78.00, 78.00, 78.00); same scale +3.21; vs envelope +3.21 [+2.68, +3.83]; shares {'0.25': 0.009166666666666667, '0.3125': 0.007916666666666667, '0.375': 0.015833333333333335, '0.4375': 0.022916666666666665, '0.5': 0.04583333333333333, '0.5625': 0.05541666666666667, '0.625': 0.13541666666666666, '0.6875': 0.1775, '0.75': 0.23875, '0.875': 0.16416666666666666, '1': 0.12708333333333333}
+[method8 oracle] bisenetv2 budget = ff 0.5 (10.05 ms): oracle 74.65 at 10.05 ms (seeds 74.65, 74.65, 74.65); same scale +4.10; vs envelope +2.08 [+1.28, +2.92]; shares {'0.25': 0.065, '0.3125': 0.105, '0.375': 0.15291666666666667, '0.4375': 0.18458333333333332, '0.5': 0.17541666666666667, '0.5625': 0.13125, '0.625': 0.07666666666666666, '0.6875': 0.059583333333333335, '0.75': 0.03125, '0.875': 0.01125, '1': 0.007083333333333333}
+[method8 oracle] bisenetv2 budget = ff 0.625 (14.65 ms): oracle 76.25 at 14.65 ms (seeds 76.25, 76.25, 76.25); same scale +3.81; vs envelope +1.10 [+0.35, +1.89]; shares {'0.25': 0.024166666666666666, '0.3125': 0.042916666666666665, '0.375': 0.06666666666666667, '0.4375': 0.09833333333333333, '0.5': 0.13458333333333333, '0.5625': 0.13208333333333333, '0.625': 0.13041666666666665, '0.6875': 0.14083333333333334, '0.75': 0.10416666666666667, '0.875': 0.07875, '1': 0.04708333333333333}
+[method8 oracle] bisenetv2 budget = ff 0.75 (20.27 ms): oracle 76.95 at 20.27 ms (seeds 76.95, 76.95, 76.95); same scale +3.56; vs envelope +0.98 [+0.21, +1.75]; shares {'0.25': 0.01375, '0.3125': 0.02, '0.375': 0.030833333333333334, '0.4375': 0.03833333333333333, '0.5': 0.06916666666666667, '0.5625': 0.07541666666666667, '0.625': 0.09416666666666666, '0.6875': 0.12333333333333334, '0.75': 0.15083333333333335, '0.875': 0.2, '1': 0.18416666666666667}
+[method8 oracle] bound PASSES (margin +1.0 vs envelope)
+[method8 oracle] -> /home/infres/abesson-24/avrh_results/method7/oracle_train_all.json
++ python -m scripts.method7 objects --split train_all --out-dir /home/infres/abesson-24/avrh_results/method7/train_all --oracle /home/infres/abesson-24/avrh_results/method7/oracle_train_all.json --out /home/infres/abesson-24/avrh_results/method7/objects_train_all.json
+  pidnet_s ff/0.25                                4.00 ms  recall 0.211  vs own curve +0.00 pts
+  pidnet_s ff/0.3125                              4.56 ms  recall 0.274  vs own curve +0.00 pts
+  pidnet_s ff/0.375                               5.25 ms  recall 0.336  vs own curve +0.00 pts
+  pidnet_s ff/0.4375                              6.08 ms  recall 0.401  vs own curve +0.00 pts
+  pidnet_s 8o/budget0.5                           7.04 ms  recall 0.461  vs own curve -0.47 pts
+  pidnet_s ff/0.5                                 7.04 ms  recall 0.466  vs own curve +0.00 pts
+  pidnet_s ff/0.5625                              8.31 ms  recall 0.521  vs own curve +0.00 pts
+  pidnet_s 8o/budget0.625                         9.73 ms  recall 0.567  vs own curve +0.10 pts
+  pidnet_s ff/0.625                               9.73 ms  recall 0.566  vs own curve +0.00 pts
+  pidnet_s ff/0.6875                             11.30 ms  recall 0.598  vs own curve +0.00 pts
+  pidnet_s 8o/budget0.75                         13.02 ms  recall 0.633  vs own curve +0.72 pts
+  pidnet_s ff/0.75                               13.02 ms  recall 0.626  vs own curve +0.00 pts
+  pidnet_s ff/0.875                              16.94 ms  recall 0.663  vs own curve +0.00 pts
+  pidnet_s ff/1                                  21.47 ms  recall 0.698  vs own curve +0.00 pts
+  bisenetv2 ff/0.25                                4.27 ms  recall 0.321  vs own curve +0.00 pts
+  bisenetv2 ff/0.3125                              5.33 ms  recall 0.391  vs own curve +0.00 pts
+  bisenetv2 ff/0.375                               6.61 ms  recall 0.449  vs own curve +0.00 pts
+  bisenetv2 ff/0.4375                              8.21 ms  recall 0.493  vs own curve +0.00 pts
+  bisenetv2 8o/budget0.5                          10.05 ms  recall 0.532  vs own curve -0.29 pts
+  bisenetv2 ff/0.5                                10.05 ms  recall 0.535  vs own curve +0.00 pts
+  bisenetv2 ff/0.5625                             12.23 ms  recall 0.571  vs own curve +0.00 pts
+  bisenetv2 8o/budget0.625                        14.65 ms  recall 0.603  vs own curve +0.29 pts
+  bisenetv2 ff/0.625                              14.65 ms  recall 0.600  vs own curve +0.00 pts
+  bisenetv2 ff/0.6875                             17.34 ms  recall 0.627  vs own curve +0.00 pts
+  bisenetv2 8o/budget0.75                         20.27 ms  recall 0.651  vs own curve +0.40 pts
+  bisenetv2 ff/0.75                               20.27 ms  recall 0.647  vs own curve +0.00 pts
+  bisenetv2 ff/0.875                              26.32 ms  recall 0.677  vs own curve +0.00 pts
+  bisenetv2 ff/1                                  33.30 ms  recall 0.705  vs own curve +0.00 pts
+[method7 objects] -> /home/infres/abesson-24/avrh_results/method7/objects_train_all.json

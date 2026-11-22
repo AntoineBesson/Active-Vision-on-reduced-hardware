@@ -1,0 +1,6 @@
+{
+ "model": "pidnet_s",
+ "split": "train_all",
+ "finalists": [],
+ "rule": "gate 1, zero overhead"
+}
