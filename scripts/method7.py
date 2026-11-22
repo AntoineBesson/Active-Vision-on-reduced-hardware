@@ -5,6 +5,7 @@
     python -m scripts.method7 merge --split train_all                               # chunk files -> one per model
     python -m scripts.method7 score --split train_all                               # Method 7: readings, gate 1, finalists
     python -m scripts.method7 oracle --split train_all                              # Method 8: the per-frame scale oracle
+    python -m scripts.method7 screen --split train_all                              # Method 8 step 2: predictability
     python -m scripts.method7 objects --split train_all                             # moving-object recall (train_all)
     python -m scripts.method7 time --session s1                                     # T4 (Colab): dense full frame + finalists
 
@@ -581,6 +582,95 @@ def cmd_oracle(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Method 8, step 2: predictability screen (no GPU, the run files only)
+# --------------------------------------------------------------------------- #
+SCREEN_MARGIN = 0.010  # the stale oracle must keep +1.0 mIoU point above the envelope
+
+
+def screen_selections(choice, frame_clip, n_scales: int, base: int, seed: int = 0) -> Dict[str, Any]:
+    """Selections derived from the oracle's per-frame choice (frames in clip order):
+
+    * ``stale``: each labelled frame takes the oracle's choice of the previous labelled frame of its
+      clip (5 frames earlier on VPS); the first labelled frame of a clip takes ``base``. The most a
+      selector that only sees the past could know, if it knew the past perfectly.
+    * ``shuffle_clip``: the oracle's choices permuted within each clip (keeps each clip's mix).
+    * ``shuffle_all``: permuted over all frames (keeps only the overall scale shares).
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    choice, frame_clip = np.asarray(choice), np.asarray(frame_clip)
+    stale = np.full_like(choice, base)
+    shuffle_clip = choice.copy()
+    for c in np.unique(frame_clip):
+        idx = np.flatnonzero(frame_clip == c)
+        stale[idx[1:]] = choice[idx[:-1]]
+        shuffle_clip[idx] = rng.permutation(choice[idx])
+    return {"stale": stale, "shuffle_clip": shuffle_clip, "shuffle_all": rng.permutation(choice)}
+
+
+def cmd_screen(args: argparse.Namespace) -> int:
+    """Is the oracle's gain predictable? Per model and budget: the frame oracle, the clip oracle (one
+    scale per clip, with labels), the stale oracle and two shuffles, each read against the envelope
+    at its own mean latency with a clip bootstrap. Pass rule (spec, Method 8 step 2): build a
+    realisable selector only if the stale oracle keeps >= +1.0 vs the envelope at some budget."""
+    import numpy as np
+
+    from upsample.scale_oracle import miou_many, scale_oracle
+
+    models = _strs(args.models)
+    runs = _load_runs(args, models)
+    prices, _ = _prices(args, runs)
+    curves = {m: (prices[m], miou_many(runs[m]["ff"].sum(0))) for m in models}
+    n_clips = len(runs[models[0]]["clips"])
+    W = _boot_weights(n_clips, args.n_boot)
+    boot_curves = {m: (prices[m], miou_many((W @ runs[m]["ff"].reshape(n_clips, -1)).reshape(
+        args.n_boot, len(runs[m]["ff_names"]), NUM_CLASSES, NUM_CLASSES))) for m in models}
+    rep: Dict[str, Any] = {"split": args.split, "margin": SCREEN_MARGIN, "models": {}}
+    for m in models:
+        r = runs[m]
+        lat = np.asarray(prices[m])
+        F = len(r["frame_clip"])
+        rep["models"][m] = []
+        for b in _floats(args.budgets):
+            k = r["ff_scales"].index(b)
+            budget = float(lat[k])
+            frame = max((scale_oracle(r["ff_frames"], lat, budget, seed=s, max_sweeps=args.max_sweeps)
+                         for s in range(args.seeds)), key=lambda x: x.miou)
+            clip = scale_oracle(r["ff"], lat, budget, seed=0, max_sweeps=args.max_sweeps)
+            sels = {"frame_oracle": frame.choice, "clip_oracle": np.asarray(clip.choice)[r["frame_clip"]]}
+            sels.update(screen_selections(frame.choice, r["frame_clip"], len(lat), k, seed=0))
+            entry: Dict[str, Any] = {"budget_scale": b, "budget_ms": budget}
+            for name, ch in sels.items():
+                per_clip = np.zeros((n_clips, NUM_CLASSES, NUM_CLASSES), dtype=np.int64)
+                np.add.at(per_clip, r["frame_clip"], r["ff_frames"][np.arange(F), ch])
+                miou = float(miou_many(per_clip.sum(0)))
+                mean_ms = float(lat[ch].mean())
+                env, _ = envelope_at(curves, mean_ms)
+                env_b, _ = envelope_at(boot_curves, mean_ms)
+                d = miou_many((W @ per_clip.reshape(n_clips, -1)).reshape(-1, NUM_CLASSES, NUM_CLASSES)) - env_b
+                d = d[~np.isnan(d)]
+                entry[name] = {"miou": miou, "mean_ms": mean_ms, "delta_envelope": float(miou - env),
+                               "delta_envelope_ci95": [float(np.percentile(d, 2.5)), float(np.percentile(d, 97.5))],
+                               "agree_with_oracle": float(np.mean(ch == frame.choice))}
+            entry["pass"] = entry["stale"]["delta_envelope"] >= SCREEN_MARGIN - 1e-12
+            rep["models"][m].append(entry)
+            print(f"[method8 screen] {m} budget ff {b:g} ({budget:.2f} ms):")
+            for name in ("frame_oracle", "clip_oracle", "stale", "shuffle_clip", "shuffle_all"):
+                e = entry[name]
+                print(f"  {name:<13} {100 * e['miou']:.2f} @ {e['mean_ms']:.2f} ms  vs envelope "
+                      f"{100 * e['delta_envelope']:+.2f} [{100 * e['delta_envelope_ci95'][0]:+.2f}, "
+                      f"{100 * e['delta_envelope_ci95'][1]:+.2f}]  same choice as oracle {100 * e['agree_with_oracle']:.0f}%")
+    rep["pass"] = any(e["pass"] for v in rep["models"].values() for e in v)
+    print(f"[method8 screen] stale oracle {'KEEPS' if rep['pass'] else 'LOSES'} the margin "
+          f"(+{100 * SCREEN_MARGIN:.1f} vs envelope): {'build a selector' if rep['pass'] else 'close Method 8'}")
+    out = Path(args.out) if args.out else (EXP if args.fixture else RES) / f"screen_{args.split}{'_fixture' if args.fixture else ''}.json"
+    _json_dump(rep, out)
+    print(f"[method8 screen] -> {out}")
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # moving-object recall (train_all)
 # --------------------------------------------------------------------------- #
 def cmd_objects(args: argparse.Namespace) -> int:
@@ -777,6 +867,14 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     o.add_argument("--seeds", type=int, default=3)
     o.add_argument("--max-sweeps", type=int, default=20)
     o.set_defaults(func=cmd_oracle)
+
+    q = sub.add_parser("screen", help="Method 8 step 2: is the oracle's gain predictable (clip / stale oracle)")
+    common(q)
+    scoring(q)
+    q.add_argument("--budgets", default=",".join(f"{b:g}" for b in ORACLE_BUDGETS))
+    q.add_argument("--seeds", type=int, default=3)
+    q.add_argument("--max-sweeps", type=int, default=20)
+    q.set_defaults(func=cmd_screen)
 
     b = sub.add_parser("objects", help="moving-object recall of the configs with object IoUs (train_all)")
     common(b)

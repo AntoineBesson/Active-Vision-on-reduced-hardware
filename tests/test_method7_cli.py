@@ -115,3 +115,16 @@ def test_objects_report_with_oracle(tmp_path):
         found += int(((np.asarray(r["iou"]["ff/0.25"]) > 0.5) & (tt == 5)).sum())
     e = next(e for e in rep["configs"] if e["name"] == "8o/budget0.5")
     assert e["recall"]["found"] == found
+
+
+def test_screen_selections_and_cli(work):
+    sel = method7.screen_selections([3, 1, 2, 0, 4], ["a", "a", "a", "b", "b"], 5, base=9)
+    assert sel["stale"].tolist() == [9, 3, 1, 9, 0]
+    assert sorted(sel["shuffle_all"].tolist()) == [0, 1, 2, 3, 4]
+    assert sorted(sel["shuffle_clip"][:3].tolist()) == [1, 2, 3]
+    d, common = work
+    out = d / "screen.json"
+    assert method7.main(["screen", *common, "--out", str(out), "--n-boot", "30", "--budgets", "0.5", "--seeds", "1"]) == 0
+    e = json.loads(out.read_text())["models"]["dummy"][0]
+    assert set(e) >= {"frame_oracle", "clip_oracle", "stale", "shuffle_clip", "shuffle_all", "pass"}
+    assert e["frame_oracle"]["miou"] >= e["clip_oracle"]["miou"] - 1e-12

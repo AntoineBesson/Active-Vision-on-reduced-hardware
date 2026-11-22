@@ -154,3 +154,37 @@ resume at ≤ 65 °C (`--max-temp 85`). Cluster submissions are typed by Antoine
   accuracy runs use FP32 throughout, the timing FP16, as the full frame's own upsampling.
 * **Selection on train.** Finalists come from train only; val is read once, on the finalists only.
 * **The oracle uses labels**: it is only a bound, never a result.
+
+## Amendments
+
+### 2026-11-22: train_all results, and Method 8 step 2 (predictability screen), fixed before it runs
+
+Antoine accepted the spec by submitting the cluster run on 2026-11-20 (jobs 1114454 to 1114461, all 8 chunks
+complete, 400 clips per model). Results on train_all (files in `results/method7/`):
+
+* **Method 7, gate 1.** PIDNet-S: STOP. Every guided configuration is below the bilinear step at its
+  own scale; the best is −1.99 [−2.21, −1.79] vs the envelope. BiSeNetV2: CONTINUE on the rule,
+  with finalists `7g/c0.25/rgb/logit/r2/e0.0001` (+0.53 [+0.50, +0.57] at zero overhead) and
+  `7g/c0.25/rgb/prob/r2/e0.0001` (+0.52). The curve's slope there is about 3.8 points per ms, so the
+  finalists pass the val rule only if the T4 overhead stays under about 0.14 ms. Stage 2 (T4 timing)
+  runs when the Colab T4 is free; nothing else in Method 7 changes.
+* **Method 8 bound: PASSES.** Oracle vs envelope at the budgets ff 0.5 / 0.625 / 0.75: PIDNet-S
+  +4.85 / +3.97 / +3.21, BiSeNetV2 +2.08 / +1.10 / +0.98. The headline moving-object recall of the
+  oracle's selections stays within ±0.7 points of the full frame at the same budget.
+
+**Step 2, before any selector is built: is the oracle's gain predictable?** The oracle picks each
+frame's scale from its own labels, so part of its gain can be per-frame noise that no selector can
+anticipate. Without any new GPU pass, from the same per-frame confusions (`method7 screen`):
+
+* **stale oracle**: each labelled frame takes the oracle's choice of the previous labelled frame of
+  its clip (5 frames, about 0.3 s, earlier); the first labelled frame of a clip takes the budget
+  scale. This is what a selector that sees only the past could do if it read the past perfectly.
+* reported with it: the **clip oracle** (one scale per clip, chosen with labels), and two nulls, the
+  oracle's choices **shuffled within each clip** and **shuffled over all frames**.
+
+Each is read against the envelope at its own mean latency, with the same clip bootstrap.
+**Rule:** a realisable selector is specified and built only if the **stale oracle keeps at least
++1.0 mIoU point above the envelope** at some budget for either model. Otherwise Method 8 is closed:
+the oracle's gain is not predictable from the past. If the stale oracle passes, the selector spec
+fixes its features (the previous frame's own output, such as entropy and class mix, at no extra
+pass), its cost on the T4 and a val pass rule like Method 7's.
