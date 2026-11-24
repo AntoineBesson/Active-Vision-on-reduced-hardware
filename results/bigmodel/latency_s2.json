@@ -1,0 +1,4001 @@
+{
+ "experiment": "bigmodel_curve",
+ "session": "s2",
+ "started": "2026-11-20T09:07:38",
+ "duration_s": 738.7524750232697,
+ "quick": false,
+ "settings": {
+  "rounds": 5,
+  "iters": 40,
+  "warmup": 20,
+  "frame": [
+   1024,
+   2048
+  ],
+  "models": [
+   "pidnet_s",
+   "bisenetv2",
+   "segformer_b0",
+   "segformer_b2",
+   "segformer_b5"
+  ],
+  "scales": [
+   1.0,
+   0.75,
+   0.5,
+   0.375,
+   0.25,
+   0.1875,
+   0.125
+  ],
+  "parts": [
+   "area",
+   "e2e"
+  ],
+  "levels": [
+   "graph"
+  ],
+  "dtype": "float16",
+  "batch": "1 frame",
+  "timing": "per-frame CUDA events after synchronize; configurations interleaved in rounds",
+  "weights": "random (latency does not depend on values)"
+ },
+ "environment": {
+  "torch": "2.14.1+cu130",
+  "cuda": "13.0",
+  "cudnn": 92800,
+  "cuda_available": true,
+  "gpu": "Tesla T4",
+  "sm_count": 40,
+  "total_memory_mib": 14912.6875,
+  "capability": "7.5",
+  "driver": "580.82.07",
+  "max_sm_clock_mhz": 1590.0,
+  "power_limit_w": 70.0
+ },
+ "session_telemetry": {
+  "backend": "nvml",
+  "samples": 6508,
+  "sm_clock_mhz": {
+   "min": 585.0,
+   "median": 1020.0,
+   "max": 1590.0
+  },
+  "temperature_c": {
+   "min": 55.0,
+   "median": 77.0,
+   "max": 82.0
+  },
+  "power_w": {
+   "min": 31.884,
+   "median": 66.963,
+   "max": 110.515
+  },
+  "throttle_reasons": [
+   "sw_power_cap"
+  ]
+ },
+ "records": [
+  {
+   "name": "area/pidnet_s/1",
+   "part": "area",
+   "model": "pidnet_s",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 94.388453376,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 18.663583755493164,
+    "p95_ms": 19.97801904678344,
+    "mean_ms": 18.690281105041503,
+    "min_ms": 17.64182472229004,
+    "max_ms": 22.123647689819336,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 18.70024699996975,
+    "p95_ms": 20.012610950021774,
+    "mean_ms": 18.734134280000205,
+    "min_ms": 17.68371999997953,
+    "max_ms": 22.161646999961704,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    17.983552932739258,
+    18.43113613128662,
+    18.92027187347412,
+    18.677936553955078,
+    18.699359893798828
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 32,
+    "sm_clock_mhz": {
+     "min": 1020.0,
+     "median": 1155.0,
+     "max": 1275.0
+    },
+    "temperature_c": {
+     "min": 64.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 59.433,
+     "median": 68.0605,
+     "max": 85.487
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/pidnet_s/1",
+   "part": "e2e",
+   "model": "pidnet_s",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 94.388453376,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 19.725199699401855,
+    "p95_ms": 20.00405349731445,
+    "mean_ms": 19.603118724823,
+    "min_ms": 18.84774398803711,
+    "max_ms": 20.287744522094727,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 19.762042500047983,
+    "p95_ms": 20.072868050021953,
+    "mean_ms": 19.671026315001257,
+    "min_ms": 18.877638999981627,
+    "max_ms": 24.682391999931497,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    18.995391845703125,
+    19.513423919677734,
+    19.92535972595215,
+    19.740991592407227,
+    19.772319793701172
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 36,
+    "sm_clock_mhz": {
+     "min": 1095.0,
+     "median": 1155.0,
+     "max": 1245.0
+    },
+    "temperature_c": {
+     "min": 64.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 64.964,
+     "median": 67.942,
+     "max": 70.629
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/pidnet_s/0.75",
+   "part": "area",
+   "model": "pidnet_s",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 53.093695488,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 10.299504280090332,
+    "p95_ms": 10.603369760513305,
+    "mean_ms": 10.308749279975892,
+    "min_ms": 9.946208000183105,
+    "max_ms": 10.908063888549805,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 10.350226999946699,
+    "p95_ms": 10.821865250045448,
+    "mean_ms": 10.377290930000811,
+    "min_ms": 9.972730000015417,
+    "max_ms": 12.19463799998266,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    10.019392013549805,
+    10.23465633392334,
+    10.566767692565918,
+    10.334335803985596,
+    10.32918405532837
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 17,
+    "sm_clock_mhz": {
+     "min": 1170.0,
+     "median": 1215.0,
+     "max": 1275.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 64.064,
+     "median": 67.241,
+     "max": 69.9
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/pidnet_s/0.75",
+   "part": "e2e",
+   "model": "pidnet_s",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 53.093695488,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 11.956831932067871,
+    "p95_ms": 12.239246654510497,
+    "mean_ms": 11.957471680641174,
+    "min_ms": 11.501567840576172,
+    "max_ms": 12.402688026428223,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 11.998262000020077,
+    "p95_ms": 12.431409299944107,
+    "mean_ms": 12.011767789998373,
+    "min_ms": 11.542850000012095,
+    "max_ms": 14.046774000007645,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    11.628544330596924,
+    11.821056365966797,
+    12.225183963775635,
+    12.04852819442749,
+    12.05193567276001
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 22,
+    "sm_clock_mhz": {
+     "min": 1170.0,
+     "median": 1200.0,
+     "max": 1275.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.0,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 67.298,
+     "median": 68.725,
+     "max": 69.649
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/pidnet_s/0.5",
+   "part": "area",
+   "model": "pidnet_s",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 23.597187072,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 5.165808200836182,
+    "p95_ms": 5.563972663879395,
+    "mean_ms": 5.216700658798218,
+    "min_ms": 4.947968006134033,
+    "max_ms": 5.749279975891113,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 5.203372499977377,
+    "p95_ms": 5.67728955003872,
+    "mean_ms": 5.344807324998158,
+    "min_ms": 4.982724999990751,
+    "max_ms": 14.01302100009616,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    5.038111925125122,
+    5.1678078174591064,
+    5.255728006362915,
+    5.160672187805176,
+    5.163008213043213
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 10,
+    "sm_clock_mhz": {
+     "min": 1200.0,
+     "median": 1327.5,
+     "max": 1380.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 75.5,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 60.868,
+     "median": 67.102,
+     "max": 68.865
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/pidnet_s/0.5",
+   "part": "e2e",
+   "model": "pidnet_s",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 23.597187072,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 6.567935943603516,
+    "p95_ms": 6.688748860359192,
+    "mean_ms": 6.534146082401276,
+    "min_ms": 6.147679805755615,
+    "max_ms": 6.763040065765381,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 6.599437500028671,
+    "p95_ms": 6.742065949970311,
+    "mean_ms": 6.611562965001383,
+    "min_ms": 6.17556899999272,
+    "max_ms": 13.421025000070586,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    6.358400106430054,
+    6.520991802215576,
+    6.682496070861816,
+    6.5730881690979,
+    6.576496124267578
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 11,
+    "sm_clock_mhz": {
+     "min": 1230.0,
+     "median": 1275.0,
+     "max": 1335.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.0,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 65.73,
+     "median": 68.333,
+     "max": 69.955
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/pidnet_s/0.375",
+   "part": "area",
+   "model": "pidnet_s",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 13.273694208,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.6145440340042114,
+    "p95_ms": 3.8958160877227783,
+    "mean_ms": 3.635353285074234,
+    "min_ms": 3.446784019470215,
+    "max_ms": 3.926016092300415,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 3.6491294999621005,
+    "p95_ms": 3.944944150066476,
+    "mean_ms": 3.674017340000546,
+    "min_ms": 3.4674569999992855,
+    "max_ms": 5.164054000033502,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.472432017326355,
+    3.539344072341919,
+    3.6856160163879395,
+    3.5932799577713013,
+    3.632431983947754
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 9,
+    "sm_clock_mhz": {
+     "min": 1260.0,
+     "median": 1380.0,
+     "max": 1470.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.0,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 60.12,
+     "median": 66.808,
+     "max": 69.411
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/pidnet_s/0.375",
+   "part": "e2e",
+   "model": "pidnet_s",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 13.273694208,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 4.9754719734191895,
+    "p95_ms": 5.108871841430664,
+    "mean_ms": 4.949144155979156,
+    "min_ms": 4.642335891723633,
+    "max_ms": 5.1179518699646,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 4.99948199998812,
+    "p95_ms": 5.142564999960086,
+    "mean_ms": 5.015378654996709,
+    "min_ms": 4.675241999962054,
+    "max_ms": 9.301348000008147,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    4.86190390586853,
+    4.968448162078857,
+    5.068000078201294,
+    5.016016006469727,
+    4.995599985122681
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 8,
+    "sm_clock_mhz": {
+     "min": 1290.0,
+     "median": 1320.0,
+     "max": 1365.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.5,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 67.731,
+     "median": 68.899,
+     "max": 69.943
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/pidnet_s/0.25",
+   "part": "area",
+   "model": "pidnet_s",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 5.899419648,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 2.61569607257843,
+    "p95_ms": 2.9001792907714843,
+    "mean_ms": 2.6693846356868742,
+    "min_ms": 2.5088000297546387,
+    "max_ms": 2.975071907043457,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 2.6532279999855746,
+    "p95_ms": 2.9736952999428468,
+    "mean_ms": 2.742072290004103,
+    "min_ms": 2.534728000000541,
+    "max_ms": 7.731749000072341,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    2.580847978591919,
+    2.595311999320984,
+    2.6855679750442505,
+    2.6185280084609985,
+    2.662400007247925
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 5,
+    "sm_clock_mhz": {
+     "min": 1350.0,
+     "median": 1515.0,
+     "max": 1545.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 63.063,
+     "median": 66.22,
+     "max": 70.444
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/pidnet_s/0.25",
+   "part": "e2e",
+   "model": "pidnet_s",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 5.899419648,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.7567039728164673,
+    "p95_ms": 3.9117039799690247,
+    "mean_ms": 3.751464158296585,
+    "min_ms": 3.5083839893341064,
+    "max_ms": 3.926016092300415,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 3.8045659999852433,
+    "p95_ms": 3.94934810000791,
+    "mean_ms": 3.8029247199949623,
+    "min_ms": 3.529962000015985,
+    "max_ms": 5.453191000015067,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.6934399604797363,
+    3.7985119819641113,
+    3.8905760049819946,
+    3.8357919454574585,
+    3.7001919746398926
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 7,
+    "sm_clock_mhz": {
+     "min": 1365.0,
+     "median": 1425.0,
+     "max": 1575.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 74.0,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 61.629,
+     "median": 70.303,
+     "max": 72.161
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/pidnet_s/0.1875",
+   "part": "area",
+   "model": "pidnet_s",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 3.31874304,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 2.36408007144928,
+    "p95_ms": 2.571880066394806,
+    "mean_ms": 2.399246236085892,
+    "min_ms": 2.3103039264678955,
+    "max_ms": 2.5988800525665283,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 2.388367000037306,
+    "p95_ms": 2.612529549946885,
+    "mean_ms": 2.4540225500010138,
+    "min_ms": 2.33003299996426,
+    "max_ms": 5.205200999967019,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    2.3381600379943848,
+    2.355679988861084,
+    2.391424059867859,
+    2.374400019645691,
+    2.380576014518738
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 5,
+    "sm_clock_mhz": {
+     "min": 1410.0,
+     "median": 1515.0,
+     "max": 1560.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 75.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 58.06,
+     "median": 67.396,
+     "max": 72.303
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/pidnet_s/0.1875",
+   "part": "e2e",
+   "model": "pidnet_s",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 3.31874304,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.5126559734344482,
+    "p95_ms": 3.643494486808777,
+    "mean_ms": 3.499640473127365,
+    "min_ms": 3.3304638862609863,
+    "max_ms": 3.6830079555511475,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 3.544154999985949,
+    "p95_ms": 3.6737318999769286,
+    "mean_ms": 3.5400308500015853,
+    "min_ms": 3.3510650000039277,
+    "max_ms": 5.526795000037055,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.4347199201583862,
+    3.5041279792785645,
+    3.615567922592163,
+    3.5666240453720093,
+    3.565567970275879
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 5,
+    "sm_clock_mhz": {
+     "min": 1440.0,
+     "median": 1515.0,
+     "max": 1560.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.0,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 60.719,
+     "median": 62.126,
+     "max": 79.104
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/pidnet_s/0.125",
+   "part": "area",
+   "model": "pidnet_s",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 1.47505152,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 2.244607925415039,
+    "p95_ms": 2.394732904434204,
+    "mean_ms": 2.2647584092617037,
+    "min_ms": 2.2020161151885986,
+    "max_ms": 2.4328320026397705,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 2.2794519999820295,
+    "p95_ms": 2.4379175000120767,
+    "mean_ms": 2.314893369998572,
+    "min_ms": 2.2214729999632254,
+    "max_ms": 5.73215099996105,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    2.2331840991973877,
+    2.2522239685058594,
+    2.260591983795166,
+    2.26420795917511,
+    2.2456640005111694
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 5,
+    "sm_clock_mhz": {
+     "min": 1410.0,
+     "median": 1440.0,
+     "max": 1545.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.0,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 66.318,
+     "median": 66.782,
+     "max": 69.313
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/pidnet_s/0.125",
+   "part": "e2e",
+   "model": "pidnet_s",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 1.47505152,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.3286080360412598,
+    "p95_ms": 3.433516776561737,
+    "mean_ms": 3.322587844133377,
+    "min_ms": 3.2113280296325684,
+    "max_ms": 4.159200191497803,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 3.359254499969211,
+    "p95_ms": 3.4727755500227886,
+    "mean_ms": 3.3999255949973417,
+    "min_ms": 3.234299999974155,
+    "max_ms": 8.92702900000586,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.264415979385376,
+    3.322800040245056,
+    3.404031991958618,
+    3.3602399826049805,
+    3.340127944946289
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 8,
+    "sm_clock_mhz": {
+     "min": 1455.0,
+     "median": 1507.5,
+     "max": 1575.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 76.5,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 53.906,
+     "median": 58.7825,
+     "max": 75.286
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/bisenetv2/1",
+   "part": "area",
+   "model": "bisenetv2",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 196.82639872,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 29.238624572753906,
+    "p95_ms": 30.356094074249267,
+    "mean_ms": 29.091900959014893,
+    "min_ms": 24.602079391479492,
+    "max_ms": 30.738208770751953,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 29.2958280000164,
+    "p95_ms": 30.438102349967266,
+    "mean_ms": 29.183323110001425,
+    "min_ms": 24.633189999974547,
+    "max_ms": 32.228183000029276,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    28.16867160797119,
+    29.009520530700684,
+    30.189663887023926,
+    29.285856246948242,
+    29.373711585998535
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 50,
+    "sm_clock_mhz": {
+     "min": 960.0,
+     "median": 1035.0,
+     "max": 1305.0
+    },
+    "temperature_c": {
+     "min": 65.0,
+     "median": 75.0,
+     "max": 82.0
+    },
+    "power_w": {
+     "min": 62.731,
+     "median": 67.501,
+     "max": 90.011
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/bisenetv2/1",
+   "part": "e2e",
+   "model": "bisenetv2",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 196.82639872,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 29.811647415161133,
+    "p95_ms": 30.4299464225769,
+    "mean_ms": 29.687553539276124,
+    "min_ms": 28.307584762573242,
+    "max_ms": 30.932607650756836,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 29.85686350001515,
+    "p95_ms": 30.6696281501047,
+    "mean_ms": 29.740829804999862,
+    "min_ms": 28.356660999975247,
+    "max_ms": 30.972917999974925,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    28.64073657989502,
+    29.5480318069458,
+    30.275232315063477,
+    29.78659152984619,
+    30.097055435180664
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 54,
+    "sm_clock_mhz": {
+     "min": 990.0,
+     "median": 1035.0,
+     "max": 1140.0
+    },
+    "temperature_c": {
+     "min": 66.0,
+     "median": 75.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 62.731,
+     "median": 67.6405,
+     "max": 70.879
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/bisenetv2/0.75",
+   "part": "area",
+   "model": "bisenetv2",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 110.714863616,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 17.029120445251465,
+    "p95_ms": 17.594745540618895,
+    "mean_ms": 17.013464241027833,
+    "min_ms": 16.225248336791992,
+    "max_ms": 18.053152084350586,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 17.087964999973337,
+    "p95_ms": 17.645863000018377,
+    "mean_ms": 17.066687755000487,
+    "min_ms": 16.267363999986628,
+    "max_ms": 18.155436000029113,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    16.446144104003906,
+    16.939023971557617,
+    17.38055992126465,
+    17.104111671447754,
+    17.21614360809326
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 30,
+    "sm_clock_mhz": {
+     "min": 1005.0,
+     "median": 1072.5,
+     "max": 1170.0
+    },
+    "temperature_c": {
+     "min": 66.0,
+     "median": 75.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 64.26,
+     "median": 67.2975,
+     "max": 69.606
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/bisenetv2/0.75",
+   "part": "e2e",
+   "model": "bisenetv2",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 110.714863616,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 18.86830425262451,
+    "p95_ms": 19.685506057739257,
+    "mean_ms": 18.876753759384155,
+    "min_ms": 18.00931167602539,
+    "max_ms": 19.717248916625977,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 18.929569000022184,
+    "p95_ms": 19.776034599954073,
+    "mean_ms": 18.988595209999914,
+    "min_ms": 18.04709200001753,
+    "max_ms": 22.519839999972646,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    18.267839431762695,
+    18.818047523498535,
+    19.40275287628174,
+    18.90664005279541,
+    19.1255521774292
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 35,
+    "sm_clock_mhz": {
+     "min": 1020.0,
+     "median": 1065.0,
+     "max": 1185.0
+    },
+    "temperature_c": {
+     "min": 66.0,
+     "median": 75.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 62.496,
+     "median": 67.354,
+     "max": 71.075
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/bisenetv2/0.5",
+   "part": "area",
+   "model": "bisenetv2",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 49.206624256,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 7.74567985534668,
+    "p95_ms": 8.026519632339477,
+    "mean_ms": 7.727435829639435,
+    "min_ms": 7.332128047943115,
+    "max_ms": 8.140800476074219,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 7.793087500004958,
+    "p95_ms": 8.174929949956322,
+    "mean_ms": 7.871924525002214,
+    "min_ms": 7.385302999978194,
+    "max_ms": 11.787779999963277,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    7.45849609375,
+    7.636928081512451,
+    8.00108814239502,
+    7.6338560581207275,
+    7.884912014007568
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 13,
+    "sm_clock_mhz": {
+     "min": 1095.0,
+     "median": 1140.0,
+     "max": 1215.0
+    },
+    "temperature_c": {
+     "min": 66.0,
+     "median": 75.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 65.868,
+     "median": 67.606,
+     "max": 69.019
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/bisenetv2/0.5",
+   "part": "e2e",
+   "model": "bisenetv2",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 49.206624256,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 9.283423900604248,
+    "p95_ms": 9.576544427871704,
+    "mean_ms": 9.246079049110413,
+    "min_ms": 8.796159744262695,
+    "max_ms": 9.761631965637207,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 9.331161000034172,
+    "p95_ms": 9.65900760003251,
+    "mean_ms": 9.367719544997897,
+    "min_ms": 8.840761999977076,
+    "max_ms": 15.760861000046589,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    8.955071926116943,
+    9.173264026641846,
+    9.442815780639648,
+    9.278992176055908,
+    9.406767845153809
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 17,
+    "sm_clock_mhz": {
+     "min": 1110.0,
+     "median": 1140.0,
+     "max": 1215.0
+    },
+    "temperature_c": {
+     "min": 66.0,
+     "median": 75.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 65.534,
+     "median": 67.633,
+     "max": 70.151
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/bisenetv2/0.375",
+   "part": "area",
+   "model": "bisenetv2",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 27.67874048,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 4.562880039215088,
+    "p95_ms": 4.820216012001038,
+    "mean_ms": 4.585840797424316,
+    "min_ms": 4.376736164093018,
+    "max_ms": 5.0114240646362305,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 4.6282329999769445,
+    "p95_ms": 4.929253149970236,
+    "mean_ms": 4.706007199999647,
+    "min_ms": 4.418094000016026,
+    "max_ms": 12.551183000027777,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    4.447456121444702,
+    4.530272006988525,
+    4.678368091583252,
+    4.515903949737549,
+    4.59769606590271
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 9,
+    "sm_clock_mhz": {
+     "min": 1080.0,
+     "median": 1230.0,
+     "max": 1290.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 63.535,
+     "median": 67.746,
+     "max": 69.104
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/bisenetv2/0.375",
+   "part": "e2e",
+   "model": "bisenetv2",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 27.67874048,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 6.031360149383545,
+    "p95_ms": 6.182929468154907,
+    "mean_ms": 6.030767838954926,
+    "min_ms": 5.738048076629639,
+    "max_ms": 6.29145622253418,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 6.0802765000005365,
+    "p95_ms": 6.266402350053112,
+    "mean_ms": 6.092811874997892,
+    "min_ms": 5.776799000045685,
+    "max_ms": 7.383714999946278,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    5.9126880168914795,
+    6.030320167541504,
+    6.171760082244873,
+    6.019200086593628,
+    6.086320161819458
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 11,
+    "sm_clock_mhz": {
+     "min": 1185.0,
+     "median": 1215.0,
+     "max": 1245.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 67.746,
+     "median": 68.487,
+     "max": 69.649
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/bisenetv2/0.25",
+   "part": "area",
+   "model": "bisenetv2",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 12.30168064,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 2.6362080574035645,
+    "p95_ms": 2.896558475494384,
+    "mean_ms": 2.6702808022499083,
+    "min_ms": 2.4866878986358643,
+    "max_ms": 3.0556159019470215,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 2.6962704999959897,
+    "p95_ms": 3.031667499942614,
+    "mean_ms": 2.7628798799966603,
+    "min_ms": 2.51078100001223,
+    "max_ms": 5.318471999999019,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    2.5801440477371216,
+    2.6271040439605713,
+    2.698512077331543,
+    2.5655839443206787,
+    2.6444640159606934
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 6,
+    "sm_clock_mhz": {
+     "min": 1155.0,
+     "median": 1357.5,
+     "max": 1425.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 76.5,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 57.113,
+     "median": 61.7575,
+     "max": 67.354
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/bisenetv2/0.25",
+   "part": "e2e",
+   "model": "bisenetv2",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 12.30168064,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.948415994644165,
+    "p95_ms": 4.096057796478272,
+    "mean_ms": 3.9606059312820436,
+    "min_ms": 3.7468159198760986,
+    "max_ms": 4.949696063995361,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 4.016556000038918,
+    "p95_ms": 4.147710599971788,
+    "mean_ms": 4.020589530008465,
+    "min_ms": 3.7765920000083497,
+    "max_ms": 5.031941999959599,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.8851360082626343,
+    3.933456063270569,
+    4.051455974578857,
+    3.9621119499206543,
+    3.966639995574951
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 6,
+    "sm_clock_mhz": {
+     "min": 1275.0,
+     "median": 1320.0,
+     "max": 1365.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 77.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 62.906,
+     "median": 70.1565,
+     "max": 73.823
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/bisenetv2/0.1875",
+   "part": "area",
+   "model": "bisenetv2",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 6.919709696,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 1.8803679943084717,
+    "p95_ms": 2.0382559299468994,
+    "mean_ms": 1.900414398908615,
+    "min_ms": 1.7613760232925415,
+    "max_ms": 2.0690560340881348,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 1.9391010000617825,
+    "p95_ms": 2.0891206999920087,
+    "mean_ms": 1.9551616749973277,
+    "min_ms": 1.830872000027739,
+    "max_ms": 2.167439999993803,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    1.8143519759178162,
+    1.8950400352478027,
+    1.960319995880127,
+    1.9003839492797852,
+    1.879040002822876
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 4,
+    "sm_clock_mhz": {
+     "min": 1290.0,
+     "median": 1342.5,
+     "max": 1440.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 75.5,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 59.469,
+     "median": 66.5515,
+     "max": 68.571
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/bisenetv2/0.1875",
+   "part": "e2e",
+   "model": "bisenetv2",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 6.919709696,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.2317121028900146,
+    "p95_ms": 3.3306623220443727,
+    "mean_ms": 3.2030641555786135,
+    "min_ms": 2.9675519466400146,
+    "max_ms": 3.362816095352173,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 3.275591499999564,
+    "p95_ms": 3.3909466500006147,
+    "mean_ms": 3.2530705699994655,
+    "min_ms": 3.001559000040288,
+    "max_ms": 3.458143999978347,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.1701279878616333,
+    3.194831967353821,
+    3.277951955795288,
+    3.248576045036316,
+    3.2778559923171997
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 6,
+    "sm_clock_mhz": {
+     "min": 1305.0,
+     "median": 1342.5,
+     "max": 1470.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 77.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 62.007,
+     "median": 65.876,
+     "max": 70.684
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/bisenetv2/0.125",
+   "part": "area",
+   "model": "bisenetv2",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 3.075444736,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 1.468783974647522,
+    "p95_ms": 1.59621120095253,
+    "mean_ms": 1.4901049602031708,
+    "min_ms": 1.392575979232788,
+    "max_ms": 1.6147840023040771,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 1.5232350000076167,
+    "p95_ms": 1.6461126500530554,
+    "mean_ms": 1.572046195000496,
+    "min_ms": 1.4133979999542134,
+    "max_ms": 8.648617999938324,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    1.4555040001869202,
+    1.4850080013275146,
+    1.4749760031700134,
+    1.4716799855232239,
+    1.492031991481781
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 3,
+    "sm_clock_mhz": {
+     "min": 1380.0,
+     "median": 1455.0,
+     "max": 1455.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 67.452,
+     "median": 68.669,
+     "max": 68.767
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/bisenetv2/0.125",
+   "part": "e2e",
+   "model": "bisenetv2",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 3.075444736,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 2.696623921394348,
+    "p95_ms": 2.8180480003356934,
+    "mean_ms": 2.688358074426651,
+    "min_ms": 2.529279947280884,
+    "max_ms": 2.879487991333008,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 2.746372000046904,
+    "p95_ms": 2.8781336500571797,
+    "mean_ms": 2.739943025001139,
+    "min_ms": 2.552574000048935,
+    "max_ms": 3.83699400003934,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    2.6773760318756104,
+    2.7475039958953857,
+    2.78057599067688,
+    2.74235200881958,
+    2.730015993118286
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 5,
+    "sm_clock_mhz": {
+     "min": 1335.0,
+     "median": 1425.0,
+     "max": 1545.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 55.281,
+     "median": 57.541,
+     "max": 62.18
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b0/1",
+   "part": "area",
+   "model": "segformer_b0",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 241.914871808,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 82.14023971557617,
+    "p95_ms": 83.7423324584961,
+    "mean_ms": 81.89377166748046,
+    "min_ms": 77.63545227050781,
+    "max_ms": 84.44310760498047,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 82.19703550003032,
+    "p95_ms": 83.86276164996502,
+    "mean_ms": 81.97712148499788,
+    "min_ms": 77.67424300004677,
+    "max_ms": 84.75528299993584,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    79.8559684753418,
+    82.01871871948242,
+    83.3180160522461,
+    82.01523208618164,
+    82.70123291015625
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 145,
+    "sm_clock_mhz": {
+     "min": 1050.0,
+     "median": 1155.0,
+     "max": 1365.0
+    },
+    "temperature_c": {
+     "min": 67.0,
+     "median": 76.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 60.709,
+     "median": 67.648,
+     "max": 78.518
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b0/1",
+   "part": "e2e",
+   "model": "segformer_b0",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 241.914871808,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 83.58330917358398,
+    "p95_ms": 84.8746452331543,
+    "mean_ms": 83.2109920501709,
+    "min_ms": 79.92002868652344,
+    "max_ms": 85.20201873779297,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 83.62374299997555,
+    "p95_ms": 84.9544951999917,
+    "mean_ms": 83.30378561499941,
+    "min_ms": 79.98252800001637,
+    "max_ms": 90.49714299999323,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    80.93754959106445,
+    83.59228515625,
+    84.19401550292969,
+    83.3588981628418,
+    84.09609603881836
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 144,
+    "sm_clock_mhz": {
+     "min": 1065.0,
+     "median": 1155.0,
+     "max": 1245.0
+    },
+    "temperature_c": {
+     "min": 68.0,
+     "median": 77.0,
+     "max": 80.0
+    },
+    "power_w": {
+     "min": 60.966,
+     "median": 68.061,
+     "max": 72.161
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b0/0.75",
+   "part": "area",
+   "model": "segformer_b0",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 103.311212544,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 40.173583984375,
+    "p95_ms": 40.730960273742674,
+    "mean_ms": 40.10046646118164,
+    "min_ms": 38.820289611816406,
+    "max_ms": 41.10508728027344,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 40.2322180000283,
+    "p95_ms": 40.80503195002052,
+    "mean_ms": 40.16354971000027,
+    "min_ms": 38.86560600000166,
+    "max_ms": 41.91967500003102,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    39.174495697021484,
+    40.1181755065918,
+    40.61961555480957,
+    40.173583984375,
+    40.429073333740234
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 72,
+    "sm_clock_mhz": {
+     "min": 1125.0,
+     "median": 1170.0,
+     "max": 1260.0
+    },
+    "temperature_c": {
+     "min": 69.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 64.808,
+     "median": 67.984,
+     "max": 70.596
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b0/0.75",
+   "part": "e2e",
+   "model": "segformer_b0",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 103.311212544,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 41.95377540588379,
+    "p95_ms": 42.59857292175293,
+    "mean_ms": 41.83974439620972,
+    "min_ms": 40.30259323120117,
+    "max_ms": 42.871646881103516,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 42.01190599997062,
+    "p95_ms": 42.78113344997223,
+    "mean_ms": 41.92941106500115,
+    "min_ms": 40.37960699997711,
+    "max_ms": 46.65254399992591,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    40.71777534484863,
+    42.264495849609375,
+    42.33927917480469,
+    41.82976150512695,
+    42.27793502807617
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 74,
+    "sm_clock_mhz": {
+     "min": 1125.0,
+     "median": 1170.0,
+     "max": 1245.0
+    },
+    "temperature_c": {
+     "min": 69.0,
+     "median": 78.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 65.436,
+     "median": 68.312,
+     "max": 72.793
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b0/0.5",
+   "part": "area",
+   "model": "segformer_b0",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 35.514220544,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 12.02996826171875,
+    "p95_ms": 12.382584381103516,
+    "mean_ms": 12.05232141971588,
+    "min_ms": 11.68943977355957,
+    "max_ms": 12.626496315002441,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 12.099188000036065,
+    "p95_ms": 12.456320500041329,
+    "mean_ms": 12.212725279999859,
+    "min_ms": 11.722259999999096,
+    "max_ms": 24.558792000107132,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    11.780304431915283,
+    12.122144222259521,
+    12.15763235092163,
+    12.023455619812012,
+    12.16105604171753
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 22,
+    "sm_clock_mhz": {
+     "min": 1170.0,
+     "median": 1215.0,
+     "max": 1260.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 78.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 66.457,
+     "median": 67.8085,
+     "max": 72.988
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b0/0.5",
+   "part": "e2e",
+   "model": "segformer_b0",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 35.514220544,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 13.510784149169922,
+    "p95_ms": 13.777436542510987,
+    "mean_ms": 13.483589463233947,
+    "min_ms": 13.049856185913086,
+    "max_ms": 14.002592086791992,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 13.55254749995538,
+    "p95_ms": 13.870969699979696,
+    "mean_ms": 13.545532170001024,
+    "min_ms": 13.102397000011479,
+    "max_ms": 14.704883999911544,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    13.14364767074585,
+    13.529183864593506,
+    13.51692819595337,
+    13.422879695892334,
+    13.740992069244385
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 25,
+    "sm_clock_mhz": {
+     "min": 1155.0,
+     "median": 1215.0,
+     "max": 1245.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 65.378,
+     "median": 67.69,
+     "max": 71.173
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b0/0.375",
+   "part": "area",
+   "model": "segformer_b0",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 17.928880128,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 6.594063997268677,
+    "p95_ms": 6.884774398803711,
+    "mean_ms": 6.599119529724121,
+    "min_ms": 5.795839786529541,
+    "max_ms": 7.014400005340576,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 6.644424500024115,
+    "p95_ms": 6.962415399914335,
+    "mean_ms": 6.683233334999841,
+    "min_ms": 5.837885000005372,
+    "max_ms": 9.99366199994256,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    6.585088014602661,
+    6.590000152587891,
+    6.6013758182525635,
+    6.596127986907959,
+    6.599088191986084
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 11,
+    "sm_clock_mhz": {
+     "min": 1185.0,
+     "median": 1260.0,
+     "max": 1290.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 64.398,
+     "median": 66.685,
+     "max": 69.606
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b0/0.375",
+   "part": "e2e",
+   "model": "segformer_b0",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 17.928880128,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 7.989327907562256,
+    "p95_ms": 8.144911575317384,
+    "mean_ms": 7.968967063426971,
+    "min_ms": 7.033599853515625,
+    "max_ms": 8.248160362243652,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 8.052986499990311,
+    "p95_ms": 8.216135899982646,
+    "mean_ms": 8.064821079999263,
+    "min_ms": 7.075306999922759,
+    "max_ms": 12.540401000023849,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    7.852176189422607,
+    8.00921630859375,
+    8.064784049987793,
+    7.909375905990601,
+    8.058047771453857
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 15,
+    "sm_clock_mhz": {
+     "min": 1215.0,
+     "median": 1245.0,
+     "max": 1275.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 37.455,
+     "median": 67.494,
+     "max": 69.661
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b0/0.25",
+   "part": "area",
+   "model": "segformer_b0",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 7.318274048,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.540063977241516,
+    "p95_ms": 3.9383792757987974,
+    "mean_ms": 3.6033944022655486,
+    "min_ms": 3.373152017593384,
+    "max_ms": 3.947103977203369,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 3.613770500010105,
+    "p95_ms": 3.984997050054062,
+    "mean_ms": 3.664705765000633,
+    "min_ms": 3.400427000030959,
+    "max_ms": 4.813135999938822,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.4524641036987305,
+    3.5349119901657104,
+    3.5693119764328003,
+    3.502560019493103,
+    3.593984007835388
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 6,
+    "sm_clock_mhz": {
+     "min": 1215.0,
+     "median": 1387.5,
+     "max": 1410.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 61.939,
+     "median": 64.39750000000001,
+     "max": 68.908
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b0/0.25",
+   "part": "e2e",
+   "model": "segformer_b0",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 7.318274048,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 4.729520082473755,
+    "p95_ms": 4.900326442718506,
+    "mean_ms": 4.735004963874817,
+    "min_ms": 4.490528106689453,
+    "max_ms": 4.915200233459473,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 4.780921000019589,
+    "p95_ms": 4.985196699942662,
+    "mean_ms": 4.872407279996196,
+    "min_ms": 4.525854000007712,
+    "max_ms": 10.19182400000318,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    4.722912073135376,
+    4.8117759227752686,
+    4.7299041748046875,
+    4.675951957702637,
+    4.852560043334961
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 10,
+    "sm_clock_mhz": {
+     "min": 1305.0,
+     "median": 1342.5,
+     "max": 1440.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 61.811,
+     "median": 68.66149999999999,
+     "max": 77.394
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b0/0.1875",
+   "part": "area",
+   "model": "segformer_b0",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 3.988537344,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 2.6365280151367188,
+    "p95_ms": 2.9056464195251466,
+    "mean_ms": 2.674862720966339,
+    "min_ms": 2.5042879581451416,
+    "max_ms": 4.25984001159668,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 2.693434500031344,
+    "p95_ms": 2.9812161500103684,
+    "mean_ms": 2.8047457400009534,
+    "min_ms": 2.533301000028132,
+    "max_ms": 9.411186999955135,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    2.579103946685791,
+    2.6021599769592285,
+    2.6654720306396484,
+    2.578559994697571,
+    2.6438400745391846
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 5,
+    "sm_clock_mhz": {
+     "min": 1410.0,
+     "median": 1500.0,
+     "max": 1530.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 57.344,
+     "median": 60.831,
+     "max": 66.571
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b0/0.1875",
+   "part": "e2e",
+   "model": "segformer_b0",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 3.988537344,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.93779194355011,
+    "p95_ms": 3.999743938446045,
+    "mean_ms": 3.898731199502945,
+    "min_ms": 3.610719919204712,
+    "max_ms": 4.036543846130371,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 3.9991005000388213,
+    "p95_ms": 4.079049150044511,
+    "mean_ms": 4.013779560000614,
+    "min_ms": 3.650472999993326,
+    "max_ms": 8.362376999912158,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.8920480012893677,
+    3.906559944152832,
+    3.9898879528045654,
+    3.8895360231399536,
+    3.9712799787521362
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 7,
+    "sm_clock_mhz": {
+     "min": 1380.0,
+     "median": 1395.0,
+     "max": 1500.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 64.319,
+     "median": 68.431,
+     "max": 80.471
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b0/0.125",
+   "part": "area",
+   "model": "segformer_b0",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 1.732050944,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 2.0224639177322388,
+    "p95_ms": 2.207185697555542,
+    "mean_ms": 2.0423062378168106,
+    "min_ms": 1.955839991569519,
+    "max_ms": 2.2297921180725098,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 2.067060500024809,
+    "p95_ms": 2.2765653999726965,
+    "mean_ms": 2.181937980004136,
+    "min_ms": 1.984470000024885,
+    "max_ms": 12.739925999994739,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    2.0238559246063232,
+    2.015423893928528,
+    2.0238239765167236,
+    2.0069600343704224,
+    2.036720037460327
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 4,
+    "sm_clock_mhz": {
+     "min": 1395.0,
+     "median": 1492.5,
+     "max": 1575.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 78.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 54.037,
+     "median": 63.5875,
+     "max": 72.883
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b0/0.125",
+   "part": "e2e",
+   "model": "segformer_b0",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 1.732050944,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 3.1903200149536133,
+    "p95_ms": 3.282305693626404,
+    "mean_ms": 3.155576637983322,
+    "min_ms": 3.0003199577331543,
+    "max_ms": 3.30515193939209,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 3.2401784999933625,
+    "p95_ms": 3.337740149970614,
+    "mean_ms": 3.238801599995327,
+    "min_ms": 3.0263659999718584,
+    "max_ms": 6.6303500000231,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    3.1428639888763428,
+    3.191200017929077,
+    3.236448049545288,
+    3.189776062965393,
+    3.2139679193496704
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 6,
+    "sm_clock_mhz": {
+     "min": 1395.0,
+     "median": 1477.5,
+     "max": 1575.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 77.0,
+     "max": 79.0
+    },
+    "power_w": {
+     "min": 56.558,
+     "median": 63.533,
+     "max": 79.736
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b2/1",
+   "part": "area",
+   "model": "segformer_b2",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 1406.970888192,
+   "level": "graph",
+   "chunk": 0,
+   "cuda_event": {
+    "median_ms": 268.0068054199219,
+    "p95_ms": 272.94917449951174,
+    "mean_ms": 267.6848099517822,
+    "min_ms": 253.2698211669922,
+    "max_ms": 275.5748291015625,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 268.09576599998763,
+    "p95_ms": 273.0315945999564,
+    "mean_ms": 267.79445291499457,
+    "min_ms": 253.2978509999566,
+    "max_ms": 275.6468090000226,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    263.3339080810547,
+    270.8701477050781,
+    267.5969696044922,
+    267.38909912109375,
+    269.81666564941406
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 468,
+    "sm_clock_mhz": {
+     "min": 690.0,
+     "median": 1005.0,
+     "max": 1455.0
+    },
+    "temperature_c": {
+     "min": 70.0,
+     "median": 77.0,
+     "max": 81.0
+    },
+    "power_w": {
+     "min": 56.23,
+     "median": 65.015,
+     "max": 110.515
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b2/1",
+   "part": "e2e",
+   "model": "segformer_b2",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 1406.970888192,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 269.97962951660156,
+    "p95_ms": 274.2110229492188,
+    "mean_ms": 270.3601104736328,
+    "min_ms": 266.708984375,
+    "max_ms": 275.9598083496094,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 270.1114120000625,
+    "p95_ms": 274.46976040000663,
+    "mean_ms": 270.5156529200025,
+    "min_ms": 266.7616270000508,
+    "max_ms": 277.44060400004855,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    269.8325653076172,
+    270.46006774902344,
+    269.60182189941406,
+    269.9452819824219,
+    270.0401306152344
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 470,
+    "sm_clock_mhz": {
+     "min": 675.0,
+     "median": 1005.0,
+     "max": 1260.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 55.969,
+     "median": 64.868,
+     "max": 105.711
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b2/0.75",
+   "part": "area",
+   "model": "segformer_b2",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 668.81323008,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 140.25723266601562,
+    "p95_ms": 141.80116424560546,
+    "mean_ms": 139.8805017852783,
+    "min_ms": 137.05638122558594,
+    "max_ms": 144.0870361328125,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 140.318306499978,
+    "p95_ms": 141.95803650001722,
+    "mean_ms": 140.01705222499368,
+    "min_ms": 137.11964599997373,
+    "max_ms": 151.09581799993066,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    140.2326889038086,
+    140.42127990722656,
+    140.09521484375,
+    139.9485626220703,
+    140.25879669189453
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 245,
+    "sm_clock_mhz": {
+     "min": 810.0,
+     "median": 1005.0,
+     "max": 1170.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 56.853,
+     "median": 65.28,
+     "max": 93.946
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b2/0.75",
+   "part": "e2e",
+   "model": "segformer_b2",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 668.81323008,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 141.86908721923828,
+    "p95_ms": 142.96446075439454,
+    "mean_ms": 141.7193824005127,
+    "min_ms": 137.32864379882812,
+    "max_ms": 143.59344482421875,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 141.94371450003018,
+    "p95_ms": 143.10608039999124,
+    "mean_ms": 141.8350576099965,
+    "min_ms": 137.38107300002866,
+    "max_ms": 145.56810700003098,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    142.02959442138672,
+    141.55115509033203,
+    141.8058853149414,
+    141.9779052734375,
+    141.7834243774414
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 248,
+    "sm_clock_mhz": {
+     "min": 840.0,
+     "median": 1005.0,
+     "max": 1155.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 57.113,
+     "median": 64.692,
+     "max": 86.559
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b2/0.5",
+   "part": "area",
+   "model": "segformer_b2",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 258.32718336,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 40.69601631164551,
+    "p95_ms": 43.241694641113284,
+    "mean_ms": 41.30592575073242,
+    "min_ms": 39.583744049072266,
+    "max_ms": 46.00076675415039,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 40.85888349993638,
+    "p95_ms": 44.03311044998759,
+    "mean_ms": 41.51417251499708,
+    "min_ms": 39.62900700003047,
+    "max_ms": 48.75509600003625,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    40.837934494018555,
+    40.782447814941406,
+    40.90643310546875,
+    40.617231369018555,
+    40.61332893371582
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 69,
+    "sm_clock_mhz": {
+     "min": 945.0,
+     "median": 1050.0,
+     "max": 1125.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 60.12,
+     "median": 70.444,
+     "max": 74.801
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b2/0.5",
+   "part": "e2e",
+   "model": "segformer_b2",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 258.32718336,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 43.28686332702637,
+    "p95_ms": 45.39488487243652,
+    "mean_ms": 43.39825918197632,
+    "min_ms": 41.66377639770508,
+    "max_ms": 46.18239974975586,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 43.34192149997307,
+    "p95_ms": 45.43693144992176,
+    "mean_ms": 43.455789990003375,
+    "min_ms": 41.706345999955374,
+    "max_ms": 46.21601000008013,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    43.24492835998535,
+    43.17316818237305,
+    43.43179130554199,
+    43.69196701049805,
+    43.59283256530762
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 76,
+    "sm_clock_mhz": {
+     "min": 930.0,
+     "median": 1035.0,
+     "max": 1125.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 59.666,
+     "median": 68.55699999999999,
+     "max": 74.111
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b2/0.375",
+   "part": "area",
+   "model": "segformer_b2",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 137.646047232,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 22.09716796875,
+    "p95_ms": 22.822898960113527,
+    "mean_ms": 22.136766185760496,
+    "min_ms": 21.101247787475586,
+    "max_ms": 23.459840774536133,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 22.164161500029422,
+    "p95_ms": 22.8983475499831,
+    "mean_ms": 22.18858183500174,
+    "min_ms": 21.146684999962417,
+    "max_ms": 23.507608000045366,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    22.056079864501953,
+    22.18995189666748,
+    22.116607666015625,
+    22.223567962646484,
+    22.06486415863037
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 41,
+    "sm_clock_mhz": {
+     "min": 1020.0,
+     "median": 1110.0,
+     "max": 1155.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 61.909,
+     "median": 66.963,
+     "max": 73.771
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b2/0.375",
+   "part": "e2e",
+   "model": "segformer_b2",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 137.646047232,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 23.543888092041016,
+    "p95_ms": 24.27463264465332,
+    "mean_ms": 23.6018394947052,
+    "min_ms": 22.833984375,
+    "max_ms": 24.575008392333984,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 23.612015999958658,
+    "p95_ms": 24.32500604990082,
+    "mean_ms": 23.65421841500904,
+    "min_ms": 22.876471000017773,
+    "max_ms": 24.631786000099964,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    23.673423767089844,
+    23.364383697509766,
+    23.542351722717285,
+    23.720831871032715,
+    23.60856056213379
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 42,
+    "sm_clock_mhz": {
+     "min": 1035.0,
+     "median": 1095.0,
+     "max": 1140.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 61.335,
+     "median": 67.59899999999999,
+     "max": 72.206
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b2/0.25",
+   "part": "area",
+   "model": "segformer_b2",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 58.743324672,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 11.36959981918335,
+    "p95_ms": 12.2705602645874,
+    "mean_ms": 11.470052132606506,
+    "min_ms": 11.141280174255371,
+    "max_ms": 12.904319763183594,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 11.4176689999681,
+    "p95_ms": 12.306847400031982,
+    "mean_ms": 11.520780485003002,
+    "min_ms": 11.183807000065826,
+    "max_ms": 12.989613000058853,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    11.480624198913574,
+    11.366991996765137,
+    11.372479915618896,
+    11.368063926696777,
+    11.348544120788574
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 21,
+    "sm_clock_mhz": {
+     "min": 1095.0,
+     "median": 1260.0,
+     "max": 1290.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 58.979,
+     "median": 67.69,
+     "max": 70.586
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b2/0.25",
+   "part": "e2e",
+   "model": "segformer_b2",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 58.743324672,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 12.642928123474121,
+    "p95_ms": 12.847672367095948,
+    "mean_ms": 12.638738865852355,
+    "min_ms": 11.961471557617188,
+    "max_ms": 12.899935722351074,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 12.716775499939104,
+    "p95_ms": 12.920852149966322,
+    "mean_ms": 12.72705398499852,
+    "min_ms": 12.061892000019725,
+    "max_ms": 18.205742999953145,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    12.732048034667969,
+    12.638079643249512,
+    12.642816066741943,
+    12.62612771987915,
+    12.669839859008789
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 24,
+    "sm_clock_mhz": {
+     "min": 1230.0,
+     "median": 1245.0,
+     "max": 1275.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 63.26,
+     "median": 68.298,
+     "max": 71.325
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b2/0.1875",
+   "part": "area",
+   "model": "segformer_b2",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 32.56418304,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 8.203376293182373,
+    "p95_ms": 8.754868936538696,
+    "mean_ms": 8.253860504627228,
+    "min_ms": 7.960991859436035,
+    "max_ms": 8.959808349609375,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 8.269064999979037,
+    "p95_ms": 8.868857949966014,
+    "mean_ms": 8.363573384999086,
+    "min_ms": 8.009108000010201,
+    "max_ms": 15.546716000017113,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    8.253439903259277,
+    8.189712047576904,
+    8.235743999481201,
+    8.132239818572998,
+    8.176688194274902
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 15,
+    "sm_clock_mhz": {
+     "min": 1245.0,
+     "median": 1365.0,
+     "max": 1395.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 62.12,
+     "median": 67.396,
+     "max": 70.64
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b2/0.1875",
+   "part": "e2e",
+   "model": "segformer_b2",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 32.56418304,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 9.639840126037598,
+    "p95_ms": 9.820231914520264,
+    "mean_ms": 9.597244791984558,
+    "min_ms": 9.243935585021973,
+    "max_ms": 9.921567916870117,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 9.686284500048714,
+    "p95_ms": 9.89153114996384,
+    "mean_ms": 9.676342464996424,
+    "min_ms": 9.287037999911263,
+    "max_ms": 11.331911999945987,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    9.647136211395264,
+    9.518799781799316,
+    9.728384017944336,
+    9.638688087463379,
+    9.608607769012451
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 18,
+    "sm_clock_mhz": {
+     "min": 1290.0,
+     "median": 1320.0,
+     "max": 1395.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 62.85,
+     "median": 68.0115,
+     "max": 72.152
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b2/0.125",
+   "part": "area",
+   "model": "segformer_b2",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 14.32092672,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 5.677055835723877,
+    "p95_ms": 6.342851328849792,
+    "mean_ms": 5.768019361495972,
+    "min_ms": 5.540351867675781,
+    "max_ms": 6.608895778656006,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 5.7209744999795475,
+    "p95_ms": 6.429160450005611,
+    "mean_ms": 5.874322209997445,
+    "min_ms": 5.566194000039104,
+    "max_ms": 11.508388000038394,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    5.642335891723633,
+    5.691472053527832,
+    5.660416126251221,
+    5.680016040802002,
+    5.679903984069824
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 10,
+    "sm_clock_mhz": {
+     "min": 1275.0,
+     "median": 1515.0,
+     "max": 1545.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 61.26,
+     "median": 64.7205,
+     "max": 70.226
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b2/0.125",
+   "part": "e2e",
+   "model": "segformer_b2",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 14.32092672,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 6.977712154388428,
+    "p95_ms": 7.145503997802734,
+    "mean_ms": 6.952005598545075,
+    "min_ms": 6.651904106140137,
+    "max_ms": 7.206719875335693,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 7.023011500052689,
+    "p95_ms": 7.240013449995786,
+    "mean_ms": 7.049371600001564,
+    "min_ms": 6.6833930000029795,
+    "max_ms": 13.138873000002604,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    7.061424016952515,
+    6.945728063583374,
+    6.972880125045776,
+    6.97980809211731,
+    6.987792015075684
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 14,
+    "sm_clock_mhz": {
+     "min": 1410.0,
+     "median": 1447.5,
+     "max": 1545.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 62.867,
+     "median": 69.58500000000001,
+     "max": 73.712
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b5/1",
+   "part": "area",
+   "model": "segformer_b5",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 2892.735971328,
+   "level": "graph",
+   "chunk": 1,
+   "cuda_event": {
+    "median_ms": 458.5323028564453,
+    "p95_ms": 462.02893524169923,
+    "mean_ms": 458.48561782836913,
+    "min_ms": 448.9819641113281,
+    "max_ms": 464.3391418457031,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 458.6343935000059,
+    "p95_ms": 462.1666203999496,
+    "mean_ms": 458.58817329499686,
+    "min_ms": 449.01410499994654,
+    "max_ms": 464.3973319999759,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    459.6655731201172,
+    458.2647399902344,
+    458.22332763671875,
+    458.8096160888672,
+    458.19297790527344
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 808,
+    "sm_clock_mhz": {
+     "min": 675.0,
+     "median": 960.0,
+     "max": 1425.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 55.772,
+     "median": 66.906,
+     "max": 108.357
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b5/1",
+   "part": "e2e",
+   "model": "segformer_b5",
+   "scale": 1.0,
+   "h": 1024,
+   "w": 2048,
+   "gflops": 2892.735971328,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 459.28125,
+    "p95_ms": 462.516259765625,
+    "mean_ms": 459.18614776611327,
+    "min_ms": 449.7134704589844,
+    "max_ms": 464.3471374511719,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 459.3685525001092,
+    "p95_ms": 462.57500970015144,
+    "mean_ms": 459.2787750200017,
+    "min_ms": 449.76284199992733,
+    "max_ms": 464.4907439999315,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    458.9968719482422,
+    459.0835266113281,
+    458.40802001953125,
+    460.0778503417969,
+    459.72581481933594
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 808,
+    "sm_clock_mhz": {
+     "min": 675.0,
+     "median": 960.0,
+     "max": 1260.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 56.558,
+     "median": 66.808,
+     "max": 107.485
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b5/0.75",
+   "part": "area",
+   "model": "segformer_b5",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 1307.960672256,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 229.37523651123047,
+    "p95_ms": 232.41339187622071,
+    "mean_ms": 229.63701026916505,
+    "min_ms": 225.2346954345703,
+    "max_ms": 235.32850646972656,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 229.4750605000786,
+    "p95_ms": 232.64246804999402,
+    "mean_ms": 229.81869313500226,
+    "min_ms": 225.30748399981348,
+    "max_ms": 240.55951499985895,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    230.2071533203125,
+    229.30919647216797,
+    229.0915985107422,
+    230.23787689208984,
+    229.0016632080078
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 403,
+    "sm_clock_mhz": {
+     "min": 735.0,
+     "median": 975.0,
+     "max": 1170.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 56.165,
+     "median": 66.571,
+     "max": 100.375
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b5/0.75",
+   "part": "e2e",
+   "model": "segformer_b5",
+   "scale": 0.75,
+   "h": 768,
+   "w": 1536,
+   "gflops": 1307.960672256,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 230.77617645263672,
+    "p95_ms": 234.07036437988282,
+    "mean_ms": 231.01107818603515,
+    "min_ms": 226.01986694335938,
+    "max_ms": 234.68765258789062,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 230.8385814999383,
+    "p95_ms": 234.187744799965,
+    "mean_ms": 231.13917735499513,
+    "min_ms": 226.47688000006383,
+    "max_ms": 236.75321999996868,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    230.90593719482422,
+    230.46078491210938,
+    230.50379180908203,
+    231.00782775878906,
+    230.74726104736328
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 406,
+    "sm_clock_mhz": {
+     "min": 825.0,
+     "median": 990.0,
+     "max": 1170.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 56.264,
+     "median": 66.69749999999999,
+     "max": 84.804
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b5/0.5",
+   "part": "area",
+   "model": "segformer_b5",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 479.981469696,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 79.64913558959961,
+    "p95_ms": 81.44850311279296,
+    "mean_ms": 79.43735034942627,
+    "min_ms": 76.15433502197266,
+    "max_ms": 84.9903335571289,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 79.71944950008947,
+    "p95_ms": 81.6072878999762,
+    "mean_ms": 79.60953145499502,
+    "min_ms": 76.1936210001295,
+    "max_ms": 89.14067000000614,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    80.29540634155273,
+    79.69417572021484,
+    79.60844802856445,
+    79.61671829223633,
+    79.36670303344727
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 140,
+    "sm_clock_mhz": {
+     "min": 930.0,
+     "median": 1020.0,
+     "max": 1125.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 56.165,
+     "median": 65.85650000000001,
+     "max": 72.25
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b5/0.5",
+   "part": "e2e",
+   "model": "segformer_b5",
+   "scale": 0.5,
+   "h": 512,
+   "w": 1024,
+   "gflops": 479.981469696,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 80.60577392578125,
+    "p95_ms": 82.52250328063965,
+    "mean_ms": 80.57365837097169,
+    "min_ms": 77.62348937988281,
+    "max_ms": 82.90713500976562,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 80.6792110000174,
+    "p95_ms": 82.58612394990905,
+    "mean_ms": 80.63645540500261,
+    "min_ms": 77.66588100002991,
+    "max_ms": 83.15859100002854,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    80.2959976196289,
+    80.3768310546875,
+    80.95495986938477,
+    80.86441802978516,
+    80.97665786743164
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 146,
+    "sm_clock_mhz": {
+     "min": 960.0,
+     "median": 1035.0,
+     "max": 1080.0
+    },
+    "temperature_c": {
+     "min": 76.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 59.335,
+     "median": 66.612,
+     "max": 71.521
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b5/0.375",
+   "part": "area",
+   "model": "segformer_b5",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 250.039369728,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 43.405744552612305,
+    "p95_ms": 44.769400405883786,
+    "mean_ms": 43.51896772384644,
+    "min_ms": 41.50688171386719,
+    "max_ms": 47.885215759277344,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 43.47906950005154,
+    "p95_ms": 44.92606914993189,
+    "mean_ms": 43.618630220000234,
+    "min_ms": 41.59843999991608,
+    "max_ms": 47.956276000149956,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    43.43185615539551,
+    43.386688232421875,
+    43.36204719543457,
+    43.682159423828125,
+    43.39902305603027
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 78,
+    "sm_clock_mhz": {
+     "min": 1050.0,
+     "median": 1125.0,
+     "max": 1155.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 59.862,
+     "median": 67.34700000000001,
+     "max": 71.663
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b5/0.375",
+   "part": "e2e",
+   "model": "segformer_b5",
+   "scale": 0.375,
+   "h": 384,
+   "w": 768,
+   "gflops": 250.039369728,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 45.14740753173828,
+    "p95_ms": 46.15376167297363,
+    "mean_ms": 45.08352066040039,
+    "min_ms": 43.80710220336914,
+    "max_ms": 46.485504150390625,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 45.20145199995795,
+    "p95_ms": 46.218452150014855,
+    "mean_ms": 45.14958399999614,
+    "min_ms": 43.85622999984662,
+    "max_ms": 46.52443300005871,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    45.18038368225098,
+    45.05204772949219,
+    44.82046318054199,
+    45.20849609375,
+    44.98647880554199
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 81,
+    "sm_clock_mhz": {
+     "min": 1065.0,
+     "median": 1110.0,
+     "max": 1155.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 62.12,
+     "median": 67.143,
+     "max": 71.325
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b5/0.25",
+   "part": "area",
+   "model": "segformer_b5",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 104.795209728,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 22.493263244628906,
+    "p95_ms": 23.616748619079583,
+    "mean_ms": 22.66024495124817,
+    "min_ms": 22.033727645874023,
+    "max_ms": 26.399072647094727,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 22.55669700002727,
+    "p95_ms": 23.70488880008565,
+    "mean_ms": 22.721613490008963,
+    "min_ms": 22.089772999947854,
+    "max_ms": 26.44995800005745,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    22.507920265197754,
+    22.48072052001953,
+    22.49135971069336,
+    22.539968490600586,
+    22.486143112182617
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 42,
+    "sm_clock_mhz": {
+     "min": 1125.0,
+     "median": 1275.0,
+     "max": 1290.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 77.0
+    },
+    "power_w": {
+     "min": 55.052,
+     "median": 68.5435,
+     "max": 70.237
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b5/0.25",
+   "part": "e2e",
+   "model": "segformer_b5",
+   "scale": 0.25,
+   "h": 256,
+   "w": 512,
+   "gflops": 104.795209728,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 23.837632179260254,
+    "p95_ms": 24.09191312789917,
+    "mean_ms": 23.835726671218872,
+    "min_ms": 23.375871658325195,
+    "max_ms": 24.350528717041016,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 23.897585000099753,
+    "p95_ms": 24.16045180001447,
+    "mean_ms": 23.893284340001628,
+    "min_ms": 23.420544000146037,
+    "max_ms": 24.41339599999992,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    23.83839988708496,
+    23.837599754333496,
+    23.846879959106445,
+    23.84348773956299,
+    23.82151985168457
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 43,
+    "sm_clock_mhz": {
+     "min": 1230.0,
+     "median": 1260.0,
+     "max": 1275.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 63.711,
+     "median": 68.278,
+     "max": 70.39
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b5/0.1875",
+   "part": "area",
+   "model": "segformer_b5",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 57.700417536,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 17.106863975524902,
+    "p95_ms": 17.603994083404537,
+    "mean_ms": 17.15113754272461,
+    "min_ms": 16.865888595581055,
+    "max_ms": 18.188127517700195,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 17.15898150001749,
+    "p95_ms": 17.795566300060273,
+    "mean_ms": 17.2161372849979,
+    "min_ms": 16.9104410001637,
+    "max_ms": 18.56988999998066,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    17.109792709350586,
+    17.099791526794434,
+    17.115327835083008,
+    17.04755210876465,
+    17.107328414916992
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 31,
+    "sm_clock_mhz": {
+     "min": 1245.0,
+     "median": 1350.0,
+     "max": 1380.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 61.26,
+     "median": 68.333,
+     "max": 71.261
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b5/0.1875",
+   "part": "e2e",
+   "model": "segformer_b5",
+   "scale": 0.1875,
+   "h": 192,
+   "w": 384,
+   "gflops": 57.700417536,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 18.501872062683105,
+    "p95_ms": 18.948476123809815,
+    "mean_ms": 18.518974056243895,
+    "min_ms": 18.00998306274414,
+    "max_ms": 24.45849609375,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 18.550458499930755,
+    "p95_ms": 18.99656795010287,
+    "mean_ms": 18.581964010003276,
+    "min_ms": 18.0641500001002,
+    "max_ms": 24.506818999952884,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    18.50327968597412,
+    18.496784210205078,
+    18.5140323638916,
+    18.37497615814209,
+    18.48414421081543
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 35,
+    "sm_clock_mhz": {
+     "min": 1305.0,
+     "median": 1335.0,
+     "max": 1380.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 77.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 64.005,
+     "median": 68.963,
+     "max": 71.653
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "area/segformer_b5/0.125",
+   "part": "area",
+   "model": "segformer_b5",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 25.248792576,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 11.827199935913086,
+    "p95_ms": 12.713974189758298,
+    "mean_ms": 11.896585783958436,
+    "min_ms": 11.450719833374023,
+    "max_ms": 13.291647911071777,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 11.876997000001666,
+    "p95_ms": 12.945170299849448,
+    "mean_ms": 12.047948774997508,
+    "min_ms": 11.500521000016306,
+    "max_ms": 21.14903000006052,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    11.82918405532837,
+    11.82417631149292,
+    11.831279754638672,
+    11.768831729888916,
+    11.815584182739258
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 22,
+    "sm_clock_mhz": {
+     "min": 1365.0,
+     "median": 1500.0,
+     "max": 1530.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 78.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 57.31,
+     "median": 68.82300000000001,
+     "max": 72.099
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  },
+  {
+   "name": "e2e/segformer_b5/0.125",
+   "part": "e2e",
+   "model": "segformer_b5",
+   "scale": 0.125,
+   "h": 128,
+   "w": 256,
+   "gflops": 25.248792576,
+   "level": "graph",
+   "chunk": 2,
+   "cuda_event": {
+    "median_ms": 13.246463775634766,
+    "p95_ms": 13.368355655670166,
+    "mean_ms": 13.23062400341034,
+    "min_ms": 12.731167793273926,
+    "max_ms": 13.38368034362793,
+    "iters": 200
+   },
+   "host": {
+    "median_ms": 13.296211500005484,
+    "p95_ms": 13.423651000027803,
+    "mean_ms": 13.303196734996732,
+    "min_ms": 12.770367000030092,
+    "max_ms": 14.693115000000034,
+    "iters": 200
+   },
+   "round_medians_ms": [
+    13.248208045959473,
+    13.240015983581543,
+    13.254655838012695,
+    13.24558401107788,
+    13.239439964294434
+   ],
+   "telemetry": {
+    "backend": "nvml",
+    "samples": 25,
+    "sm_clock_mhz": {
+     "min": 1440.0,
+     "median": 1455.0,
+     "max": 1485.0
+    },
+    "temperature_c": {
+     "min": 77.0,
+     "median": 78.0,
+     "max": 78.0
+    },
+    "power_w": {
+     "min": 65.084,
+     "median": 68.529,
+     "max": 72.838
+    },
+    "throttle_reasons": [
+     "sw_power_cap"
+    ]
+   }
+  }
+ ],
+ "failures": []
+}

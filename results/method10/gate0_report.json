@@ -1,0 +1,217 @@
+{
+ "margin": 1.0,
+ "ks": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "missing_ff": [],
+ "models": {
+  "bisenetv2": {
+   "rows": [
+    {
+     "scale": 0.5,
+     "ff_miou": 70.54557072947108,
+     "t_ff_ms": 8.93563175201416,
+     "t_key_ms": 9.020624160766602,
+     "t_fresh_ms": 6.898207902908325,
+     "fresh_share": 0.7647151438711635,
+     "t_slow_ms": 2.2076799869537354,
+     "schedules": [
+      {
+       "K": 2,
+       "mean_ms": 7.959416031837463,
+       "envelope": 70.46124897446472,
+       "envelope_model": "pidnet_s",
+       "ceiling": 0.08432175500635708
+      },
+      {
+       "K": 3,
+       "mean_ms": 7.605679988861084,
+       "envelope": 69.72326682990196,
+       "envelope_model": "pidnet_s",
+       "ceiling": 0.8223038995691212
+      },
+      {
+       "K": 4,
+       "mean_ms": 7.428811967372894,
+       "envelope": 69.48654256326449,
+       "envelope_model": "pidnet_s",
+       "ceiling": 1.0590281662065877
+      },
+      {
+       "K": 5,
+       "mean_ms": 7.322691154479981,
+       "envelope": 69.344508003282,
+       "envelope_model": "pidnet_s",
+       "ceiling": 1.201062726189079
+      },
+      {
+       "K": "inf",
+       "mean_ms": 6.898207902908325,
+       "envelope": 68.77636976335206,
+       "envelope_model": "pidnet_s",
+       "ceiling": 1.7692009661190156
+      }
+     ],
+     "gate0_pass": true
+    },
+    {
+     "scale": 1.0,
+     "ff_miou": 73.34850443758886,
+     "t_ff_ms": 28.76124858856201,
+     "t_key_ms": 28.78673553466797,
+     "t_fresh_ms": 21.54771137237549,
+     "fresh_share": 0.748529174015772,
+     "t_slow_ms": 7.413616180419922,
+     "schedules": [
+      {
+       "K": 2,
+       "mean_ms": 25.16722345352173,
+       "envelope": 73.59987539031049,
+       "envelope_model": "bisenetv2",
+       "ceiling": -0.25137095272162924
+      },
+      {
+       "K": 3,
+       "mean_ms": 23.96071942647298,
+       "envelope": 73.68425990498315,
+       "envelope_model": "bisenetv2",
+       "ceiling": -0.33575546739429285
+      },
+      {
+       "K": 4,
+       "mean_ms": 23.35746741294861,
+       "envelope": 73.66218437892785,
+       "envelope_model": "bisenetv2",
+       "ceiling": -0.31367994133898947
+      },
+      {
+       "K": 5,
+       "mean_ms": 22.995516204833983,
+       "envelope": 73.64355553224644,
+       "envelope_model": "bisenetv2",
+       "ceiling": -0.2950510946575804
+      },
+      {
+       "K": "inf",
+       "mean_ms": 21.54771137237549,
+       "envelope": 73.56904014552079,
+       "envelope_model": "bisenetv2",
+       "ceiling": -0.2205357079319299
+      }
+     ],
+     "gate0_pass": false
+    }
+   ],
+   "gate0_pass": true
+  },
+  "pidnet_s": {
+   "rows": [
+    {
+     "scale": 0.5,
+     "ff_miou": 67.94209313465004,
+     "t_ff_ms": 6.2748799324035645,
+     "t_key_ms": 6.34006404876709,
+     "t_fresh_ms": 4.695919990539551,
+     "fresh_share": 0.7406739039888304,
+     "t_slow_ms": 3.047136068344116,
+     "schedules": [
+      {
+       "K": 2,
+       "mean_ms": 5.51799201965332,
+       "envelope": 65.84325250727643,
+       "envelope_model": "bisenetv2",
+       "ceiling": 2.0988406273736047
+      },
+      {
+       "K": 3,
+       "mean_ms": 5.2439680099487305,
+       "envelope": 64.97566575470977,
+       "envelope_model": "bisenetv2",
+       "ceiling": 2.9664273799402707
+      },
+      {
+       "K": 4,
+       "mean_ms": 5.1069560050964355,
+       "envelope": 64.54187237842645,
+       "envelope_model": "bisenetv2",
+       "ceiling": 3.4002207562235895
+      },
+      {
+       "K": 5,
+       "mean_ms": 5.024748802185059,
+       "envelope": 64.28159635265645,
+       "envelope_model": "bisenetv2",
+       "ceiling": 3.6604967819935865
+      },
+      {
+       "K": "inf",
+       "mean_ms": 4.695919990539551,
+       "envelope": 63.22656334097432,
+       "envelope_model": "bisenetv2",
+       "ceiling": 4.715529793675714
+      }
+     ],
+     "gate0_pass": true
+    },
+    {
+     "scale": 1.0,
+     "ff_miou": 76.08271963487174,
+     "t_ff_ms": 18.953279495239258,
+     "t_key_ms": 19.031439781188965,
+     "t_fresh_ms": 15.65496015548706,
+     "fresh_share": 0.8225841205645786,
+     "t_slow_ms": 10.043823719024658,
+     "schedules": [
+      {
+       "K": 2,
+       "mean_ms": 17.343199968338013,
+       "envelope": 75.88420947446615,
+       "envelope_model": "pidnet_s",
+       "ceiling": 0.19851016040558989
+      },
+      {
+       "K": 3,
+       "mean_ms": 16.780453364054363,
+       "envelope": 75.8148272378638,
+       "envelope_model": "pidnet_s",
+       "ceiling": 0.267892397007941
+      },
+      {
+       "K": 4,
+       "mean_ms": 16.499080061912537,
+       "envelope": 75.78013611956263,
+       "envelope_model": "pidnet_s",
+       "ceiling": 0.30258351530910943
+      },
+      {
+       "K": 5,
+       "mean_ms": 16.330256080627443,
+       "envelope": 75.75932144858193,
+       "envelope_model": "pidnet_s",
+       "ceiling": 0.32339818628980765
+      },
+      {
+       "K": "inf",
+       "mean_ms": 15.65496015548706,
+       "envelope": 75.67606276465911,
+       "envelope_model": "pidnet_s",
+       "ceiling": 0.406656870212629
+      }
+     ],
+     "gate0_pass": false
+    }
+   ],
+   "gate0_pass": true
+  }
+ },
+ "continue": [
+  "bisenetv2",
+  "pidnet_s"
+ ],
+ "timing_files": [
+  "/content/drive/MyDrive/avrh/method9/gate0_s1.json"
+ ]
+}
