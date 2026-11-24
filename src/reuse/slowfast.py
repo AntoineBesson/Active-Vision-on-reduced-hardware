@@ -1,9 +1,9 @@
-"""Method 9: split a frozen two-branch model into a slow part (reused across frames) and a fresh part.
+"""Method 10: split a frozen two-branch model into a slow part (reused across frames) and a fresh part.
 
 Not black-box: this reads the model's internal tensors and only exists for models whose
 architecture has a separable low-resolution context branch (BiSeNetV2, PIDNet). It changes no
 weight and trains nothing; with the slow tensors of the same frame it reproduces the model's own
-forward exactly (``tests/test_method9_split.py``).
+forward exactly (``tests/test_method10_split.py``).
 
     split = slowfast_split(backbone)       # a PIDNetBackbone or BiSeNetV2Backbone
     logits, cache = split.key(images)      # key frame: the full model, also returns the cache
@@ -129,4 +129,4 @@ def slowfast_split(backbone):
         return PIDNetSplit(backbone)
     if isinstance(backbone, BiSeNetV2Backbone):
         return BiSeNetV2Split(backbone)
-    raise TypeError(f"no slow/fast split for {type(backbone).__name__}: Method 9 needs a two-branch model")
+    raise TypeError(f"no slow/fast split for {type(backbone).__name__}: Method 10 needs a two-branch model")

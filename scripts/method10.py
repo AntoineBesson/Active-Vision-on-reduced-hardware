@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Method 9, gate 0: is the slow branch a large enough share of the T4 latency to win anything?
+"""Method 10, gate 0: is the slow branch a large enough share of the T4 latency to win anything?
 
-Spec: docs/superpowers/specs/2026-11-23-method9-deep-feature-reuse-design.md.
+Spec: docs/superpowers/specs/2026-11-23-method10-slow-branch-reuse-design.md.
 
     # 1. T4 timing (random weights, fp16, CUDA graphs, all cases interleaved; ~10 min)
-    python -m scripts.method9 gate0 --session s1
+    python -m scripts.method10 gate0 --session s1
     # 2. the ceiling (pure python): reads the timing JSON(s) and the train_all full-frame curves
-    python -m scripts.method9 ceiling --timing 'experiments/method9/gate0_*.json'
+    python -m scripts.method10 ceiling --timing 'experiments/method10/gate0_*.json'
 
 ``gate0`` times, end to end from the 1024 x 2048 frame (resize, network, upsampling, argmax):
 
@@ -36,7 +36,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-if __package__ in (None, ""):  # `python scripts/method9.py`
+if __package__ in (None, ""):  # `python scripts/method10.py`
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.common import REPO_ROOT, ensure_src_on_path  # noqa: E402
@@ -49,7 +49,7 @@ GATE_SCALES = (0.5, 1.0)
 ENVELOPE_SCALES = (0.25, 0.3125, 0.375, 0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75, 0.875, 1.0)
 KS = (2, 3, 4, 5)
 MARGIN = 1.0  # mIoU points
-CURVES = REPO_ROOT / "results" / "method9" / "fullframe_train_all.json"
+CURVES = REPO_ROOT / "results" / "method10" / "fullframe_train_all.json"
 FULL = dict(rounds=5, iters=40, warmup=20)
 QUICK = dict(rounds=2, iters=5, warmup=3)
 
@@ -62,7 +62,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     g.add_argument("--models", default=",".join(MODELS))
     g.add_argument("--scales", default=",".join(f"{s:g}" for s in GATE_SCALES))
     g.add_argument("--quick", action="store_true", help="few iterations (smoke test)")
-    g.add_argument("--out", default=str(REPO_ROOT / "experiments" / "method9"))
+    g.add_argument("--out", default=str(REPO_ROOT / "experiments" / "method10"))
     c = sub.add_parser("ceiling", help="gate 0 verdict from the timing JSONs")
     c.add_argument("--timing", nargs="+", required=True, help="gate0 JSONs (globs allowed)")
     c.add_argument("--curves", default=str(CURVES))
@@ -130,7 +130,7 @@ def run_gate0(args: argparse.Namespace) -> int:
     from scripts.latency_floor import time_part
 
     if not torch.cuda.is_available():
-        print("method9 gate0 needs a CUDA GPU", file=sys.stderr)
+        print("method10 gate0 needs a CUDA GPU", file=sys.stderr)
         return 2
     s = QUICK if args.quick else FULL
     models = [m.strip() for m in args.models.split(",") if m.strip()]
@@ -141,12 +141,12 @@ def run_gate0(args: argparse.Namespace) -> int:
     with torch.no_grad():
         nets = {m: build(m) for m in models}
         cases = [c for m in models for c in gate0_cases(m, nets[m], scales)]
-        print(f"[method9 gate0] {len(cases)} configurations, interleaved", flush=True)
+        print(f"[method10 gate0] {len(cases)} configurations, interleaved", flush=True)
         with GpuTelemetry() as tel:
             records = time_part(cases, "graph", s, tel)
             session_tel = tel.window(float("-inf"), float("inf"))
     out = {
-        "experiment": "method9_gate0", "session": args.session, "started": started,
+        "experiment": "method10_gate0", "session": args.session, "started": started,
         "duration_s": time.time() - t0, "quick": args.quick,
         "settings": {**s, "frame": list(FRAME), "models": models, "gate_scales": scales,
                      "envelope_scales": list(ENVELOPE_SCALES), "dtype": "float16", "batch": "1 frame",
@@ -160,7 +160,7 @@ def run_gate0(args: argparse.Namespace) -> int:
     for r in records:
         print(f"{r['name']:24s} {r['cuda_event']['median_ms']:8.2f} ms median  p95 {r['cuda_event']['p95_ms']:8.2f}"
               f"  {r.get('gflops') or float('nan'):7.1f} GFLOPs")
-    print(f"\n[method9 gate0] {time.time() - t0:.0f} s, wrote {path}")
+    print(f"\n[method10 gate0] {time.time() - t0:.0f} s, wrote {path}")
     return 0
 
 
@@ -267,7 +267,7 @@ def print_report(rep: Dict[str, Any]) -> None:
                 print(f"     K={str(sc['K']):>3s}: mean {sc['mean_ms']:6.2f} ms, {env}")
     if rep["missing_ff"]:
         print("\nmissing full-frame timings:", ", ".join(rep["missing_ff"]))
-    print(f"\n[method9 gate0] continue: {rep['continue'] or 'none (Method 9 stops)'}")
+    print(f"\n[method10 gate0] continue: {rep['continue'] or 'none (Method 10 stops)'}")
 
 
 def run_ceiling(args: argparse.Namespace) -> int:

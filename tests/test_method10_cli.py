@@ -1,4 +1,4 @@
-"""scripts/method9.py ceiling (pure python): the gate 0 arithmetic."""
+"""scripts/method10.py ceiling (pure python): the gate 0 arithmetic."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from scripts.method9 import ceiling_report, curve_at, envelope_at, load_timing
+from scripts.method10 import ceiling_report, curve_at, envelope_at, load_timing
 
 CURVES = {"models": {
     "a": {"scales": [0.25, 0.5, 1.0], "miou": [0.50, 0.68, 0.76], "price_ms": [4.0, 7.0, 21.0]},

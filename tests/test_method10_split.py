@@ -1,4 +1,4 @@
-"""Method 9 slow/fast split: with the same frame's slow tensors it is the model's own forward."""
+"""Method 10 slow/fast split: with the same frame's slow tensors it is the model's own forward."""
 
 from __future__ import annotations
 

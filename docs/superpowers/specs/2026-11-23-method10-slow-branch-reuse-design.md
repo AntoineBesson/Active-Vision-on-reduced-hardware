@@ -1,12 +1,16 @@
-# Method 9: reuse the slow branch across frames (frozen two-branch models)
+# Method 10: reuse the slow branch across frames (frozen two-branch models)
+
+*Renamed from "Method 9" on 2026-11-24: that number was already taken by the per-frame scale
+selector (`docs/superpowers/specs/2026-11-22-method9-scale-selector-design.md`, branch
+`claude/project-thread-7qe7zd`). The gate 0 raw file keeps its old experiment name.*
 
 Status: **accepted by Antoine 2026-11-24; gate 0 coded (`src/reuse/slowfast.py`,
-`scripts/method9.py`, `notebooks/method9_gate0_colab.ipynb`), not yet run.** Points marked
+`scripts/method10.py`, `notebooks/method10_gate0_colab.ipynb`), not yet run.** Points marked
 *(my call)* were settled by Claude, not the user. Antoine's answers to the open points are at the end.
 
 ## Not black-box model-agnostic (Antoine 2026-11-24: must be written)
 
-Method 9 is **frozen** (no weight changes, no training, the public checkpoints) but it is **not
+Method 10 is **frozen** (no weight changes, no training, the public checkpoints) but it is **not
 model-agnostic** in the sense of Methods 2 to 8, which only touched the input or the output of
 an unmodified network:
 
@@ -19,8 +23,8 @@ an unmodified network:
 - how much it can save is set by the architecture (gate 0), not by the method.
 
 Positioning in the project: the model-agnostic methods (2 to 8) are written up first as
-documented negative results; Method 9 is the first **architecture-aware, still frozen** step,
-and work on improving the base model (training) only comes after it. Results of Method 9 are
+documented negative results; Method 10 is the first **architecture-aware, still frozen** step,
+and work on improving the base model (training) only comes after it. Results of Method 10 are
 reported under that label and never as model-agnostic.
 
 ## Why this and not Method 3 again
@@ -29,7 +33,7 @@ Method 3 reused the **prediction** of the previous frame and recomputed only the
 something moved ([results/method3](../../../results/method3/README.md)). It failed on three
 measured facts, and the method below avoids each of them:
 
-| Method 3 failure (train_all, T4) | What Method 9 does instead |
+| Method 3 failure (train_all, T4) | What Method 10 does instead |
 |---|---|
 | Deciding what to recompute cost ~6.8 ms (gray, IC-LK homography, motion map) before any segmentation. | No decision step. The schedule is fixed (a key frame every K frames); variant N uses no motion estimate at all. |
 | A one-frame-old **prediction**, even homography-warped, already loses ~5 mIoU points (PIDNet-S 0.761 → 0.708). | No prediction is reused. Every frame gets a fresh pass of the model's **fast, high-resolution branch**; only the **slow, low-resolution semantic features** are reused, and the model's own fusion layer combines them with fresh detail. |
@@ -43,7 +47,7 @@ two-branch, so the split is the architecture's own, not one we invent.
 
 | Work | What is reused / recomputed | Trained for the reuse? | Closest to us in |
 |---|---|---|---|
-| **Clockwork Convnets** (Shelhamer et al., ECCV-W 2016, [arXiv 1608.03609](https://arxiv.org/abs/1608.03609)) | FCN-8s (VGG16) cut into 3 stages; shallow stage every frame, deep score stages cached and fused by the net's own skip fusion. Fixed schedules (alternating, exponential, skip) and an adaptive one (pool4 score change). | No schedule-specific training is described: the fixed schedules run the ordinary FCN. | **The mechanism.** Method 9's variant N is essentially a fixed clockwork schedule. |
+| **Clockwork Convnets** (Shelhamer et al., ECCV-W 2016, [arXiv 1608.03609](https://arxiv.org/abs/1608.03609)) | FCN-8s (VGG16) cut into 3 stages; shallow stage every frame, deep score stages cached and fused by the net's own skip fusion. Fixed schedules (alternating, exponential, skip) and an adaptive one (pool4 score change). | No schedule-specific training is described: the fixed schedules run the ordinary FCN. | **The mechanism.** Method 10's variant N is essentially a fixed clockwork schedule. |
 | Deep Feature Flow (Zhu et al. 2017), Accel (Jain et al. 2019), DVSNet (Xu et al. 2018) | Key-frame features warped by optical flow, plus a correction branch or a learned key-frame policy. | Yes (flow net, fusion, policy). | Key frames. |
 | Low-Latency VSS (Li et al., CVPR 2018, [arXiv 1804.00389](https://arxiv.org/abs/1804.00389)) | Low-level features every frame, high-level features propagated by learned spatially variant convolution; adaptive key frames. | Yes. | Fresh low-level path + stale high level. |
 | TDNet (Hu et al., CVPR 2020) | Deep features split into sub-networks spread over consecutive frames, attention fusion. | Yes (a new architecture). | Spreading the slow part over frames (our "out of scope" p95 fix). |
@@ -124,7 +128,7 @@ not beat fresh context (accuracy ≤ the same model's full frame at s):
     ceiling(model, s) = FF_model(s) − Envelope(T_fresh(s))     [mIoU points, train_all]
 
 **Gate 0 rule:** a model continues only if `ceiling(model, s) ≥ +1.0` at some s. If neither model
-does, Method 9 stops and no accuracy GPU time is spent. This needs no new accuracy number: the
+does, Method 10 stops and no accuracy GPU time is spent. This needs no new accuracy number: the
 full-frame mIoU per scale already exists on train_all.
 
 What would make it fail: if the fast branch is most of the cost (BiSeNetV2's detail branch is
@@ -147,13 +151,17 @@ slower on the T4 than its FLOPs say. For PIDNet-S, if latency follows FLOPs (fre
 key frame), the ceiling against the train_all envelope is about **+1 point at s = 1** (borderline)
 and **several points at s = 0.5**, where both curves are steep. The T4 decides.
 
-Code: `src/reuse/slowfast.py` (the split; `tests/test_method9_split.py` checks that with the same
+Code: `src/reuse/slowfast.py` (the split; `tests/test_method10_split.py` checks that with the same
 frame's slow tensors it equals the model's own forward, bit-exact for the key frame and to 1e-5
 for the fresh pass, and that a stale cache changes the output and is never written to);
-`scripts/method9.py gate0` (timing) and `ceiling` (verdict); the train_all full-frame curves are
-copied to `results/method9/fullframe_train_all.json` from Methods 7/8.
+`scripts/method10.py gate0` (timing) and `ceiling` (verdict); the train_all full-frame curves are
+copied to `results/method10/fullframe_train_all.json` from Methods 7/8.
 
-## Gate 1: the staleness bound on train_all (cluster or Colab)
+## Gate 1: the staleness bound on train_all (school cluster)
+
+**Gate 0 result (2026-11-24, one T4 session, `results/method10/gate0_report.json`):** passes at
+s = 0.5 for both models (ceiling at K = ∞: PIDNet-S +4.72, BiSeNetV2 +1.77), fails at s = 1 for
+both (+0.41, −0.22). Gate 1 therefore runs **s = 0.5 only**, for both models.
 
 Only for a model that passed gate 0. Data: VPS `train_all`, 400 clips, all 30 frames (the same
 chunk zips as Methods 3 to 5), labels on frames 4, 9, ..., 29.
@@ -165,8 +173,17 @@ chunk zips as Methods 3 to 5), labels on frames 4, 9, ..., 29.
 - A schedule with interval K puts a labelled frame at staleness 0..K−1 with equal probability
   (key-frame phase uniform). Its accuracy is the mIoU of the confusions **pooled over
   k = 0..K−1**, which is the exact expectation over phases *(my call)*. K ∈ {2, 3, 4, 5}.
-- Grid: 2 models × 2 scales × 4 K × 2 variants = 32 schedules (only models that passed gate 0), from 2400 labelled frames ×
-  ~9 passes per (model, scale). Estimated ~2 to 3 h on one cluster P100 per model.
+- Grid: 2 models × 1 scale × 4 K × 2 variants = 16 schedules.
+- Implementation (`scripts/method10_gate1.py`, `scripts/cluster/m10_gate1.sh`, 4 chunks × 2 models):
+  each labelled frame also gets the model's full frame at the 11 envelope scales, so the
+  envelope (mIoU and moving-object recall) comes from the same run; `score` checks that this
+  curve matches Methods 7/8's. H0 warps the cached tensors with the chain of consecutive IC-LK
+  homographies (`reuse.motion`, as Method 3). Mean latency and envelope prices come from the
+  gate 0 session (`results/method10/gate0_s1.json`), so method and envelope are priced together.
+- The moving-object reading of a schedule is the mean over k = 0..K−1 of "found" (IoU > 0.5) per
+  object, minus the **higher of both models' full-frame recall curves** at the same latency,
+  with the same clip resamples for all curves *(my call: the envelope of the recall curves,
+  matching the mIoU envelope)*.
 
 **Gate 1 rule (pre-registered):** a model continues if some schedule in **variant N** has
 **ΔmIoU ≥ +1.0 point vs the envelope at its mean latency** (the margin of Methods 4 and 8), **and**

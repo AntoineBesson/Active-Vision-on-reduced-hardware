@@ -1,6 +1,6 @@
-"""Generate notebooks/method9_gate0_colab.ipynb (Method 9 gate 0: T4 timing of the slow/fast split).
+"""Generate notebooks/method10_gate0_colab.ipynb (Method 10 gate 0: T4 timing of the slow/fast split).
 
-    python scripts/make_method9_notebook.py notebooks/method9_gate0_colab.ipynb
+    python scripts/make_method10_notebook.py notebooks/method10_gate0_colab.ipynb
 """
 
 import json
@@ -11,9 +11,9 @@ code = lambda s: {"cell_type": "code", "metadata": {}, "execution_count": None, 
 
 cells = [
     md("""
-# Method 9, gate 0: is the slow branch worth reusing? (T4, ~10 min)
+# Method 10, gate 0: is the slow branch worth reusing? (T4, ~10 min)
 
-Spec: `docs/superpowers/specs/2026-11-23-method9-deep-feature-reuse-design.md`.
+Spec: `docs/superpowers/specs/2026-11-23-method10-slow-branch-reuse-design.md`.
 
 Times on the T4, end to end from the 1024 x 2048 frame (fp16, CUDA graphs, everything
 interleaved in the same rounds), for PIDNet-S and BiSeNetV2 at scales 0.5 and 1:
@@ -27,7 +27,7 @@ Methods 7/8. Gate 0 passes for a model if it is at least +1.0 point at some scal
 no weights (latency does not depend on them).
 
 **Runtime → Change runtime type → T4 GPU**, then *Runtime → Run all*. One session is enough;
-results go to `MyDrive/avrh/method9/` and are printed at the end for pasting back.
+results go to `MyDrive/avrh/method10/` and are printed at the end for pasting back.
 """),
     code("""
 SESSION = "s1"
@@ -46,7 +46,7 @@ assert name and "T4" in name, "Switch the runtime to a T4 GPU (Runtime -> Change
 import os, shutil
 from google.colab import drive
 drive.mount("/content/drive")
-OUT = f"{DRIVE}/method9"
+OUT = f"{DRIVE}/method10"
 os.makedirs(OUT, exist_ok=True)
 """),
     code("""
@@ -54,7 +54,7 @@ os.makedirs(OUT, exist_ok=True)
 %cd /content/avrh
 !git log --oneline -1
 !pip install -q -e . nvidia-ml-py
-!python -m pytest -q tests/test_method9_split.py tests/test_method9_cli.py
+!python -m pytest -q tests/test_method10_split.py tests/test_method10_cli.py
 """),
     md("""
 ## 1. Timing
@@ -70,20 +70,20 @@ def run(cmd, log):
     if proc.wait() != 0:
         raise RuntimeError(f"{cmd[3:5]} failed (exit {proc.returncode}); full log: {log}")
 
-run([sys.executable, "-u", "-m", "scripts.method9", "gate0", "--session", SESSION, "--scales", SCALES,
-     "--out", "/content/method9"], f"/content/method9_gate0_{SESSION}.log")
-shutil.copy(f"/content/method9/gate0_{SESSION}.json", OUT)
+run([sys.executable, "-u", "-m", "scripts.method10", "gate0", "--session", SESSION, "--scales", SCALES,
+     "--out", "/content/method10"], f"/content/method10_gate0_{SESSION}.log")
+shutil.copy(f"/content/method10/gate0_{SESSION}.json", OUT)
 print("saved", f"{OUT}/gate0_{SESSION}.json")
 """),
     md("""
 ## 2. The ceiling and the gate 0 verdict (reads every session on Drive)
 """),
     code("""
-run([sys.executable, "-u", "-m", "scripts.method9", "ceiling", "--timing", f"{OUT}/gate0_*.json",
-     "--out", f"{OUT}/gate0_report.json"], "/content/method9_ceiling.log")
+run([sys.executable, "-u", "-m", "scripts.method10", "ceiling", "--timing", f"{OUT}/gate0_*.json",
+     "--out", f"{OUT}/gate0_report.json"], "/content/method10_ceiling.log")
 """),
     md("""
-**Result files** are in `MyDrive/avrh/method9/`. The cell below prints them compressed
+**Result files** are in `MyDrive/avrh/method10/`. The cell below prints them compressed
 (gzip + base64) between markers, to paste back into the thread.
 """),
     code("""
@@ -92,7 +92,7 @@ for path in (f"{OUT}/gate0_report.json", f"{OUT}/gate0_{SESSION}.json"):
     raw = open(path, "rb").read()
     b64 = base64.b64encode(gzip.compress(raw, 9)).decode()
     tag = os.path.basename(path).replace(".json", "").upper()
-    print(f"METHOD9_{tag}_BEGIN"); print(b64); print(f"METHOD9_{tag}_END")
+    print(f"METHOD10_{tag}_BEGIN"); print(b64); print(f"METHOD10_{tag}_END")
     print(len(raw), "bytes ->", len(b64), "chars")
 """),
 ]
