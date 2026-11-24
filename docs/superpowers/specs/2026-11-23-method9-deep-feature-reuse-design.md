@@ -1,7 +1,27 @@
 # Method 9: reuse the slow branch across frames (frozen two-branch models)
 
-Status: **draft for Antoine's acceptance, 2026-11-23. Nothing coded or run.** Points marked
-*(my call)* were settled by Claude, not the user. Open points for the user are listed at the end.
+Status: **accepted by Antoine 2026-11-24; gate 0 coded (`src/reuse/slowfast.py`,
+`scripts/method9.py`, `notebooks/method9_gate0_colab.ipynb`), not yet run.** Points marked
+*(my call)* were settled by Claude, not the user. Antoine's answers to the open points are at the end.
+
+## Not black-box model-agnostic (Antoine 2026-11-24: must be written)
+
+Method 9 is **frozen** (no weight changes, no training, the public checkpoints) but it is **not
+model-agnostic** in the sense of Methods 2 to 8, which only touched the input or the output of
+an unmodified network:
+
+- it reads and injects **internal tensors** of the network (the semantic branch of BiSeNetV2, the
+  I branch of PIDNet), so it needs the model's code, not just a callable;
+- it only exists for models whose architecture has a **separable low-resolution context
+  branch**. The split is hand-written per family (`src/reuse/slowfast.py` refuses any other
+  model). A single-path network (SegFormer, a plain encoder-decoder) has no such split without
+  choosing a cut point inside it, which is the clockwork design space and not free;
+- how much it can save is set by the architecture (gate 0), not by the method.
+
+Positioning in the project: the model-agnostic methods (2 to 8) are written up first as
+documented negative results; Method 9 is the first **architecture-aware, still frozen** step,
+and work on improving the base model (training) only comes after it. Results of Method 9 are
+reported under that label and never as model-agnostic.
 
 ## Why this and not Method 3 again
 
@@ -17,10 +37,32 @@ measured facts, and the method below avoids each of them:
 
 This is the "clockwork" idea (Shelhamer et al. 2016: update deep layers less often than shallow
 ones) applied to a frozen network with no retraining. Both of our models are explicitly
-two-branch, so the split is the architecture's own, not one we invent. The published versions
-that work well (Deep Feature Flow, Accel, TDNet; see `docs/research/RELATED.md`) all train a flow
-or fusion module. Nobody has shown whether a frozen real-time model tolerates stale context
-features; that is the question.
+two-branch, so the split is the architecture's own, not one we invent.
+
+### Related work: what exists, and what is not new here (checked 2026-11-24)
+
+| Work | What is reused / recomputed | Trained for the reuse? | Closest to us in |
+|---|---|---|---|
+| **Clockwork Convnets** (Shelhamer et al., ECCV-W 2016, [arXiv 1608.03609](https://arxiv.org/abs/1608.03609)) | FCN-8s (VGG16) cut into 3 stages; shallow stage every frame, deep score stages cached and fused by the net's own skip fusion. Fixed schedules (alternating, exponential, skip) and an adaptive one (pool4 score change). | No schedule-specific training is described: the fixed schedules run the ordinary FCN. | **The mechanism.** Method 9's variant N is essentially a fixed clockwork schedule. |
+| Deep Feature Flow (Zhu et al. 2017), Accel (Jain et al. 2019), DVSNet (Xu et al. 2018) | Key-frame features warped by optical flow, plus a correction branch or a learned key-frame policy. | Yes (flow net, fusion, policy). | Key frames. |
+| Low-Latency VSS (Li et al., CVPR 2018, [arXiv 1804.00389](https://arxiv.org/abs/1804.00389)) | Low-level features every frame, high-level features propagated by learned spatially variant convolution; adaptive key frames. | Yes. | Fresh low-level path + stale high level. |
+| TDNet (Hu et al., CVPR 2020) | Deep features split into sub-networks spread over consecutive frames, attention fusion. | Yes (a new architecture). | Spreading the slow part over frames (our "out of scope" p95 fix). |
+| DCFM (Zheng et al., AAAI 2024, [arXiv 2403.02689](https://arxiv.org/abs/2403.02689)) | Key frame's deep "common" feature reused directly (no flow); a shallow encoder runs every frame and a fusion module merges them. | Yes, end to end with dedicated losses; own encoder-decoder, not a two-branch real-time net. | Reuse without propagation. |
+
+**What is therefore not new:** caching deep / slow features and refreshing shallow ones with a
+fixed schedule (Clockwork, 2016). We must cite it as the method and not present the mechanism
+as ours.
+
+**What we have not found in the literature** (searches on clockwork / slow-branch reuse with
+BiSeNet, PIDNet, DDRNet, and training-free video acceleration of frozen image models): (1) the
+clockwork schedule on **modern two-branch real-time models** whose context branch is a
+designed, separable path, **frozen**, with the cut at the architecture's own branch boundary;
+(2) judged against the **resolution-scaling envelope of several models at equal measured
+latency** on a T4 (Clockwork compares to frame skipping and per-frame cost, not to simply
+running at a lower resolution); (3) **moving, small-object recall** as a co-requirement. So the
+contribution, if it passes, is an evaluation of a 2016 idea on 2020s real-time models under a
+stricter baseline, not a new mechanism. If it fails, it is a documented negative result for
+that idea under this baseline.
 
 It still predicts every frame from that frame's own pixels, so the earlier "no frame skipping"
 decision (Method 3 non-goals) is respected *(my call)*. Antoine opened key-frame reuse on
@@ -72,7 +114,9 @@ need the slow pass spread over several frames, which is outside this spec.
 ## Gate 0: the cost split, T4 timing only (one Colab session, ~15 min)
 
 Before any accuracy run. On the T4, interleaved, CUDA graphs: `T_full(s)` and `T_fresh(s)` for
-both models at s ∈ {0.5, 0.625, 0.75, 0.875, 1}.
+both models at s ∈ {0.5, 1} (Antoine 2026-11-24: more scales only if this looks promising). The
+same session also times both models' full frame at the 11 envelope scales, so the envelope is
+priced in the same session as the method.
 
 The most a schedule can gain is bounded by K → ∞ and by the assumption that stale context does
 not beat fresh context (accuracy ≤ the same model's full frame at s):
@@ -87,6 +131,28 @@ What would make it fail: if the fast branch is most of the cost (BiSeNetV2's det
 wide and at 1/8; PIDNet-S's stem is shared), `T_fresh` is close to `T_full` and nothing is left to
 win. That is exactly what this gate measures.
 
+**Prediction from FLOPs, before the T4 run (2026-11-24, `eval.cost.count_flops`, 1024 x 2048 frame):**
+
+| Model | s | full | fresh | slow alone | fresh / full |
+|---|---|---|---|---|---|
+| PIDNet-S | 0.5 | 23.6 G | 15.9 G | 13.1 G | 67 % |
+| PIDNet-S | 1 | 94.4 G | 63.6 G | 52.4 G | 67 % |
+| BiSeNetV2 | 0.5 | 49.2 G | 46.5 G | 2.7 G | 95 % |
+| BiSeNetV2 | 1 | 196.8 G | 186.1 G | 10.7 G | 95 % |
+
+(The PIDNet slow part counts the stem again, which the split does not recompute.) BiSeNetV2's
+semantic branch is only ~5 % of its FLOPs: its head (1024 channels at 1/8) and detail branch
+dominate, so it is expected to **fail** gate 0 unless the depthwise semantic branch is much
+slower on the T4 than its FLOPs say. For PIDNet-S, if latency follows FLOPs (fresh ≈ 67 % of the
+key frame), the ceiling against the train_all envelope is about **+1 point at s = 1** (borderline)
+and **several points at s = 0.5**, where both curves are steep. The T4 decides.
+
+Code: `src/reuse/slowfast.py` (the split; `tests/test_method9_split.py` checks that with the same
+frame's slow tensors it equals the model's own forward, bit-exact for the key frame and to 1e-5
+for the fresh pass, and that a stale cache changes the output and is never written to);
+`scripts/method9.py gate0` (timing) and `ceiling` (verdict); the train_all full-frame curves are
+copied to `results/method9/fullframe_train_all.json` from Methods 7/8.
+
 ## Gate 1: the staleness bound on train_all (cluster or Colab)
 
 Only for a model that passed gate 0. Data: VPS `train_all`, 400 clips, all 30 frames (the same
@@ -99,7 +165,7 @@ chunk zips as Methods 3 to 5), labels on frames 4, 9, ..., 29.
 - A schedule with interval K puts a labelled frame at staleness 0..K−1 with equal probability
   (key-frame phase uniform). Its accuracy is the mIoU of the confusions **pooled over
   k = 0..K−1**, which is the exact expectation over phases *(my call)*. K ∈ {2, 3, 4, 5}.
-- Grid: 2 models × 5 scales × 4 K × 2 variants = 80 schedules, from 2400 labelled frames ×
+- Grid: 2 models × 2 scales × 4 K × 2 variants = 32 schedules (only models that passed gate 0), from 2400 labelled frames ×
   ~9 passes per (model, scale). Estimated ~2 to 3 h on one cluster P100 per model.
 
 **Gate 1 rule (pre-registered):** a model continues if some schedule in **variant N** has
@@ -127,9 +193,11 @@ No training or fine-tuning of anything, no learned flow, no INT8 / TensorRT or o
 tricks (Antoine 2026-11-23: unfair comparison), no prediction reuse (Method 3), no learned or
 adaptive key-frame policy in this spec (only if gate 1 passes, as a separate spec).
 
-## Open points for Antoine
+## Antoine's answers (2026-11-24)
 
-1. **Margins:** gate 0 and gate 1 at +1.0 point, as Methods 4 and 8. Keep?
-2. **Moving objects as a co-requirement of gate 1** (proposed above), or reported only as in Method 7?
-3. **Scales:** 0.5 to 1 only (where the fresh branch is big enough to matter), or the full 11?
-4. **Where to run gate 1:** the school cluster (my default, as Method 6) or Colab. Gate 0 needs one Colab T4 session.
+1. **Margins:** +1.0 point at gates 0 and 1, kept.
+2. **Moving objects:** a co-requirement of gate 1, as proposed.
+3. **Scales:** 0.5 and 1 only for now; more scales only if it looks promising.
+4. **Gate 1 on the school cluster.** Gate 0 on one Colab T4 session.
+5. Not model-agnostic: written above. The model-agnostic failures are written up first, then
+   work moves to improving the base model.
