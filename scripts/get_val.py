@@ -12,6 +12,10 @@ members are needed. This reads the zips remotely with HTTP range requests
     pip install remotezip requests
     python scripts/get_val.py --out D:/cityscapes            # both packages
     python scripts/get_val.py --out D:/cityscapes --only gtFine
+    python scripts/get_val.py --out D:/cityscapes --train    # Method 11: gtFine/train + leftImg8bit/train
+
+With ``--train`` only the train labels (packageID 1) and the train images of
+``leftImg8bit_trainvaltest.zip`` (packageID 3, about 6 GB of its 11 GB) are fetched.
 
 Credentials come from $CITYSCAPES_USERNAME / $CITYSCAPES_PASSWORD, else are
 prompted for. The download is resumable: a file appears under --out only once
@@ -37,7 +41,13 @@ PACKAGE_URL = "https://www.cityscapes-dataset.com/file-handling/?packageID={}"
 PACKAGES = {
     "gtFine": (1, "gtFine/val/"),
     "leftImg8bit_sequence": (14, "leftImg8bit_sequence/val/"),
+    # --train (Method 11's fine-tuning set): the 2,975 fine train images and their labels.
+    # packageID 3 = leftImg8bit_trainvaltest.zip (11 GB; the train part is about 6 GB).
+    "gtFine_train": (1, "gtFine/train/"),
+    "leftImg8bit_train": (3, "leftImg8bit/train/"),
 }
+VAL_PACKAGES = ("gtFine", "leftImg8bit_sequence")
+TRAIN_PACKAGES = ("gtFine_train", "leftImg8bit_train")
 
 
 class LoginError(RuntimeError):
@@ -89,6 +99,8 @@ def main() -> None:
     p.add_argument("--out", required=True, help="Output folder (gets leftImg8bit_sequence/val/ and gtFine/val/).")
     p.add_argument("--only", choices=sorted(PACKAGES), action="append",
                    help="Download only this package (repeatable). Default: all.")
+    p.add_argument("--train", action="store_true",
+                   help="Fetch the Cityscapes train fine images and labels (Method 11) instead of the val packages.")
     p.add_argument("--retry-seconds", type=int, default=60)
     args = p.parse_args()
 
@@ -97,7 +109,8 @@ def main() -> None:
     login(user, password)  # fail fast before touching anything
     os.makedirs(args.out, exist_ok=True)
     # gtFine first: it is small, so a broken setup shows up in seconds.
-    for name in [n for n in ("gtFine", "leftImg8bit_sequence") if not args.only or n in args.only]:
+    names = TRAIN_PACKAGES if args.train else VAL_PACKAGES
+    for name in [n for n in names if not args.only or n in args.only]:
         download_package(name, args.out, user, password, args.retry_seconds)
 
 

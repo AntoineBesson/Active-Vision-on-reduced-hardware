@@ -182,3 +182,41 @@ scp -i ~/.ssh/id_ed25519_cluster "<user>@gpu-gw.enst.fr:avrh_results/method5/tra
 
 Then `merge` and `score` on the laptop, and log the run in the method's
 TRIES.md (job id, GPU, commit, time per clip).
+
+## Method 11: fine-tuning on warped frames
+
+Spec: [2026-11-25-method11-warp-finetune-design.md](superpowers/specs/2026-11-25-method11-warp-finetune-design.md).
+Scripts: [m11_train.sh](../scripts/cluster/m11_train.sh) (one run, P100, 24 h limit, resumable per
+epoch) and [m11_eval.sh](../scripts/cluster/m11_eval.sh) (one run's confusions on one chunk of
+`train_all`, or the public weights at the 13 scales).
+
+**Before the first job** (on the laptop):
+
+1. `python scripts/get_val.py --out <cityscapes folder> --train` fetches `leftImg8bit/train` and
+   `gtFine/train` (about 6 GB) with the user's Cityscapes login.
+2. `python -m scripts.method11 boundary-prior --cityscapes <cityscapes folder>` writes
+   `results/method11/prior_boundary.pt` and `.json` (CPU, minutes); commit them, `git pull` on the cluster.
+3. Zip the two folders as `cityscapes_train.zip` (paths inside: `leftImg8bit/train/...`,
+   `gtFine/train/...`) and `scp` it to `~/avrh_data/`.
+4. Gate 1 scores all 400 clips, so `vps_train_all_chunk0.zip` must be in `~/avrh_data/` too.
+
+**Gate 0** (spec): per model, `EXTRA="--lr 0 --max-steps 20"` at `KIND=uniform SCALE=1` with
+`TAG=gate0_lr0`, then `EXTRA="--epochs 1"` at `KIND=uniform SCALE=0.5` with `TAG=gate0_ep1`;
+evaluate both on 5 clips of a chunk.
+
+**Gate 1**, per model (20 runs in all; the QoS runs 4 at a time):
+
+```bash
+for M in bisenetv2 pidnet_s; do
+  for S in 0.25 0.5 0.75 1; do for K in uniform boundary; do
+    sbatch --job-name=m11_${M}_${K}_c$S --output=$HOME/avrh_jobs/%x_%j.out \
+        --export=ALL,MODEL=$M,KIND=$K,SCALE=$S scripts/cluster/m11_train.sh
+  done; done
+  sbatch --job-name=m11_${M}_multi --output=$HOME/avrh_jobs/%x_%j.out \
+      --export=ALL,MODEL=$M,KIND=multi scripts/cluster/m11_train.sh
+  sbatch --job-name=m11_${M}_error_c0.25 --output=$HOME/avrh_jobs/%x_%j.out \
+      --export=ALL,MODEL=$M,KIND=error,SCALE=0.25 scripts/cluster/m11_train.sh
+done
+```
+
+Then `m11_eval.sh` for each finished run folder and `PUBLIC=<model>`, chunks 0 to 3.

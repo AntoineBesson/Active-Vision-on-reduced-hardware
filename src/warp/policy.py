@@ -182,6 +182,7 @@ class StepConfig:
     unwarp: str = "u2"
     rounds: int = ROUNDS
     taps: Optional[int] = None
+    d_max: Optional[float] = None  # Method 11: upper density clip replacing 1/scale (magnification at scale 1)
 
     def __post_init__(self) -> None:
         if not 0.0 < self.scale <= 1.0:
@@ -198,6 +199,8 @@ class StepConfig:
             raise ValueError(f"resample/unwarp must be in {RESAMPLES}/{UNWARPS}, got {self.resample}/{self.unwarp}")
         if int(self.rounds) < 1:
             raise ValueError(f"rounds must be >= 1, got {self.rounds}")
+        if self.d_max is not None and (self.uniform or float(self.d_max) < 1.0):
+            raise ValueError(f"d_max must be >= 1 and only on a warped row, got {self.d_max} ({self.saliency})")
         if self.taps is not None and int(self.taps) < filter_taps(self.scale):
             raise ValueError(f"{self.taps} taps would cut the filter at scale {self.scale:g} "
                              f"(needs {filter_taps(self.scale)})")
@@ -220,6 +223,8 @@ class StepConfig:
             return f"5p/c{self.scale:g}/{UNIFORM}/{tail}"
         if self.rounds != ROUNDS:
             tail += f"/n{self.rounds}"
+        if self.d_max is not None:
+            tail += f"/m{self.d_max:g}"
         return f"5p/c{self.scale:g}/{self.saliency}/a{self.alpha:g}/s{self.sigma:g}/{tail}"
 
 
@@ -337,7 +342,7 @@ class WarpStep(nn.Module):
             sal = state if state is not None else self.prior
             return make_grid(torch.zeros_like(sal), 0.0, cfg.scale)
         src = self.prior if cfg.saliency == "P" else state
-        return make_grid(smooth(src, cfg.sigma), cfg.alpha, cfg.scale, rounds=cfg.rounds)
+        return make_grid(smooth(src, cfg.sigma), cfg.alpha, cfg.scale, d_max=cfg.d_max, rounds=cfg.rounds)
 
     def _cached(self, key: Tuple[Any, ...], build: Callable[[], Any]) -> Any:
         if not self.cfg.fixed:
