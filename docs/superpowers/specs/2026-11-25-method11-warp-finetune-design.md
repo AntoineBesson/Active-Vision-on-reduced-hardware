@@ -45,23 +45,23 @@ stay in the design:
 4. **scale 1 with magnification** (LZU never magnifies for segmentation);
 5. our error prior P next to their boundary prior.
 
-## Data *(open question Q1 for the user)*
+## Data (decided by the user on 2026-11-25: Cityscapes train fine)
 
 The public weights were trained on Cityscapes **train** (2,975 fine images).
 Every Cityscapes-VPS clip is a Cityscapes **val** sequence, so VPS
 `train_all` (400 clips) and VPS `val` (50 clips) are both unseen by the
 public weights.
 
-- **Recommended: fine-tune on Cityscapes train fine (2,975 images).** Gates
+- **Chosen: fine-tune on Cityscapes train fine (2,975 images).** Gates
   run on VPS `train_all` exactly as in Methods 2-10, val is read once.
   Needs `leftImg8bit/train` (about 6 GB of the 11 GB
   `leftImg8bit_trainvaltest.zip`, packageID 3 from memory, to confirm) and `gtFine/train`
   (packageID 1, already used), fetched by `scripts/get_val.py` extended with
   a `--train` option (range requests, the user's Cityscapes login).
-- Alternative: fine-tune on VPS `train_all`'s labelled frames (2,400, already
+- Not chosen: fine-tune on VPS `train_all`'s labelled frames (2,400, already
   on the cluster). Then the gate needs a held-out part of `train_all` (for
   example chunk 0, 100 clips), and the fine-tune sees fewer, more correlated
-  images (6 per clip). Not recommended.
+  images (6 per clip).
 
 ## What is trained
 
@@ -79,7 +79,7 @@ hyperparameters; one setting for every run, warp and control alike)*:
   label resolution: the same path as the evaluation, made differentiable
   (`grid_sample`).
 - Input: the **whole frame** (the warp is defined on the whole frame, so no
-  random crop), horizontal flip (the prior is flipped with the frame) and
+  random crop), horizontal flip (per batch; the prior is flipped with the frame) and
   photometric jitter. No scale jitter except in the multi-scale control.
 - Checkpoint: the **last** one. No selection on `train_all`, which is the
   gate's data.
@@ -89,7 +89,7 @@ hyperparameters; one setting for every run, warp and control alike)*:
 | Run | Scales | Per model |
 | --- | --- | --- |
 | `U-s`: uniform specialist (control) | 0.25, 0.5, 0.75, 1.0 | 4 |
-| `M`: uniform multi-scale (control), s drawn per sample from the 11 dense scales 0.25-1 | evaluated at all 11 | 1 |
+| `M`: uniform multi-scale (control), s drawn per batch from the 13 scales 0.25-1 in steps of 1/16 | evaluated at all 13 | 1 |
 | `B-s`: warp with the boundary prior B̄ | 0.25, 0.5, 0.75, 1.0 | 4 |
 | `P-0.25`: warp with Method 5's scored prior P (the frozen BiSeNetV2 finalist's settings) | 0.25 | 1 |
 
@@ -128,8 +128,8 @@ Before the 20 runs, per model on 5 clips of `train_all`:
 ## Gate 1: train_all, 400 clips
 
 The **envelope** E(t) is the best mIoU at T4 latency ≤ t over every
-full-frame curve: frozen PIDNet-S and BiSeNetV2 (11 dense scales each), the
-`U-s` specialists and `M` (11 scales) of both models. For each warp run w:
+full-frame curve: frozen PIDNet-S and BiSeNetV2 (the same 13 scales, run through the same eval path), the
+`U-s` specialists and `M` (13 scales) of both models. For each warp run w:
 
     Δ(w) = mIoU(w) − E(latency(w))
 
